@@ -219,7 +219,7 @@ $pageContent = function () use ($verticalName, $canvas_list, $categories, $categ
                             $emoji = $canvas['icon'] ?? mb_substr($canvas['name'], 0, 1);
                             ?>
                             <div class="col-md-6">
-                                <a href="<?= $canvas_url ?>" class="tool-card" style="border-left-color: <?= $meta['color'] ?>;">
+                                <a href="<?= $canvas_url ?>" hx-boost="false" class="tool-card" style="border-left-color: <?= $meta['color'] ?>;">
                                     <div class="tool-card-icon"><?= $emoji ?></div>
                                     <div class="tool-card-body">
                                         <p class="tool-card-title"><?= sanitize_output($nameClean) ?></p>

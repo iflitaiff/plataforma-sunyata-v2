@@ -70,7 +70,12 @@ $activeSlug = $activeNav ?? '';
                         <small class="text-uppercase text-secondary fw-bold"><?= htmlspecialchars($item['label']) ?></small>
                     </div>
                 <?php else: ?>
+                    <?php
+                    // Pages under /areas/ load SurveyJS and need full page loads (not HTMX partial)
+                    $needsFullLoad = str_contains($item['url'] ?? '', '/areas/');
+                    ?>
                     <a href="<?= BASE_URL . $item['url'] ?>"
+                       <?= $needsFullLoad ? 'hx-boost="false"' : '' ?>
                        class="list-group-item list-group-item-action d-flex align-items-center <?= $activeSlug === $item['slug'] ? 'active' : '' ?>">
                         <i class="ti <?= $item['icon'] ?> me-2"></i>
                         <?= htmlspecialchars($item['label']) ?>
