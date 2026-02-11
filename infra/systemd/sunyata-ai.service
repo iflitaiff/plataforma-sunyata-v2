@@ -9,6 +9,7 @@ User=www-data
 Group=www-data
 WorkingDirectory=/var/www/sunyata/services/ai
 Environment="PATH=/var/www/sunyata/services/ai/.venv/bin:/usr/local/bin:/usr/bin"
+EnvironmentFile=/var/www/sunyata/services/ai/.env
 ExecStart=/var/www/sunyata/services/ai/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
 Restart=always
 RestartSec=5

@@ -1,9 +1,12 @@
 """
 Plataforma Sunyata - AI Microservice
 FastAPI application for AI operations.
+
+Entry point: uvicorn main:app --host 127.0.0.1 --port 8000
 """
 
-import os
+import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -11,12 +14,43 @@ from fastapi import FastAPI
 
 load_dotenv()
 
+from app.config import settings
+from app.database import close_pool, get_pool
+from app.routers import documents, generate, stream
+
+logging.basicConfig(
+    level=logging.DEBUG if settings.debug else logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle."""
+    logger.info("Starting Sunyata AI Service v0.2.0")
+    try:
+        await get_pool()
+        logger.info("Database pool created")
+    except Exception:
+        logger.warning("Database pool failed (non-fatal, some features unavailable)")
+    yield
+    await close_pool()
+    logger.info("Sunyata AI Service stopped")
+
+
 app = FastAPI(
     title="Sunyata AI Service",
-    version="0.1.0",
+    version="0.2.0",
     docs_url="/api/ai/docs",
     redoc_url=None,
+    lifespan=lifespan,
 )
+
+# Mount routers
+app.include_router(generate.router, prefix="/api/ai", tags=["generate"])
+app.include_router(stream.router, prefix="/api/ai", tags=["stream"])
+app.include_router(documents.router, prefix="/api/ai", tags=["documents"])
 
 
 @app.get("/api/ai/health")
@@ -24,10 +58,10 @@ async def health():
     return {
         "status": "ok",
         "service": "sunyata-ai",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "checks": {
-            "anthropic_key": bool(os.getenv("ANTHROPIC_API_KEY")),
-            "database_url": bool(os.getenv("DATABASE_URL")),
+            "anthropic_key": bool(settings.anthropic_api_key),
+            "database_url": bool(settings.database_url),
         },
     }
