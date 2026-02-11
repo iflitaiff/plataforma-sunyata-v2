@@ -1,34 +1,29 @@
 <?php
 /**
- * Admin Header Component — Tabler-based.
+ * Admin Layout — Tabler dark navbar + admin sidebar + content.
  *
- * This is a compatibility shim: existing admin pages include this file.
- * It opens the admin layout with Tabler. Pairs with admin-footer.php.
- *
- * Expects: $pageTitle (string), optionally $stats['pending_requests'] (int)
+ * Variables expected:
+ *   $pageTitle  (string)  — page title
+ *   $headExtra  (string)  — extra <head> HTML (optional)
+ *   $activeNav  (string)  — active sidebar item slug (optional)
  */
 
 use Sunyata\Core\Database;
 
-// Get pending requests count for badge
+// Pending requests badge
 $pending_requests = 0;
-if (isset($stats['pending_requests'])) {
-    $pending_requests = $stats['pending_requests'];
-} else {
-    try {
-        $db_temp = Database::getInstance();
-        $result = $db_temp->fetchOne("SELECT COUNT(*) as count FROM vertical_access_requests WHERE status = 'pending'");
-        $pending_requests = $result['count'] ?? 0;
-    } catch (\Exception $e) {
-        // non-fatal
-    }
+try {
+    $db_temp = Database::getInstance();
+    $result = $db_temp->fetchOne("SELECT COUNT(*) as count FROM vertical_access_requests WHERE status = 'pending'");
+    $pending_requests = $result['count'] ?? 0;
+} catch (\Exception $e) {
+    // non-fatal
 }
 
-// Determine active page
-$current_page = basename($_SERVER['PHP_SELF'], '.php');
-if ($current_page === 'index') {
-    $current_page = 'dashboard';
-}
+$current_page = $activeNav ?? basename($_SERVER['PHP_SELF'], '.php');
+if ($current_page === 'index') $current_page = 'dashboard';
+
+$bodyClass = 'layout-fluid';
 
 $adminNavItems = [
     ['slug' => 'dashboard',         'icon' => 'ti-dashboard',          'label' => 'Dashboard',           'url' => '/admin/'],
@@ -43,20 +38,9 @@ $adminNavItems = [
     ['slug' => 'audit-logs',        'icon' => 'ti-file-text',         'label' => 'Logs Auditoria',      'url' => '/admin/audit-logs.php'],
     ['slug' => 'system-logs',       'icon' => 'ti-terminal',          'label' => 'System Logs',         'url' => '/admin/system-logs.php'],
 ];
-?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?? 'Admin' ?> - <?= APP_NAME ?></title>
 
-    <!-- Tabler CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/css/tabler.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/sunyata-theme.css">
-</head>
-<body class="layout-fluid">
+$contentCallback = function () use (&$pageContent, $current_page, $adminNavItems) {
+?>
     <div class="page">
         <!-- Admin Navbar -->
         <header class="navbar navbar-expand-md navbar-dark d-print-none" data-bs-theme="dark">
@@ -67,17 +51,17 @@ $adminNavItems = [
 
                 <a href="<?= BASE_URL ?>/admin/" class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
                     <i class="ti ti-shield-lock me-2"></i>
-                    <span class="fw-bold d-none d-sm-inline">Admin - <?= APP_NAME ?></span>
-                    <span class="fw-bold d-inline d-sm-none">Admin</span>
+                    <span class="fw-bold">Admin - <?= APP_NAME ?></span>
                 </a>
 
                 <div class="navbar-nav flex-row order-md-last">
-                    <a class="nav-link" href="<?= BASE_URL ?>/dashboard.php">
+                    <a class="nav-link" href="<?= BASE_URL ?>/dashboard.php" hx-boost="false">
                         <i class="ti ti-arrow-left me-1"></i>
                         <span class="d-none d-sm-inline">Voltar ao Portal</span>
                     </a>
                 </div>
 
+                <!-- Mobile nav collapse -->
                 <div class="collapse navbar-collapse" id="admin-navbar">
                     <div class="d-md-none py-2">
                         <?php foreach ($adminNavItems as $item): ?>
@@ -121,3 +105,16 @@ $adminNavItems = [
 
                         <!-- Main Content -->
                         <div class="col-md-9 col-lg-10">
+                            <div id="page-content">
+                                <?php if (isset($pageContent)) call_user_func($pageContent); ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php
+};
+
+include __DIR__ . '/base.php';

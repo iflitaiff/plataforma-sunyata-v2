@@ -1,0 +1,105 @@
+/*
+ * SurveyJS + Tabler harmonization
+ * Ensures SurveyJS forms look consistent within Tabler cards.
+ */
+
+/* Container */
+.sv-root-modern {
+    --primary: var(--tblr-primary) !important;
+    --primary-light: rgba(var(--tblr-primary-rgb), 0.1) !important;
+    font-family: var(--tblr-font-sans-serif) !important;
+}
+
+/* Input fields match Tabler form-control */
+.sv-root-modern .sv-text,
+.sv-root-modern .sv-comment,
+.sv-root-modern .sv-dropdown {
+    border: 1px solid var(--tblr-border-color) !important;
+    border-radius: var(--tblr-border-radius) !important;
+    padding: 0.4375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.4285714286 !important;
+}
+
+.sv-root-modern .sv-text:focus,
+.sv-root-modern .sv-comment:focus,
+.sv-root-modern .sv-dropdown:focus {
+    border-color: var(--tblr-primary) !important;
+    box-shadow: 0 0 0 0.25rem rgba(var(--tblr-primary-rgb), 0.25) !important;
+}
+
+/* Buttons match Tabler btn-primary */
+.sv-root-modern .sv-btn {
+    background-color: var(--tblr-primary) !important;
+    border-color: var(--tblr-primary) !important;
+    border-radius: var(--tblr-border-radius) !important;
+    font-weight: 500 !important;
+    padding: 0.4375rem 1rem !important;
+    font-size: 0.875rem !important;
+}
+.sv-root-modern .sv-btn:hover {
+    opacity: 0.9;
+}
+
+/* Navigation buttons */
+.sv-root-modern .sv-footer {
+    padding: 1rem 0 !important;
+}
+
+/* Question titles */
+.sv-root-modern .sv-question__title {
+    font-weight: 600 !important;
+    color: var(--tblr-body-color) !important;
+    font-size: 0.875rem !important;
+}
+
+/* Required asterisk */
+.sv-root-modern .sv-question__required-text {
+    color: var(--tblr-danger) !important;
+}
+
+/* Error messages */
+.sv-root-modern .sv-question__erbox {
+    color: var(--tblr-danger) !important;
+    font-size: 0.8125rem !important;
+}
+
+/* Panel/Page titles */
+.sv-root-modern .sv-page__title {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    border-bottom: 1px solid var(--tblr-border-color) !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* File upload area */
+.sv-root-modern .sv-file__decorator {
+    border: 2px dashed var(--tblr-border-color) !important;
+    border-radius: var(--tblr-border-radius) !important;
+    padding: 2rem !important;
+    text-align: center;
+}
+.sv-root-modern .sv-file__decorator:hover {
+    border-color: var(--tblr-primary) !important;
+    background: rgba(var(--tblr-primary-rgb), 0.02);
+}
+
+/* Progress bar */
+.sv-root-modern .sv-progress__bar {
+    background-color: var(--tblr-primary) !important;
+}
+
+/* Checkbox & Radio */
+.sv-root-modern .sv-item__control:checked + .sv-item__decorator {
+    background-color: var(--tblr-primary) !important;
+    border-color: var(--tblr-primary) !important;
+}
+
+/* Isolate SurveyJS within a Tabler card */
+.card .sv-root-modern {
+    margin: -1rem;
+}
+.card .sv-root-modern .sv-body {
+    padding: 1rem !important;
+}

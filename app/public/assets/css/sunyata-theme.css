@@ -1,0 +1,109 @@
+/*
+ * Sunyata Platform — Theme overrides for Tabler
+ * Customizes colors, fonts, and spacing.
+ */
+
+:root {
+    /* Brand colors */
+    --tblr-primary: #206bc4;
+    --tblr-primary-rgb: 32, 107, 196;
+    --sunyata-gradient: linear-gradient(135deg, #206bc4 0%, #4299e1 100%);
+
+    /* Layout */
+    --sunyata-sidebar-width: 240px;
+}
+
+/* Page loader for HTMX transitions */
+.page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    height: 3px;
+    background: var(--tblr-primary);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.page-loader.htmx-request {
+    opacity: 1;
+    animation: htmx-loading 1.5s ease-in-out infinite;
+}
+@keyframes htmx-loading {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(0); }
+    100% { transform: translateX(100%); }
+}
+
+/* HTMX loading states */
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: block;
+}
+
+/* SSE streaming result area */
+.stream-result {
+    min-height: 200px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+.stream-result .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background: var(--tblr-primary);
+    margin-left: 2px;
+    animation: blink 0.7s infinite;
+    vertical-align: text-bottom;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Card hover effects */
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+/* Sidebar compact styles */
+.list-group-item.active {
+    border-color: var(--tblr-primary);
+}
+
+/* Toast container for notifications */
+.toast-container {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 9999;
+}
+
+/* Print improvements */
+@media print {
+    .page-header,
+    .navbar,
+    .list-group,
+    .btn {
+        display: none !important;
+    }
+    .stream-result {
+        border: none !important;
+        padding: 0 !important;
+    }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 767px) {
+    .page-header .page-title {
+        font-size: 1.25rem;
+    }
+    .card-body {
+        padding: 0.75rem;
+    }
+}

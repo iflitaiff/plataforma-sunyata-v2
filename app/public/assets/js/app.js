@@ -238,6 +238,42 @@ function debounce(func, wait) {
     };
 }
 
+// ========== HTMX Event Handlers ==========
+
+// Re-initialize tooltips/popovers after HTMX content swap
+document.addEventListener('htmx:afterSwap', function(event) {
+    // Re-init Bootstrap tooltips in new content
+    const tooltips = event.detail.target.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(el => new bootstrap.Tooltip(el));
+
+    // Re-init popovers
+    const popovers = event.detail.target.querySelectorAll('[data-bs-toggle="popover"]');
+    popovers.forEach(el => new bootstrap.Popover(el));
+
+    // Auto-dismiss new alerts
+    const alerts = event.detail.target.querySelectorAll('.alert:not(.alert-warning)');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            try { new bootstrap.Alert(alert).close(); } catch(e) { /* ok */ }
+        }, 5000);
+    });
+});
+
+// Handle HTMX errors gracefully
+document.addEventListener('htmx:responseError', function(event) {
+    const status = event.detail.xhr.status;
+    if (status === 401) {
+        window.location.href = window.location.origin + '/login.php';
+    } else if (status >= 500) {
+        showToast('Erro no servidor. Tente novamente.', 'danger');
+    }
+});
+
+// Update page title after HTMX navigation
+document.addEventListener('htmx:pushedIntoHistory', function(event) {
+    // The new page content should have set the title already via the layout
+});
+
 // Export functions for use in other scripts
 window.SunyataApp = {
     copyPrompt,

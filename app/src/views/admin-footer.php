@@ -1,7 +1,11 @@
-            </div><!-- End Main Content -->
-        </div><!-- End Row -->
-    </div><!-- End Container -->
+                        </div><!-- End Main Content col -->
+                    </div><!-- End Row -->
+                </div><!-- End Container -->
+            </div><!-- End page-body -->
+        </div><!-- End page-wrapper -->
+    </div><!-- End page -->
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Tabler JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0/dist/js/tabler.min.js"></script>
 </body>
 </html>
