@@ -40,7 +40,7 @@ class ConsentManager {
         $sql = "SELECT * FROM consents
                 WHERE user_id = :user_id
                 AND consent_type = :consent_type
-                AND consent_given = 1
+                AND consent_given = TRUE
                 AND revoked_at IS NULL
                 ORDER BY created_at DESC
                 LIMIT 1";
@@ -129,7 +129,7 @@ class ConsentManager {
                 WHERE user_id = :user_id
                 AND consent_type = :consent_type
                 AND consent_version = :version
-                AND consent_given = 1
+                AND consent_given = TRUE
                 AND revoked_at IS NULL
                 LIMIT 1";
 

@@ -38,7 +38,7 @@ $db = Database::getInstance();
 $canvas = $db->fetchOne("
     SELECT id, slug, name, form_config, system_prompt, user_prompt_template, max_questions, canvas_id, current_version
     FROM canvas_templates
-    WHERE slug = :slug AND vertical = 'legal' AND is_active = 1
+    WHERE slug = :slug AND vertical = 'legal' AND is_active = TRUE
 ", ['slug' => $template_slug]);
 
 if (!$canvas) {

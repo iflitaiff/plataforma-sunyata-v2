@@ -81,7 +81,7 @@ try {
     $canvas = $db->fetchOne("
         SELECT id, slug, name, vertical, system_prompt, user_prompt_template, max_questions, form_config, api_params_override
         FROM canvas_templates
-        WHERE id = :id AND is_active = 1
+        WHERE id = :id AND is_active = TRUE
     ", ['id' => $canvasId]);
 
     if (!$canvas) {

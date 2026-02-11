@@ -66,7 +66,7 @@ if (!$show_menu) {
     $canvas = $db->fetchOne("
         SELECT id, slug, name, form_config, system_prompt, user_prompt_template, max_questions
         FROM canvas_templates
-        WHERE slug = :slug AND vertical = 'juridico' AND is_active = 1
+        WHERE slug = :slug AND vertical = 'juridico' AND is_active = TRUE
     ", ['slug' => $selected_aj]);
 
     if (!$canvas) {
@@ -84,7 +84,7 @@ if ($show_menu) {
     $all_templates = $db->fetchAll("
         SELECT id, slug, name
         FROM canvas_templates
-        WHERE vertical = 'juridico' AND is_active = 1 AND slug != 'juridico-geral'
+        WHERE vertical = 'juridico' AND is_active = TRUE AND slug != 'juridico-geral'
         ORDER BY
             CASE slug
                 WHEN 'juridico-livre' THEN 99

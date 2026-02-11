@@ -36,7 +36,7 @@ if (!in_array($user_vertical, $allowed_verticals) && !$is_demo && !$is_admin) {
 $db = Database::getInstance();
 $canvas_list = $db->fetchAll("
     SELECT * FROM canvas
-    WHERE vertical = 'juridico' AND type = 'forms' AND is_active = 1
+    WHERE vertical = 'juridico' AND type = 'forms' AND is_active = TRUE
     ORDER BY display_order ASC
 ");
 

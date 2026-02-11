@@ -37,7 +37,7 @@ $db = Database::getInstance();
 // Buscar Canvas
 $canvas = $db->fetchOne("
     SELECT * FROM canvas
-    WHERE id = :id AND vertical = 'legal' AND is_active = 1
+    WHERE id = :id AND vertical = 'legal' AND is_active = TRUE
 ", ['id' => $canvas_id]);
 
 if (!$canvas) {
@@ -48,7 +48,7 @@ if (!$canvas) {
 // Buscar Formulários deste Canvas
 $formularios = $db->fetchAll("
     SELECT * FROM canvas_templates
-    WHERE canvas_id = :canvas_id AND is_active = 1
+    WHERE canvas_id = :canvas_id AND is_active = TRUE
     ORDER BY name ASC
 ", ['canvas_id' => $canvas_id]);
 

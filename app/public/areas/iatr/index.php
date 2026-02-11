@@ -34,13 +34,13 @@ if ($user_vertical !== 'iatr' && !$is_demo && !$is_admin) {
 $db = Database::getInstance();
 $verticalData = $db->fetchOne("
     SELECT name FROM verticals
-    WHERE slug = 'iatr' AND is_active = 1
+    WHERE slug = 'iatr' AND is_active = TRUE
 ");
 
 // Buscar Canvas da vertical IATR do banco
 $canvas_list = $db->fetchAll("
     SELECT * FROM canvas
-    WHERE vertical = 'iatr' AND is_active = 1
+    WHERE vertical = 'iatr' AND is_active = TRUE
     ORDER BY display_order ASC
 ");
 

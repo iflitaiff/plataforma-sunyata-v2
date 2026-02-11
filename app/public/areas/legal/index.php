@@ -34,13 +34,13 @@ if ($user_vertical !== 'legal' && !$is_demo && !$is_admin) {
 $db = Database::getInstance();
 $verticalData = $db->fetchOne("
     SELECT name FROM verticals
-    WHERE slug = 'legal' AND is_active = 1
+    WHERE slug = 'legal' AND is_active = TRUE
 ");
 
 // Buscar Canvas da vertical do banco
 $canvas_list = $db->fetchAll("
     SELECT * FROM canvas
-    WHERE vertical = 'legal' AND is_active = 1
+    WHERE vertical = 'legal' AND is_active = TRUE
     ORDER BY display_order ASC
 ");
 

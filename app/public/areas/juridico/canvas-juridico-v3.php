@@ -68,7 +68,7 @@ if (!$show_menu) {
     $canvas = $db->fetchOne("
         SELECT id, slug, name, form_config, system_prompt, user_prompt_template, max_questions
         FROM canvas_templates
-        WHERE slug = :slug AND slug LIKE '%-manus-test' AND is_active = 1
+        WHERE slug = :slug AND slug LIKE '%-manus-test' AND is_active = TRUE
     ", ['slug' => $selected_aj]);
 
     if (!$canvas) {
@@ -86,7 +86,7 @@ if ($show_menu) {
     $all_templates = $db->fetchAll("
         SELECT id, slug, name
         FROM canvas_templates
-        WHERE slug LIKE '%-manus-test' AND is_active = 1
+        WHERE slug LIKE '%-manus-test' AND is_active = TRUE
         ORDER BY
             CASE
                 WHEN slug LIKE '%-livre-manus-test' THEN 99

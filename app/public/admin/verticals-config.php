@@ -38,7 +38,7 @@ $vertical_id = $_GET['id'] ?? null;
 
 if (!$vertical_id) {
     // Listar verticais disponíveis
-    $verticals = $db->fetchAll("SELECT id, slug, name FROM verticals WHERE is_active = 1 ORDER BY name");
+    $verticals = $db->fetchAll("SELECT id, slug, name FROM verticals WHERE is_active = TRUE ORDER BY name");
     $pageTitle = 'Configuração de Verticais';
 } else {
     // Buscar vertical específica

@@ -34,13 +34,13 @@ if ($user_vertical !== 'prompt-builder' && !$is_demo && !$is_admin) {
 $db = Database::getInstance();
 $verticalData = $db->fetchOne("
     SELECT name FROM verticals
-    WHERE slug = 'prompt-builder' AND is_active = 1
+    WHERE slug = 'prompt-builder' AND is_active = TRUE
 ");
 
 // Buscar Canvas/ferramentas da vertical prompt-builder do banco
 $canvas_list = $db->fetchAll("
     SELECT * FROM canvas
-    WHERE vertical = 'prompt-builder' AND is_active = 1
+    WHERE vertical = 'prompt-builder' AND is_active = TRUE
     ORDER BY display_order ASC
 ");
 

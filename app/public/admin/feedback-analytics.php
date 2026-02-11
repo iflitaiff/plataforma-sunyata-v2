@@ -111,7 +111,7 @@ $feedbacks = $db->fetchAll("
 $canvasList = $db->fetchAll("
     SELECT id, name
     FROM canvas_templates
-    WHERE is_active = 1
+    WHERE is_active = TRUE
     ORDER BY name
 ");
 
