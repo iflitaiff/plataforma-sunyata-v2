@@ -32,11 +32,8 @@ define('PUBLIC_PATH', BASE_PATH . '/public');
 define('SRC_PATH', BASE_PATH . '/src');
 define('CONFIG_PATH', BASE_PATH . '/config');
 
-// URLs (override via env for dev/staging)
-define('BASE_URL', getenv('BASE_URL') ?: 'https://portal.sunyataconsulting.com');
-define('CALLBACK_URL', BASE_URL . '/callback.php');
-
 // Load environment variables from .env.local (if exists)
+// MUST run before BASE_URL so env overrides take effect
 $envFile = BASE_PATH . '/.env.local';
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -57,6 +54,10 @@ if (file_exists($envFile)) {
         }
     }
 }
+
+// URLs (override via env for dev/staging)
+define('BASE_URL', getenv('BASE_URL') ?: 'https://portal.sunyataconsulting.com');
+define('CALLBACK_URL', BASE_URL . '/callback.php');
 
 // Load secrets
 $secretsFile = CONFIG_PATH . '/secrets.php';
