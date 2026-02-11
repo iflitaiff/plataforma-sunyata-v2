@@ -48,6 +48,10 @@ if (!$canvas) {
 
 // Decodificar form_config JSON
 $formConfig = json_decode($canvas['form_config'], true);
+$formConfigError = null;
+if ($formConfig === null && json_last_error() !== JSON_ERROR_NONE) {
+    $formConfigError = json_last_error_msg();
+}
 
 // Detectar modo debug
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] == '1';
@@ -57,27 +61,12 @@ $mock_mode_active = $_SESSION['canvas_mock_mode'] ?? false;
 
 $canvasVersion = $canvas['current_version'] ?? 1;
 $pageTitle = $canvas['name'];
-?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= sanitize_output($pageTitle) ?> (v<?= $canvasVersion ?>.0) - <?= APP_NAME ?></title>
+$activeNav = 'iatr';
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- SurveyJS CSS (v2.4.1 - latest stable) -->
-    <link href="https://unpkg.com/survey-core@2.4.1/survey-core.min.css" type="text/css" rel="stylesheet">
-
-    <!-- Marked.js for Markdown rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-
-    <!-- DOMPurify for HTML sanitization -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
-
-    <style>
+$headExtra = <<<'HEADEXTRA'
+<link href="https://unpkg.com/survey-core@2.4.1/survey-core.min.css" type="text/css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+<style>
         body {
             background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
             min-height: 100vh;
@@ -354,9 +343,18 @@ $pageTitle = $canvas['name'];
             color: #333;
         }
     </style>
-</head>
-<body>
+HEADEXTRA;
+
+$pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_mode, $mock_mode_active, $formConfig, $formConfigError) {
+?>
     <div class="container-custom">
+
+        <?php if ($formConfigError): ?>
+            <div class="alert alert-danger">
+                <strong>Erro no template do formulário.</strong><br>
+                O JSON do SurveyJS está inválido: <?= sanitize_output($formConfigError) ?>
+            </div>
+        <?php endif; ?>
         <!-- Navegação Superior -->
         <div class="canvas-nav">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -476,9 +474,6 @@ $pageTitle = $canvas['name'];
             </div>
         </div>
     </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- SurveyJS (v2.4.1 - latest stable) -->
     <script src="https://unpkg.com/survey-core@2.4.1/survey.core.min.js"></script>
@@ -914,5 +909,7 @@ $pageTitle = $canvas['name'];
             }
         }
     </script>
-</body>
-</html>
+<?php
+};
+
+require __DIR__ . '/../../../src/views/layouts/user.php';

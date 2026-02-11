@@ -65,120 +65,117 @@ $categoryOrder = ['geral', 'analise', 'documentos', 'gestao', 'ferramentas'];
 
 $verticalName = $verticalData['name'] ?? 'IATR';
 $pageTitle = $verticalName;
+$activeNav = 'iatr';
+
+$headExtra = <<<HTML
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    .container-custom {
+        max-width: 1200px;
+    }
+    .header {
+        background: white;
+        padding: 1.5rem 2rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    .header h1 {
+        color: #1a365d;
+        margin-bottom: 0.25rem;
+        font-size: 1.8rem;
+    }
+    .header p {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    .category-section {
+        margin-bottom: 1.5rem;
+    }
+    .category-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid rgba(255,255,255,0.3);
+    }
+    .category-header h4 {
+        color: white;
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    .category-header i {
+        color: white;
+        font-size: 1.1rem;
+    }
+    .category-count {
+        color: rgba(255,255,255,0.7);
+        font-size: 0.8rem;
+        margin-left: auto;
+    }
+    .tool-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        transition: all 0.2s ease;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        border-left: 4px solid transparent;
+    }
+    .tool-card:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        color: inherit;
+    }
+    .tool-card-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        width: 2.5rem;
+        text-align: center;
+    }
+    .tool-card-body {
+        flex: 1;
+        min-width: 0;
+    }
+    .tool-card-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1a365d;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .tool-card-arrow {
+        color: #ccc;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+    .tool-card:hover .tool-card-arrow {
+        color: #667eea;
+    }
+    .nav-buttons {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+</style>
+HTML;
+
+$pageContent = function () use ($verticalName, $canvas_list, $categories, $categoryOrder, $categoryMeta) {
 ?>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?> - <?= APP_NAME ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 2rem 0;
-        }
-        .container-custom {
-            max-width: 1200px;
-        }
-        .header {
-            background: white;
-            padding: 1.5rem 2rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-        .header h1 {
-            color: #1a365d;
-            margin-bottom: 0.25rem;
-            font-size: 1.8rem;
-        }
-        .header p {
-            color: #6c757d;
-            margin-bottom: 0;
-        }
-        .category-section {
-            margin-bottom: 1.5rem;
-        }
-        .category-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid rgba(255,255,255,0.3);
-        }
-        .category-header h4 {
-            color: white;
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-        .category-header i {
-            color: white;
-            font-size: 1.1rem;
-        }
-        .category-count {
-            color: rgba(255,255,255,0.7);
-            font-size: 0.8rem;
-            margin-left: auto;
-        }
-        .tool-card {
-            background: white;
-            border-radius: 10px;
-            padding: 1rem 1.25rem;
-            margin-bottom: 0.75rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            transition: all 0.2s ease;
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            border-left: 4px solid transparent;
-        }
-        .tool-card:hover {
-            transform: translateX(4px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-            color: inherit;
-        }
-        .tool-card-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-            width: 2.5rem;
-            text-align: center;
-        }
-        .tool-card-body {
-            flex: 1;
-            min-width: 0;
-        }
-        .tool-card-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #1a365d;
-            margin: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .tool-card-arrow {
-            color: #ccc;
-            font-size: 0.85rem;
-            flex-shrink: 0;
-        }
-        .tool-card:hover .tool-card-arrow {
-            color: #667eea;
-        }
-        .nav-buttons {
-            text-align: center;
-            margin-top: 1.5rem;
-        }
-    </style>
-</head>
-<body>
     <div class="container container-custom">
         <!-- Header -->
         <div class="header">
@@ -267,7 +264,7 @@ $pageTitle = $verticalName;
             </div>
         </div>
     </div>
+<?php
+};
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+require __DIR__ . '/../../../src/views/layouts/user.php';
