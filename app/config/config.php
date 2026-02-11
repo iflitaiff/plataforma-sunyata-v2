@@ -32,8 +32,8 @@ define('PUBLIC_PATH', BASE_PATH . '/public');
 define('SRC_PATH', BASE_PATH . '/src');
 define('CONFIG_PATH', BASE_PATH . '/config');
 
-// URLs
-define('BASE_URL', 'https://portal.sunyataconsulting.com');
+// URLs (override via env for dev/staging)
+define('BASE_URL', getenv('BASE_URL') ?: 'https://portal.sunyataconsulting.com');
 define('CALLBACK_URL', BASE_URL . '/callback.php');
 
 // Load environment variables from .env.local (if exists)
@@ -77,14 +77,22 @@ if (file_exists($localDbFile)) {
 // Note: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET are already defined in secrets.php
 // No need to redefine them here
 
-// Database charset (additional config not in secrets.php)
-if (!defined('DB_CHARSET')) {
-    define('DB_CHARSET', 'utf8mb4');
+// Database port (PostgreSQL default: 5432)
+if (!defined('DB_PORT')) {
+    define('DB_PORT', '5432');
 }
 
 // Session configuration
 define('SESSION_LIFETIME', 3600 * 24); // 24 hours
 define('SESSION_NAME', 'SUNYATA_SESSION');
+
+// Redis session handler (enabled via env REDIS_SESSION_HOST)
+$redisHost = getenv('REDIS_SESSION_HOST');
+if ($redisHost) {
+    $redisPort = getenv('REDIS_SESSION_PORT') ?: '6379';
+    ini_set('session.save_handler', 'redis');
+    ini_set('session.save_path', "tcp://{$redisHost}:{$redisPort}");
+}
 
 // LGPD Configuration
 define('CONSENT_VERSION', '1.0.0');

@@ -1,6 +1,6 @@
 <?php
 /**
- * Database Connection Handler
+ * Database Connection Handler — PostgreSQL
  *
  * @package Sunyata\Core
  */
@@ -20,24 +20,26 @@ class Database {
     }
 
     /**
-     * Estabelece conexão com o banco de dados
+     * Estabelece conexão com o banco de dados (PostgreSQL)
      */
     private function connect(): void {
         try {
             $this->dsn = sprintf(
-                'mysql:host=%s;dbname=%s;charset=%s',
+                'pgsql:host=%s;port=%s;dbname=%s',
                 DB_HOST,
-                DB_NAME,
-                DB_CHARSET
+                defined('DB_PORT') ? DB_PORT : '5432',
+                DB_NAME
             );
 
             $this->pdo = new PDO($this->dsn, DB_USER, DB_PASS, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_CASE => PDO::CASE_LOWER,
-                PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
+                PDO::ATTR_EMULATE_PREPARES => true, // Required for LIMIT/OFFSET with PDO+PostgreSQL
             ]);
+
+            // Set timezone to match PHP
+            $this->pdo->exec("SET timezone = 'America/Sao_Paulo'");
         } catch (PDOException $e) {
             error_log('Database connection failed: ' . $e->getMessage());
             throw new \Exception('Database connection error');
@@ -75,18 +77,23 @@ class Database {
         return $this->pdo;
     }
 
+    /**
+     * Prepare a statement (used by ConversationService)
+     */
+    public function prepare($sql) {
+        return $this->pdo->prepare($sql);
+    }
+
     public function query($sql, $params = []) {
         try {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            // Verifica se é erro de conexão perdida (MySQL server has gone away)
-            if (strpos($e->getMessage(), '2006') !== false ||
-                strpos($e->getMessage(), 'server has gone away') !== false ||
-                strpos($e->getMessage(), '2013') !== false) {
-
-                // Tenta reconectar e executar novamente
+            // PostgreSQL connection error SQLSTATE codes
+            $sqlState = $e->getCode();
+            if (in_array($sqlState, ['08000', '08003', '08006', '57P01'])) {
+                // Connection exception / admin shutdown
                 error_log('Database connection lost, attempting reconnect...');
                 $this->reconnect();
 
@@ -122,7 +129,8 @@ class Database {
         $sql = "INSERT INTO $table ($fields) VALUES ($placeholders)";
         $this->query($sql, $data);
 
-        return $this->pdo->lastInsertId();
+        // PostgreSQL lastInsertId needs sequence name
+        return $this->pdo->lastInsertId($table . '_id_seq');
     }
 
     public function update($table, $data, $where, $whereParams = []) {
@@ -140,6 +148,20 @@ class Database {
         $stmt = $this->query($sql, $whereParams);
 
         return $stmt->rowCount();
+    }
+
+    /**
+     * Execute a raw SQL statement (used by canvas-clone-process etc.)
+     */
+    public function execute($sql, $params = []) {
+        return $this->query($sql, $params);
+    }
+
+    /**
+     * Get last insert ID with explicit sequence name
+     */
+    public function lastInsertId($sequence = null) {
+        return $this->pdo->lastInsertId($sequence);
     }
 
     public function beginTransaction() {

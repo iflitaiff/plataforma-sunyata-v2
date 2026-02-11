@@ -45,7 +45,7 @@ try {
     $db = Database::getInstance();
 
     // Remover sessões antigas (mais de 24h)
-    $deleted = $db->query("DELETE FROM sessions WHERE last_activity < DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    $deleted = $db->query("DELETE FROM sessions WHERE last_activity < NOW() - INTERVAL '24 hours'");
     echo "<p>✅ Sessões antigas removidas do banco</p>";
 
 } catch (Exception $e) {

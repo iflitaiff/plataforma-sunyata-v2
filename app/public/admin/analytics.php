@@ -29,7 +29,7 @@ $top_tools = $db->fetchAll("
         COUNT(*) as total_acessos,
         COUNT(DISTINCT user_id) as usuarios_unicos
     FROM tool_access_logs
-    WHERE accessed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    WHERE accessed_at >= NOW() - INTERVAL '30 days'
     GROUP BY tool_slug
     ORDER BY total_acessos DESC
     LIMIT 10
@@ -42,7 +42,7 @@ $access_by_vertical = $db->fetchAll("
         COUNT(*) as total_acessos,
         COUNT(DISTINCT user_id) as usuarios_unicos
     FROM tool_access_logs
-    WHERE accessed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    WHERE accessed_at >= NOW() - INTERVAL '30 days'
         AND vertical IS NOT NULL
     GROUP BY vertical
     ORDER BY total_acessos DESC
@@ -93,7 +93,7 @@ $stats = [
     'total_users' => $db->fetchOne("SELECT COUNT(*) as count FROM users")['count'] ?? 0,
     'users_completed_onboarding' => $db->fetchOne("SELECT COUNT(*) as count FROM users WHERE completed_onboarding = TRUE")['count'] ?? 0,
     'total_tool_accesses' => $db->fetchOne("SELECT COUNT(*) as count FROM tool_access_logs")['count'] ?? 0,
-    'total_accesses_30d' => $db->fetchOne("SELECT COUNT(*) as count FROM tool_access_logs WHERE accessed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)")['count'] ?? 0
+    'total_accesses_30d' => $db->fetchOne("SELECT COUNT(*) as count FROM tool_access_logs WHERE accessed_at >= NOW() - INTERVAL '30 days'")['count'] ?? 0
 ];
 
 // Nomes amigáveis

@@ -68,7 +68,7 @@ class Contract {
         $sql = "SELECT * FROM contracts
                 WHERE user_id = :user_id
                 AND status = 'active'
-                AND (end_date IS NULL OR end_date >= CURDATE())
+                AND (end_date IS NULL OR end_date >= CURRENT_DATE)
                 ORDER BY created_at DESC";
 
         $contracts = $this->db->fetchAll($sql, ['user_id' => $userId]);
@@ -120,7 +120,7 @@ class Contract {
         $sql = "SELECT COUNT(*) as count FROM contracts
                 WHERE id = :id
                 AND status = 'active'
-                AND (end_date IS NULL OR end_date >= CURDATE())";
+                AND (end_date IS NULL OR end_date >= CURRENT_DATE)";
 
         $result = $this->db->fetchOne($sql, ['id' => $id]);
         return $result['count'] > 0;
@@ -134,7 +134,7 @@ class Contract {
                 SET status = 'expired'
                 WHERE status = 'active'
                 AND end_date IS NOT NULL
-                AND end_date < CURDATE()";
+                AND end_date < CURRENT_DATE";
 
         $stmt = $this->db->query($sql);
         return $stmt->rowCount();

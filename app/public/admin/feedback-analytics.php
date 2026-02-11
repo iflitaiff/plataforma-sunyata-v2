@@ -86,7 +86,7 @@ if ($filterRating) {
 }
 
 if ($filterDate) {
-    $where[] = "DATE(ff.created_at) = :date";
+    $where[] = "ff.created_at::date = :date";
     $params['date'] = $filterDate;
 }
 

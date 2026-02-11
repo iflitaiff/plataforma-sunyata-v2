@@ -82,7 +82,7 @@ class User {
         $sql = "SELECT * FROM contracts
                 WHERE user_id = :user_id
                 AND status = 'active'
-                AND (end_date IS NULL OR end_date >= CURDATE())
+                AND (end_date IS NULL OR end_date >= CURRENT_DATE)
                 ORDER BY created_at DESC";
 
         return $this->db->fetchAll($sql, ['user_id' => $userId]);
@@ -96,7 +96,7 @@ class User {
                 WHERE user_id = :user_id
                 AND vertical = :vertical
                 AND status = 'active'
-                AND (end_date IS NULL OR end_date >= CURDATE())";
+                AND (end_date IS NULL OR end_date >= CURRENT_DATE)";
 
         $result = $this->db->fetchOne($sql, [
             'user_id' => $userId,

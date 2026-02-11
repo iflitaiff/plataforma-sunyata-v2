@@ -63,7 +63,7 @@ class FileUploadService {
             $recentUploadsCount = $this->db->fetchOne(
                 "SELECT COUNT(*) as count FROM user_files
                  WHERE user_id = :user_id
-                 AND uploaded_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)",
+                 AND uploaded_at > NOW() - INTERVAL '1 hour'",
                 ['user_id' => $userId]
             )['count'] ?? 0;
 

@@ -242,7 +242,8 @@ class ConversationService {
                     $attachedCount++;
                 } catch (Exception $e) {
                     // Duplicate key - file already attached, continue
-                    if (strpos($e->getMessage(), 'Duplicate') === false) {
+                    if (strpos($e->getMessage(), 'Duplicate') === false &&
+                        strpos($e->getMessage(), 'duplicate key') === false) {
                         throw $e; // Other error, propagate
                     }
                 }
@@ -350,12 +351,12 @@ class ConversationService {
         try {
             // Count user messages in the last hour
             $stmt = $this->db->prepare(
-                'SELECT COUNT(*) as count
+                "SELECT COUNT(*) as count
                  FROM conversation_messages cm
                  INNER JOIN conversations c ON cm.conversation_id = c.id
-                 WHERE c.user_id = ?
-                   AND cm.role = "user"
-                   AND cm.created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)'
+                 WHERE c.user_id = $1
+                   AND cm.role = 'user'
+                   AND cm.created_at > NOW() - INTERVAL '1 hour'"
             );
             $stmt->execute([$userId]);
             $result = $stmt->fetch(\PDO::FETCH_ASSOC);

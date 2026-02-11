@@ -3,6 +3,7 @@ app/config/secrets.php
 app/config/auth.php
 .env
 .env.*
+!.env.example
 
 # PHP
 vendor/

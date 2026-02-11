@@ -562,10 +562,10 @@ class ClaudeService {
 
         // Últimos 7 dias
         $stats['last_7_days'] = $this->db->fetchAll(
-            "SELECT DATE(created_at) as date, COUNT(*) as count, SUM(tokens_total) as tokens
+            "SELECT created_at::date as date, COUNT(*) as count, SUM(tokens_total) as tokens
              FROM prompt_history
-             WHERE status = 'success' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-             GROUP BY DATE(created_at)
+             WHERE status = 'success' AND created_at >= NOW() - INTERVAL '7 days'
+             GROUP BY created_at::date
              ORDER BY date DESC"
         );
 

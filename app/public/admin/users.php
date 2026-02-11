@@ -90,7 +90,7 @@ if (!empty($userIds)) {
          FROM prompt_history
          WHERE user_id IN ($placeholders)
            AND status = 'success'
-           AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+           AND created_at >= NOW() - INTERVAL '30 days'
          GROUP BY user_id",
         array_values($userIds)
     );

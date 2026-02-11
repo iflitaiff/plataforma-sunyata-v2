@@ -85,7 +85,7 @@ $stats['pending_requests'] = $result['count'];
 $result = $db->fetchOne("
     SELECT COUNT(*) as count
     FROM users
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    WHERE created_at >= NOW() - INTERVAL '7 days'
 ");
 $stats['new_users_week'] = $result['count'];
 
@@ -111,8 +111,8 @@ try {
             COALESCE(AVG(response_time_ms), 0) as avg_response_time
         FROM prompt_history
         WHERE status = 'success'
-        AND MONTH(created_at) = MONTH(NOW())
-        AND YEAR(created_at) = YEAR(NOW())
+        AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
+        AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
     ");
 
     $stats['api_month'] = [
@@ -128,14 +128,14 @@ try {
     // Custo hoje
     $todayCost = $db->fetchOne("
         SELECT COALESCE(SUM(cost_usd), 0) as cost FROM prompt_history
-        WHERE status = 'success' AND DATE(created_at) = CURDATE()
+        WHERE status = 'success' AND created_at::date = CURRENT_DATE
     ");
     $stats['api_today'] = $todayCost['cost'] ?? 0;
 
     // Custo ontem (para comparação de trend)
     $yesterdayCost = $db->fetchOne("
         SELECT COALESCE(SUM(cost_usd), 0) as cost FROM prompt_history
-        WHERE status = 'success' AND DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+        WHERE status = 'success' AND created_at::date = CURRENT_DATE - INTERVAL '1 day'
     ");
     $stats['api_yesterday'] = $yesterdayCost['cost'] ?? 0;
 
@@ -148,8 +148,8 @@ try {
             COALESCE(SUM(tokens_total), 0) as tokens
         FROM prompt_history
         WHERE status = 'success'
-        AND MONTH(created_at) = MONTH(NOW())
-        AND YEAR(created_at) = YEAR(NOW())
+        AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
+        AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
         GROUP BY claude_model
         ORDER BY cost DESC
     ");
@@ -163,8 +163,8 @@ try {
             COALESCE(SUM(tokens_total), 0) as tokens
         FROM prompt_history
         WHERE status = 'success'
-        AND MONTH(created_at) = MONTH(NOW())
-        AND YEAR(created_at) = YEAR(NOW())
+        AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
+        AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
         GROUP BY vertical
         ORDER BY cost DESC
     ");
@@ -181,8 +181,8 @@ try {
         FROM prompt_history ph
         INNER JOIN users u ON ph.user_id = u.id
         WHERE ph.status = 'success'
-        AND MONTH(ph.created_at) = MONTH(NOW())
-        AND YEAR(ph.created_at) = YEAR(NOW())
+        AND EXTRACT(MONTH FROM ph.created_at) = EXTRACT(MONTH FROM NOW())
+        AND EXTRACT(YEAR FROM ph.created_at) = EXTRACT(YEAR FROM NOW())
         GROUP BY u.id, u.name, u.email
         ORDER BY total_cost DESC
         LIMIT 5
@@ -191,13 +191,13 @@ try {
     // Trend últimos 7 dias
     $stats['api_7day_trend'] = $db->fetchAll("
         SELECT
-            DATE(created_at) as date,
+            created_at::date as date,
             COUNT(*) as prompts,
             COALESCE(SUM(cost_usd), 0) as cost
         FROM prompt_history
         WHERE status = 'success'
-        AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-        GROUP BY DATE(created_at)
+        AND created_at >= CURRENT_DATE - INTERVAL '7 days'
+        GROUP BY created_at::date
         ORDER BY date ASC
     ");
 
@@ -207,8 +207,8 @@ try {
             COUNT(*) as total_requests,
             SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count
         FROM prompt_history
-        WHERE MONTH(created_at) = MONTH(NOW())
-        AND YEAR(created_at) = YEAR(NOW())
+        WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
+        AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())
     ");
     $stats['api_error_rate'] = $errorStats['total_requests'] > 0
         ? ($errorStats['error_count'] / $errorStats['total_requests']) * 100

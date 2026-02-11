@@ -64,12 +64,12 @@ if ($filters['status']) {
 }
 
 if ($filters['date_from']) {
-    $where[] = "DATE(ph.created_at) >= :date_from";
+    $where[] = "ph.created_at::date >= :date_from";
     $params['date_from'] = $filters['date_from'];
 }
 
 if ($filters['date_to']) {
-    $where[] = "DATE(ph.created_at) <= :date_to";
+    $where[] = "ph.created_at::date <= :date_to";
     $params['date_to'] = $filters['date_to'];
 }
 

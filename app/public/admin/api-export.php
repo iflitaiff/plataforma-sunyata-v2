@@ -47,8 +47,8 @@ try {
         SELECT
             ph.id,
             ph.created_at,
-            DATE(ph.created_at) as date,
-            TIME(ph.created_at) as time,
+            ph.created_at::date as date,
+            ph.created_at::time as time,
             u.name as user_name,
             u.email as user_email,
             ph.vertical,
@@ -63,8 +63,8 @@ try {
             ph.error_message
         FROM prompt_history ph
         LEFT JOIN users u ON ph.user_id = u.id
-        WHERE DATE(ph.created_at) >= :start_date
-        AND DATE(ph.created_at) <= :end_date
+        WHERE ph.created_at::date >= :start_date
+        AND ph.created_at::date <= :end_date
         ORDER BY ph.created_at DESC
     ", [
         ':start_date' => $startDate,

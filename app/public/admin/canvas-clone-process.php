@@ -135,7 +135,7 @@ try {
         'is_active' => $is_active
     ]);
 
-    $new_id = $db->lastInsertId();
+    $new_id = $db->lastInsertId('canvas_templates_id_seq');
 
     // Log da ação
     error_log(sprintf(

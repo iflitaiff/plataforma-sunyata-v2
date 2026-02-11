@@ -158,14 +158,14 @@ $totals = $db->fetchOne("
 
 // Mensal (últimos 6 meses)
 $monthly = $db->fetchAll("
-    SELECT DATE_FORMAT(created_at, '%Y-%m') as month,
+    SELECT to_char(created_at, 'YYYY-MM') as month,
            COUNT(*) as submissions,
            COALESCE(SUM(tokens_total), 0) as tokens,
            COALESCE(SUM(cost_usd), 0) as cost
     FROM prompt_history
     WHERE user_id = :uid AND status = 'success'
-      AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-    GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      AND created_at >= NOW() - INTERVAL '6 months'
+    GROUP BY to_char(created_at, 'YYYY-MM')
     ORDER BY month DESC
 ", ['uid' => $userId]);
 
