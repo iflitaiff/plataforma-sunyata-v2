@@ -159,8 +159,9 @@ $pageTitle = $verticalName;
                 <?php foreach ($canvas_list as $canvas): ?>
                     <div class="col-md-12">
                         <?php
+                        // Rota B: link direto para formulario.php (sem agrupador canvas)
                         if ($canvas['type'] === 'forms') {
-                            $canvas_url = BASE_URL . "/areas/nicolay-advogados/canvas.php?id=" . $canvas['id'];
+                            $canvas_url = BASE_URL . "/areas/nicolay-advogados/formulario.php?template=" . $canvas['slug'];
                         } elseif ($canvas['type'] === 'page') {
                             $canvas_url = BASE_URL . $canvas['page_url'];
                         } else {

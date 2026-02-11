@@ -36,7 +36,7 @@ $db = Database::getInstance();
 
 // Buscar template
 $canvas = $db->fetchOne("
-    SELECT id, slug, name, form_config, system_prompt, user_prompt_template, max_questions, canvas_id, current_version
+    SELECT id, slug, name, form_config, system_prompt, user_prompt_template, max_questions, current_version
     FROM canvas_templates
     WHERE slug = :slug AND vertical = 'iatr' AND is_active = TRUE
 ", ['slug' => $template_slug]);
@@ -361,18 +361,9 @@ $pageTitle = $canvas['name'];
         <div class="canvas-nav">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div>
-                    <?php
-                    // Voltar para Canvas (se canvas_id existe)
-                    if ($canvas['canvas_id']):
-                    ?>
-                    <a href="<?= BASE_URL ?>/areas/iatr/canvas.php?id=<?= $canvas['canvas_id'] ?>" class="btn btn-sm btn-outline-secondary">
-                        ← Voltar para Canvas
-                    </a>
-                    <?php else: ?>
                     <a href="<?= BASE_URL ?>/areas/iatr/index.php" class="btn btn-sm btn-outline-secondary">
                         ← Voltar para IATR
                     </a>
-                    <?php endif; ?>
                 </div>
                 <div>
                     <a href="<?= BASE_URL ?>/dashboard.php" class="btn btn-sm btn-outline-info">
@@ -444,11 +435,9 @@ $pageTitle = $canvas['name'];
             <a href="?template=<?= urlencode($template_slug) ?>" class="btn btn-primary btn-voltar">
                 ← Nova Análise (Mesmo Formulário)
             </a>
-            <?php if ($canvas['canvas_id']): ?>
-            <a href="<?= BASE_URL ?>/areas/iatr/canvas.php?id=<?= $canvas['canvas_id'] ?>" class="btn btn-secondary btn-voltar">
-                📋 Voltar ao Canvas
+            <a href="<?= BASE_URL ?>/areas/iatr/index.php" class="btn btn-secondary btn-voltar">
+                ← Voltar para IATR
             </a>
-            <?php endif; ?>
         </div>
 
         <!-- Error Container -->
@@ -461,11 +450,9 @@ $pageTitle = $canvas['name'];
                     <button class="btn btn-primary" onclick="window.location.reload()">
                         <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
                     </button>
-                    <?php if ($canvas['canvas_id']): ?>
-                    <a href="<?= BASE_URL ?>/areas/iatr/canvas.php?id=<?= $canvas['canvas_id'] ?>" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Voltar ao Canvas
+                    <a href="<?= BASE_URL ?>/areas/iatr/index.php" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar para IATR
                     </a>
-                    <?php endif; ?>
                 </div>
             </div>
         </div>

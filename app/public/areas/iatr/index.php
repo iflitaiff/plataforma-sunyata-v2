@@ -169,8 +169,9 @@ $pageTitle = $verticalName;
                     <div class="col-md-12">
                         <?php
                         // Determinar URL baseado no tipo
+                        // Rota B: link direto para formulario.php (sem agrupador canvas)
                         if ($canvas['type'] === 'forms') {
-                            $canvas_url = BASE_URL . "/areas/iatr/canvas.php?id=" . $canvas['id'];
+                            $canvas_url = BASE_URL . "/areas/iatr/formulario.php?template=" . $canvas['slug'];
                         } elseif ($canvas['type'] === 'page') {
                             $canvas_url = BASE_URL . $canvas['page_url'];
                         } else {
