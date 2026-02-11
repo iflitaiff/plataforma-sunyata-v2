@@ -13,6 +13,7 @@ session_start();
 use Sunyata\Core\Database;
 use Sunyata\Helpers\ClaudeFacade;
 use Sunyata\Services\DocumentProcessorService;
+use Sunyata\Services\SubmissionService;
 
 // Headers
 header('Content-Type: application/json; charset=utf-8');
@@ -89,6 +90,24 @@ try {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Canvas não encontrado']);
         exit;
+    }
+
+    // Verificar se usuário tem acesso à vertical do canvas (segurança)
+    $userVertical = $_SESSION['user']['selected_vertical'] ?? null;
+    $isAdmin = ($_SESSION['user']['access_level'] ?? 'guest') === 'admin';
+    $isDemo = $_SESSION['user']['is_demo'] ?? false;
+
+    if (!$isAdmin && !$isDemo) {
+        if (!$userVertical || $userVertical !== $canvas['vertical']) {
+            debugLog("ERROR: Unauthorized canvas access", [
+                'user_id' => $_SESSION['user_id'] ?? null,
+                'user_vertical' => $userVertical,
+                'canvas_vertical' => $canvas['vertical']
+            ]);
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Acesso não autorizado para este canvas']);
+            exit;
+        }
     }
 
     debugLog("Canvas Found:", [
@@ -676,15 +695,71 @@ try {
         debugLog("🔧 Canvas API overrides aplicados", $canvasOverrides);
     }
 
-    $result = ClaudeFacade::generateForCanvas(
-        verticalSlug: $canvas['vertical'], // ← Usar vertical do CANVAS, não da sessão!
-        canvasTemplateId: $canvasId,
-        prompt: $userPrompt,
-        userId: $_SESSION['user_id'],
-        toolName: $canvas['slug'],
-        inputData: $formData,
-        overrideOptions: $canvasOverrides
-    );
+    // ========== USER SUBMISSIONS (workspace) ==========
+    // Create a pending submission in user_submissions for the user's workspace
+    $submissionService = new SubmissionService();
+    $submissionId = null;
+    try {
+        $submissionId = $submissionService->createSubmission(
+            (int)$_SESSION['user_id'],
+            (int)$canvasId,
+            $canvas['vertical'],
+            $formData
+        );
+        debugLog("📋 Submission created (pending): ID {$submissionId}");
+    } catch (\Exception $e) {
+        debugLog("⚠️ Failed to create submission: " . $e->getMessage());
+        // Non-fatal: continue without submission tracking
+    }
+
+    // ========== STREAM MODE ==========
+    // If mode=stream AND microservice is enabled, DO NOT expose internal key.
+    // Fallback to sync response (CanvasStream.js handles no stream_url).
+    $streamMode = ($_GET['mode'] ?? '') === 'stream';
+    $aiServiceMode = \Sunyata\Core\Settings::getInstance()->get('ai_service_mode', 'direct');
+
+    if ($streamMode && $aiServiceMode === 'microservice') {
+        debugLog("🔄 Stream mode requested; falling back to sync to avoid exposing internal key");
+        $result = ClaudeFacade::generateViaService(
+            verticalSlug: $canvas['vertical'],
+            canvasTemplateId: $canvasId,
+            prompt: $userPrompt,
+            userId: $_SESSION['user_id'],
+            toolName: $canvas['slug'],
+            inputData: $formData,
+            overrideOptions: $canvasOverrides
+        );
+
+        echo json_encode(array_merge($result, [
+            'canvas_id' => $canvasId,
+            'submission_id' => $submissionId,
+        ]));
+        exit;
+    }
+
+    // ========== SYNC MODE (default) ==========
+    // Use microservice if enabled, otherwise direct ClaudeService
+    if ($aiServiceMode === 'microservice') {
+        $result = ClaudeFacade::generateViaService(
+            verticalSlug: $canvas['vertical'],
+            canvasTemplateId: $canvasId,
+            prompt: $userPrompt,
+            userId: $_SESSION['user_id'],
+            toolName: $canvas['slug'],
+            inputData: $formData,
+            overrideOptions: $canvasOverrides
+        );
+    } else {
+        $result = ClaudeFacade::generateForCanvas(
+            verticalSlug: $canvas['vertical'], // ← Usar vertical do CANVAS, não da sessão!
+            canvasTemplateId: $canvasId,
+            prompt: $userPrompt,
+            userId: $_SESSION['user_id'],
+            toolName: $canvas['slug'],
+            inputData: $formData,
+            overrideOptions: $canvasOverrides
+        );
+    }
 
     debugLog("Claude API Result:", [
         'success' => $result['success'],
@@ -706,12 +781,35 @@ try {
         // Calcular tempo de execução
         $executionTime = round(microtime(true) - $startTime, 2);
 
+        // Complete the user submission with the result
+        if ($submissionId) {
+            try {
+                $submissionService->completeSubmission(
+                    $submissionId,
+                    $result['response'],
+                    $result['history_id'] ?? null,
+                    [
+                        'model' => $result['model'] ?? null,
+                        'tokens_input' => $result['tokens']['input'] ?? 0,
+                        'tokens_output' => $result['tokens']['output'] ?? 0,
+                        'tokens_total' => ($result['tokens']['input'] ?? 0) + ($result['tokens']['output'] ?? 0),
+                        'cost_usd' => $result['cost_usd'] ?? 0,
+                        'execution_time' => $executionTime,
+                    ]
+                );
+                debugLog("📋 Submission completed: ID {$submissionId}");
+            } catch (\Exception $e) {
+                debugLog("⚠️ Failed to complete submission: " . $e->getMessage());
+            }
+        }
+
         // Montar resposta base
         $response = [
             'success' => true,
             'response' => $result['response'],
             'history_id' => $result['history_id'],
             'canvas_id' => $canvasId, // Para modal de feedback
+            'submission_id' => $submissionId,
             'tokens' => $result['tokens'],
             'cost_usd' => $result['cost_usd']
         ];
@@ -733,6 +831,16 @@ try {
 
         echo json_encode($response);
     } else {
+        // Mark submission as error
+        if ($submissionId) {
+            try {
+                $submissionService->failSubmission($submissionId, $result['error'] ?? 'Unknown error');
+                debugLog("📋 Submission marked as error: ID {$submissionId}");
+            } catch (\Exception $e) {
+                debugLog("⚠️ Failed to mark submission error: " . $e->getMessage());
+            }
+        }
+
         // Log de debug temporário
         error_log('Canvas Claude API Error: ' . ($result['error'] ?? 'Unknown error'));
         error_log('Canvas ID: ' . $canvasId . ', User ID: ' . $_SESSION['user_id']);
@@ -750,6 +858,16 @@ try {
 
 } catch (Exception $e) {
     error_log('Canvas submit error: ' . $e->getMessage());
+
+    // Mark submission as error if it was created
+    if (isset($submissionId) && $submissionId && isset($submissionService)) {
+        try {
+            $submissionService->failSubmission($submissionId, $e->getMessage());
+        } catch (\Exception $ignore) {
+            // non-fatal
+        }
+    }
+
     http_response_code(500);
     echo json_encode([
         'success' => false,

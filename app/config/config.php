@@ -119,21 +119,13 @@ define('ACCESS_LEVELS', [
     'admin' => 100
 ]);
 
-// Verticals configuration
-define('VERTICALS', [
-    'juridico' => 'Jurídico',
-    'sales' => 'Vendas',
-    'marketing' => 'Marketing',
-    'customer_service' => 'Atendimento',
-    'hr' => 'RH',
-    'general' => 'Geral',
-    'licitacoes' => 'Licitações',
-    'docencia' => 'Docência',
-    'pesquisa' => 'Pesquisa',
-    'iatr' => 'IATR',
-    'ifrj_alunos' => 'IFRJ Alunos',
-    'geral' => 'Geral'
-]);
+// Verticals configuration (single source of truth: config/verticals.php)
+$verticalConfig = require BASE_PATH . '/config/verticals.php';
+$verticalLabels = [];
+foreach ($verticalConfig as $slug => $cfg) {
+    $verticalLabels[$slug] = $cfg['nome'] ?? ucfirst($slug);
+}
+define('VERTICALS', $verticalLabels);
 
 // Error Handler - Must be loaded after constants are defined
 require_once __DIR__ . '/error-handler.php';

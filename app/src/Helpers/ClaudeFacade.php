@@ -13,6 +13,7 @@ namespace Sunyata\Helpers;
 
 use Sunyata\AI\ClaudeService;
 use Sunyata\Core\Settings;
+use Sunyata\Services\AiServiceClient;
 
 class ClaudeFacade
 {
@@ -337,6 +338,135 @@ class ClaudeFacade
             maxTokens: $maxTokens,
             options: $options
         );
+    }
+
+    /**
+     * Determina se devemos usar o microservice FastAPI ou chamada direta.
+     * Controlado pela setting 'ai_service_mode' = 'direct' | 'microservice'
+     */
+    private static function usesMicroservice(): bool
+    {
+        $mode = Settings::getInstance()->get('ai_service_mode', 'direct');
+        return $mode === 'microservice';
+    }
+
+    /**
+     * Gera resposta para Canvas via microservice FastAPI (alternativa ao ClaudeService direto).
+     * Retorna resposta no mesmo formato que generateForCanvas() para compatibilidade.
+     *
+     * @param string $verticalSlug Slug da vertical
+     * @param int $canvasTemplateId ID do canvas_template
+     * @param string $prompt Prompt do usuário
+     * @param int $userId ID do usuário
+     * @param string $toolName Nome da ferramenta
+     * @param array $inputData Dados do formulário
+     * @param array $overrideOptions Opções customizadas
+     * @return array Resposta compatível com ClaudeService::generate()
+     */
+    public static function generateViaService(
+        string $verticalSlug,
+        int $canvasTemplateId,
+        string $prompt,
+        int $userId,
+        string $toolName,
+        array $inputData = [],
+        array $overrideOptions = []
+    ): array {
+        // 1. Resolve full options via hierarchy (same as generateForCanvas)
+        $portalDefaults = self::getPortalDefaults();
+        $verticalConfig = VerticalConfig::get($verticalSlug);
+        $systemPrompt = CanvasHelper::getCompleteSystemPrompt($verticalSlug, $canvasTemplateId);
+
+        $options = [
+            'model' => $verticalConfig['claude_model'] ?? $portalDefaults['claude_model'],
+            'temperature' => $verticalConfig['temperature'] ?? $portalDefaults['temperature'],
+            'max_tokens' => $verticalConfig['max_tokens'] ?? $portalDefaults['max_tokens'],
+            'system' => $systemPrompt,
+        ];
+        $options = self::applyOverrides($options, $overrideOptions);
+
+        // 2. Create history record via ClaudeService (audit trail)
+        $claudeService = new ClaudeService();
+        $historyId = $claudeService->createPendingHistory(
+            $userId, $verticalSlug, $toolName, $inputData, $prompt
+        );
+
+        // 3. Call microservice
+        $client = new AiServiceClient();
+        $result = $client->generate([
+            'model' => $options['model'],
+            'system' => $options['system'] ?? null,
+            'prompt' => $prompt,
+            'max_tokens' => $options['max_tokens'],
+            'temperature' => $options['temperature'] ?? null,
+            'top_p' => $options['top_p'] ?? null,
+            'user_id' => $userId,
+            'vertical' => $verticalSlug,
+            'tool_name' => $toolName,
+        ]);
+
+        // 4. Update history with result
+        if ($result['success']) {
+            $claudeService->updateHistory($historyId, [
+                'claude_response' => $result['response'],
+                'claude_model' => $result['model'],
+                'tokens_input' => $result['tokens']['input'] ?? 0,
+                'tokens_output' => $result['tokens']['output'] ?? 0,
+                'tokens_total' => ($result['tokens']['input'] ?? 0) + ($result['tokens']['output'] ?? 0),
+                'cost_usd' => $result['cost_usd'],
+                'response_time_ms' => $result['response_time_ms'],
+                'status' => 'success',
+            ]);
+        } else {
+            $claudeService->updateHistory($historyId, [
+                'status' => 'error',
+                'error_message' => $result['error'] ?? 'Unknown microservice error',
+            ]);
+        }
+
+        $result['history_id'] = $historyId;
+        return $result;
+    }
+
+    /**
+     * Build SSE stream parameters for the browser.
+     * PHP validates the request, builds the full options, and returns
+     * the stream URL + params for the frontend to connect directly to FastAPI.
+     *
+     * @return array ['stream_url' => string, 'params' => array, 'internal_key' => string]
+     */
+    public static function buildStreamParams(
+        string $verticalSlug,
+        int $canvasTemplateId,
+        string $prompt,
+        array $overrideOptions = []
+    ): array {
+        $portalDefaults = self::getPortalDefaults();
+        $verticalConfig = VerticalConfig::get($verticalSlug);
+        $systemPrompt = CanvasHelper::getCompleteSystemPrompt($verticalSlug, $canvasTemplateId);
+
+        $options = [
+            'model' => $verticalConfig['claude_model'] ?? $portalDefaults['claude_model'],
+            'temperature' => $verticalConfig['temperature'] ?? $portalDefaults['temperature'],
+            'max_tokens' => $verticalConfig['max_tokens'] ?? $portalDefaults['max_tokens'],
+            'system' => $systemPrompt,
+        ];
+        $options = self::applyOverrides($options, $overrideOptions);
+
+        $client = new AiServiceClient();
+
+        return [
+            'stream_url' => $client->getStreamUrl([]),
+            'params' => [
+                'model' => $options['model'],
+                'system' => $options['system'] ?? null,
+                'prompt' => $prompt,
+                'max_tokens' => $options['max_tokens'],
+                'temperature' => $options['temperature'] ?? null,
+                'top_p' => $options['top_p'] ?? null,
+            ],
+            'internal_key' => $client->getInternalKey(),
+        ];
     }
 
     /**

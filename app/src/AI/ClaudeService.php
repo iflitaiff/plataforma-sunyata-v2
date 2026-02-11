@@ -510,6 +510,29 @@ class ClaudeService {
     }
 
     /**
+     * Public wrapper for createHistoryRecord — used by ClaudeFacade::generateViaService()
+     * to create the audit record before calling the microservice.
+     */
+    public function createPendingHistory(
+        int $userId,
+        string $vertical,
+        string $toolName,
+        array $inputData,
+        string $generatedPrompt
+    ): int {
+        return $this->createHistoryRecord($userId, $vertical, $toolName, $inputData, $generatedPrompt);
+    }
+
+    /**
+     * Public wrapper for updateHistoryRecord — used by ClaudeFacade::generateViaService()
+     * to update the audit record after microservice responds.
+     */
+    public function updateHistory(int $historyId, array $data): void
+    {
+        $this->updateHistoryRecord($historyId, $data);
+    }
+
+    /**
      * Obtém histórico de um usuário
      *
      * @param int $userId
