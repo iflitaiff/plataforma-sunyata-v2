@@ -1,0 +1,79 @@
+# Secrets and credentials
+app/config/secrets.php
+app/config/auth.php
+.env
+.env.*
+
+# PHP
+vendor/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+services/ai/.venv/
+
+# Logs
+logs/
+app/logs/
+
+# Sessions and cache
+sessions/
+cache/
+*.cache
+
+# Uploads
+uploads/
+user_uploads/
+app/public/uploads/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+*.Zone.Identifier
+
+# Node
+node_modules/
+package-lock.json
+
+# Database dumps
+*.sql.gz
+*.sql.old
+backup_*.sql
+backups/
+
+# Testing
+.phpunit.result.cache
+coverage/
+.pytest_cache/
+
+# Build
+dist/
+build/
+
+# AI agent configs (local per-agent)
+.gemini/
+GEMINI.md
+.mcp.json
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Local overrides
+app/config/database.local.php
+infra/local/
+
+# Storage exports (dev only)
+app/storage/canvas-exports/
+app/storage/logs/

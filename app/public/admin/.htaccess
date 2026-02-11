@@ -1,0 +1,11 @@
+# Disable LiteSpeed Cache for admin area
+<IfModule LiteSpeed>
+CacheLookup off
+</IfModule>
+
+# Disable browser cache for PHP files
+<FilesMatch "\.(php)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</FilesMatch>

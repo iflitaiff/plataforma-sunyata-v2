@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Estruturação de Prompts para Jogos Digitais</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #4a5568;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .nav {
+            background: #f7fafc;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .nav h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.5rem 0;
+            display: block;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover {
+            background: #667eea;
+            color: white;
+            padding-left: 1rem;
+        }
+
+        h2 {
+            color: #2d3748;
+            font-size: 1.8rem;
+            margin: 2.5rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        h3 {
+            color: #4a5568;
+            font-size: 1.4rem;
+            margin: 2rem 0 1rem 0;
+        }
+
+        .template-box {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .example-box {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #48bb78;
+        }
+
+        .example-title {
+            background: #48bb78;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .tip-box {
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 2rem 0;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .tip-box blockquote {
+            font-style: italic;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        ul, ol {
+            margin: 1rem 0 1rem 2rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+        }
+
+        code {
+            background: #edf2f7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .emoji {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .nav ul {
+                grid-template-columns: 1fr;
+            }
+            
+            .template-box, .example-box {
+                padding: 1rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            border-radius: 50%;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><span class="emoji">🎮</span>Guia de Estruturação de Prompts para Jogos Digitais</h1>
+            <p class="subtitle">Este documento é um guia para ajudar você a <strong>delimitar e organizar seu raciocínio antes de escrever o prompt</strong>. Use-o como base para interagir com LLMs (como o ChatGPT) de maneira mais eficaz.</p>
+        </header>
+
+        <nav class="nav">
+            <h3>📋 Navegação Rápida</h3>
+            <ul>
+                <li><a href="#estrutura">📌 Estrutura do Prompt</a></li>
+                <li><a href="#exemplo1">🎮 Brainstorm de Mecânica</a></li>
+                <li><a href="#exemplo2">🧱 Programação de NPC</a></li>
+                <li><a href="#exemplo3">🧠 Narrativa Interativa</a></li>
+                <li><a href="#exemplo4">💰 Estratégia de Monetização</a></li>
+                <li><a href="#dica">💡 Dica Final</a></li>
+            </ul>
+        </nav>
+
+        <section id="estrutura" class="section">
+            <h2><span class="emoji">📌</span>Estrutura do Prompt (Template com explicações)</h2>
+            
+            <div class="template-box">
+&lt;persona&gt;
+[Descreva quem o modelo deve simular. Pode ser uma profissão ou arquétipo específico: 
+ex: "Você é um designer de jogos", "Você é um roteirista experiente em narrativas não-lineares", etc.]
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+[Descreva em 1 ou 2 frases o que você quer que o modelo faça. 
+Use verbos no imperativo como: criar, analisar, comparar, sugerir, programar.]
+&lt;/objetivo&gt;
+
+&lt;detalhamento&gt;
+[Explique o contexto e a tarefa. Inclua o que já foi decidido, o que está em aberto, 
+qual o tipo de jogo, público-alvo, limitações e qualquer informação que ajude a IA a entender melhor o pedido.]
+&lt;/detalhamento&gt;
+
+&lt;requisitos e restrições&gt;
+1. Requisitos obrigatórios:
+   - [O que a resposta *deve ter*, sem exceção]
+   - ...
+2. Requisitos desejáveis:
+   - [O que *seria bom ter*, mas não é obrigatório]
+   - ...
+3. Restrições:
+   - [O que *não pode aparecer* na resposta. Pode incluir plataformas, estilo, orçamento, tempo, etc.]
+   - ...
+&lt;/requisitos e restrições&gt;
+
+&lt;recursos&gt;
+[Listar jogos de referência, links, assets existentes, documentos ou sistemas já criados.]
+&lt;/recursos&gt;
+
+&lt;formato da resposta&gt;
+[Indique como a resposta deve vir. Exemplos: lista, tabela, markdown, código comentado, diagrama textual, etc.]
+&lt;/formato da resposta&gt;
+
+&lt;frase mágica&gt;
+Faça perguntas indexadas para você entender melhor o contexto da tarefa e qualidade de sua pergunta e interação comigo.
+&lt;/frase mágica&gt;
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><span class="emoji">💡</span>Exemplos de Prompts Preenchidos</h2>
+
+            <div id="exemplo1" class="example-box">
+                <div class="example-title">🎮 Exemplo 1 – Brainstorm de Mecânica de Jogo</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um game designer especializado em jogos mobile com mecânicas de toque e gestos intuitivos.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Criar 3 ideias de mecânicas centrais para um jogo casual de celular, voltado para jogadores ocasionais.
+&lt;/objetivo&gt;
+
+&lt;detalhamento&gt;
+O jogo será lançado para Android e iOS, com sessões curtas (1 a 3 minutos), deve ser fácil de aprender, mas com profundidade. Preciso de ideias baseadas em interações como swipe, tap e hold.
+&lt;/detalhamento&gt;
+
+&lt;requisitos e restrições&gt;
+1. Requisitos obrigatórios:
+   - Mecânicas baseadas em gestos simples
+   - Deve permitir loop de jogo curto com progressão
+2. Desejáveis:
+   - Referência a jogos existentes que inspirem a ideia
+3. Restrições:
+   - Nada que dependa de sensores avançados ou multiplayer
+&lt;/requisitos e restrições&gt;
+
+&lt;recursos&gt;
+1. Jogos de referência: Crossy Road, Stack, Jetpack Joyride
+&lt;/recursos&gt;
+
+&lt;formato da resposta&gt;
+Lista numerada, com nome da mecânica + descrição + comparação com um jogo real
+&lt;/formato da resposta&gt;
+
+&lt;frase mágica&gt;
+Faça perguntas indexadas para você entender melhor o contexto da tarefa e qualidade de sua pergunta e interação comigo.
+&lt;/frase mágica&gt;
+                </div>
+            </div>
+
+            <div id="exemplo2" class="example-box">
+                <div class="example-title">🧱 Exemplo 2 – Programação de Comportamento de NPC</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um programador experiente em Godot Engine com foco em IA de personagens.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Criar um script básico para NPC patrulhar entre dois pontos e perseguir o jogador se estiver a menos de 5 unidades de distância.
+&lt;/objetivo&gt;
+
+&lt;detalhamento&gt;
+Estou usando Godot 4 e programando em GDScript. O NPC deve andar de um ponto A para um ponto B, e se detectar o jogador (com base em distância), deve segui-lo até que ele saia do alcance.
+&lt;/detalhamento&gt;
+
+&lt;requisitos e restrições&gt;
+1. Requisitos obrigatórios:
+   - Códigos comentados
+   - Sistema de detecção baseado em distância
+2. Desejáveis:
+   - Animação de transição entre estados
+3. Restrições:
+   - Não usar plugins externos
+&lt;/requisitos e restrições&gt;
+
+&lt;recursos&gt;
+1. Godot 4.2
+&lt;/recursos&gt;
+
+&lt;formato da resposta&gt;
+Código completo com comentários e explicações de cada parte
+&lt;/formato da resposta&gt;
+
+&lt;frase mágica&gt;
+Faça perguntas indexadas para você entender melhor o contexto da tarefa e qualidade de sua pergunta e interação comigo.
+&lt;/frase mágica&gt;
+                </div>
+            </div>
+
+            <div id="exemplo3" class="example-box">
+                <div class="example-title">🧠 Exemplo 3 – Narrativa Interativa com Múltiplos Finais</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um roteirista especializado em narrativas ramificadas para jogos com escolhas morais.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Sugerir uma estrutura narrativa com 3 finais diferentes baseados em decisões éticas do jogador.
+&lt;/objetivo&gt;
+
+&lt;detalhamento&gt;
+O jogo é um adventure cyberpunk com missões urbanas. Quero que os finais sejam consequência de ações cumulativas ao longo do jogo (e não apenas da última escolha).
+&lt;/detalhamento&gt;
+
+&lt;requisitos e restrições&gt;
+1. Requisitos obrigatórios:
+   - Cada final deve ser moralmente ambíguo
+   - Deve haver consequências acumulativas
+2. Desejáveis:
+   - Referências literárias ou filosóficas
+3. Restrições:
+   - Evitar clichês de "bom/mau/neutro"
+&lt;/requisitos e restrições&gt;
+
+&lt;recursos&gt;
+1. Jogos de referência: Deus Ex, Disco Elysium, Fallout: New Vegas
+&lt;/recursos&gt;
+
+&lt;formato da resposta&gt;
+Diagrama textual (tipo bullet tree) mostrando as ramificações + descrição de cada final
+&lt;/formato da resposta&gt;
+
+&lt;frase mágica&gt;
+Faça perguntas indexadas para você entender melhor o contexto da tarefa e qualidade de sua pergunta e interação comigo.
+&lt;/frase mágica&gt;
+                </div>
+            </div>
+
+            <div id="exemplo4" class="example-box">
+                <div class="example-title">💰 Exemplo 4 – Estratégia de Monetização</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um especialista em economia de jogos e monetização ética em mobile.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Propor estratégias de monetização para um jogo casual mobile sem prejudicar a experiência do jogador.
+&lt;/objetivo&gt;
+
+&lt;detalhamento&gt;
+O jogo é um puzzle baseado em tempo, com progressão de fases e estética colorida. Preciso gerar receita, mas sem forçar compras ou usar anúncios intrusivos.
+&lt;/detalhamento&gt;
+
+&lt;requisitos e restrições&gt;
+1. Requisitos obrigatórios:
+   - Pelo menos 2 modelos de monetização
+   - Foco em retenção e experiência positiva
+2. Desejáveis:
+   - Comparações com práticas de mercado
+3. Restrições:
+   - Nada de loot boxes ou anúncios obrigatórios entre fases
+&lt;/requisitos e restrições&gt;
+
+&lt;recursos&gt;
+1. Referência: Monument Valley 2, Candy Crush (fase inicial), Alto's Odyssey
+&lt;/recursos&gt;
+
+&lt;formato da resposta&gt;
+Tabela com nome da estratégia, descrição, impacto estimado na experiência
+&lt;/formato da resposta&gt;
+
+&lt;frase mágica&gt;
+Faça perguntas indexadas para você entender melhor o contexto da tarefa e qualidade de sua pergunta e interação comigo.
+&lt;/frase mágica&gt;
+                </div>
+            </div>
+        </section>
+
+        <section id="dica" class="section">
+            <div class="tip-box">
+                <h2><span class="emoji">🧠</span>Dica Final</h2>
+                <blockquote>
+                    Um bom prompt nasce de <strong>um problema bem pensado</strong>.<br>
+                    Um problema bem pensado vem de <strong>quem sabe o que quer, e o que ainda não sabe</strong>.
+                </blockquote>
+                <p>Use este guia como apoio para desenvolver sua autonomia criativa com IA.</p>
+            </div>
+        </section>
+    </div>
+
+    <a href="#" class="back-to-top" id="backToTop">↑</a>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Back to top button functionality
+        const backToTopButton = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+
+        backToTopButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    </script>
+</body>
+</html>

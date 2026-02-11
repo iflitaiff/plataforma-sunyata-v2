@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Prompts - Jogos Digitais IFRJ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #4a5568;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .nav {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .nav h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.5rem;
+            display: block;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav a:hover {
+            background: #667eea;
+            color: white;
+            padding-left: 1rem;
+        }
+
+        h2 {
+            color: #2d3748;
+            font-size: 1.8rem;
+            margin: 2.5rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        h3 {
+            color: #4a5568;
+            font-size: 1.4rem;
+            margin: 2rem 0 1rem 0;
+        }
+
+        .task-category {
+            margin-bottom: 4rem;
+        }
+
+        .example-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin: 2rem 0;
+            overflow: hidden;
+            border-left: 4px solid #48bb78;
+        }
+
+        .example-header {
+            background: #48bb78;
+            color: white;
+            padding: 1rem 2rem;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .example-header:hover {
+            background: #38a169;
+        }
+
+        .example-content {
+            padding: 2rem;
+            display: none;
+        }
+
+        .example-content.active {
+            display: block;
+        }
+
+        .prompt-structure {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .expected-result {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid #48bb78;
+        }
+
+        .expected-result h4 {
+            color: #276749;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .customization-tip {
+            background: #fffbeb;
+            border: 1px solid #fbd38d;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid #ed8936;
+        }
+
+        .customization-tip h4 {
+            color: #c05621;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .customization-tip p {
+            color: #c05621;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .complexity-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .basic {
+            background: #bee3f8;
+            color: #2b6cb0;
+        }
+
+        .intermediate {
+            background: #fbb6ce;
+            color: #b83280;
+        }
+
+        .advanced {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .tip-box {
+            background: linear-gradient(135deg, #ed8936 0%, #667eea 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 2rem 0;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .tip-box blockquote {
+            font-style: italic;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .warning-box {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #dc2626;
+        }
+
+        .warning-box h4 {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+        }
+
+        .warning-box p {
+            color: #7f1d1d;
+            margin: 0;
+        }
+
+        .toggle-all {
+            background: #667eea;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 2rem;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-all:hover {
+            background: #5a67d8;
+        }
+
+        .emoji {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .nav ul {
+                grid-template-columns: 1fr;
+            }
+            
+            .prompt-structure, .expected-result {
+                padding: 1rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            border-radius: 50%;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><span class="emoji">🎮</span>Guia de Estruturação de Prompts para Alunos de Jogos Digitais</h1>
+            <p class="subtitle">Material didático desenvolvido especificamente para estudantes do <strong>Curso Superior de Tecnologia em Jogos Digitais do IFRJ</strong>. Aprenda a criar prompts eficazes usando técnicas de engenharia de prompts para maximizar o potencial da Inteligência Artificial em seus projetos.</p>
+        </header>
+
+        <div class="warning-box">
+            <h4>⚠️ Dica Importante sobre Personas</h4>
+            <p>Cada exemplo neste guia contém uma <strong>persona inicial</strong>. Lembre-se sempre de <strong>editá-la e aprimorá-la</strong> para que se torne a pessoa mais qualificada a orientar e fazer sua tarefa específica. A persona é fundamental para o sucesso do prompt!</p>
+        </div>
+
+        <nav class="nav">
+            <h3>📋 Navegação por Tipos de Tarefa</h3>
+            <ul>
+                <li><a href="#programacao">💻 Programação e Desenvolvimento</a></li>
+                <li><a href="#arte">🎨 Arte e Design Visual</a></li>
+                <li><a href="#game-design">🎯 Game Design e Mecânicas</a></li>
+                <li><a href="#audio">🎵 Áudio e Sonorização</a></li>
+                <li><a href="#gestao">📊 Gestão de Projetos</a></li>
+                <li><a href="#estudo">📚 Apoio aos Estudos</a></li>
+                <li><a href="#tecnicas-avancadas">🧠 Técnicas Avançadas de Prompting</a></li>
+                <li><a href="#negocios">💼 Negócios e Empreendedorismo</a></li>
+            </ul>
+        </nav>
+
+        <button class="toggle-all" onclick="toggleAllExamples()">Expandir/Recolher Todos os Exemplos</button>
+
+        <section id="programacao" class="task-category">
+            <h2><span class="emoji">💻</span>Programação e Desenvolvimento</h2>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 1: Debugging de Código C# para Unity
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge basic">Básico</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um programador sênior especializado em Unity e C#, com 10 anos de experiência em desenvolvimento de jogos. Você é conhecido por identificar bugs rapidamente e explicar soluções de forma didática para iniciantes.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante de Jogos Digitais no IFRJ, estou no 2º período e tenho conhecimentos básicos de programação. Estou desenvolvendo um jogo 2D simples no Unity e encontrei um erro que não consigo resolver.
+&lt;/contexto&gt;
+
+&lt;tarefa&gt;
+Analise o código abaixo, identifique o problema e explique a solução de forma didática:
+
+[SEU CÓDIGO AQUI]
+
+Erro apresentado: [DESCRIÇÃO DO ERRO]
+&lt;/tarefa&gt;
+
+&lt;formato_resposta&gt;
+1. Identificação do problema
+2. Explicação do que está causando o erro
+3. Código corrigido com comentários
+4. Dicas para evitar erros similares no futuro
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>A IA irá analisar seu código, explicar o problema encontrado de forma educativa, fornecer o código corrigido com comentários explicativos e dar dicas preventivas. A resposta será adaptada ao seu nível de conhecimento como estudante.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Adapte a persona:</strong> Mude o nível de experiência conforme sua necessidade (iniciante, intermediário, avançado). <strong>Especifique a linguagem:</strong> C#, JavaScript, Python, etc. <strong>Adicione contexto:</strong> Tipo de jogo (plataforma, RPG, puzzle), engine utilizada, prazo do projeto.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 2: Otimização de Performance em Jogos
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um especialista em otimização de performance para jogos, com vasta experiência em Unity, Unreal Engine e desenvolvimento mobile. Você domina técnicas de profiling e tem conhecimento profundo sobre limitações de hardware.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou desenvolvendo um jogo 3D para mobile como projeto do 4º período do curso de Jogos Digitais. O jogo está rodando a 15 FPS em dispositivos médios, mas preciso atingir 30 FPS mínimo.
+&lt;/contexto&gt;
+
+&lt;análise_atual&gt;
+- Cenas com muitos GameObjects ativos: [número]
+- Uso de texturas: [resolução e quantidade]
+- Sistema de iluminação: [tipo utilizado]
+- Scripts em Update(): [quantidade aproximada]
+- Plataforma alvo: Android/iOS
+&lt;/análise_atual&gt;
+
+&lt;objetivo&gt;
+Forneça um plano de otimização priorizado com técnicas específicas para melhorar a performance, considerando que sou estudante e tenho tempo/recursos limitados.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise dos gargalos mais prováveis
+2. Lista priorizada de otimizações (fácil → difícil)
+3. Código/configurações específicas
+4. Ferramentas de profiling recomendadas
+5. Métricas para acompanhar o progresso
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Plano estruturado de otimização com soluções priorizadas por impacto vs. dificuldade, código específico para implementar melhorias, recomendações de ferramentas gratuitas para monitoramento e metas realistas de performance.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Engine específica:</strong> Substitua por Godot, GameMaker, etc. <strong>Plataforma alvo:</strong> PC, console, VR. <strong>Tipo de jogo:</strong> 2D, 3D, multiplayer. <strong>Recursos disponíveis:</strong> Tempo, orçamento, conhecimento técnico.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 3: Implementação de Sistema de Save/Load
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge advanced">Avançado</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um arquiteto de software especializado em sistemas de persistência de dados para jogos, com expertise em segurança, serialização e diferentes formatos de armazenamento. Você já trabalhou em jogos AAA e indies.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 5º período do curso e desenvolvendo um RPG como projeto final. Preciso implementar um sistema robusto de save/load que persista: estado do jogador, inventário, progresso de quests, configurações e conquistas.
+&lt;/contexto&gt;
+
+&lt;requisitos_técnicos&gt;
+- Múltiplos slots de save (até 3)
+- Compatibilidade com versões futuras do jogo
+- Proteção básica contra edição manual
+- Backup automático
+- Plataforma: PC (Windows/Mac/Linux)
+&lt;/requisitos_técnicos&gt;
+
+&lt;conhecimento_atual&gt;
+- Entendo conceitos básicos de serialização
+- Trabalho com Unity há 2 anos
+- Conheço JSON e XML superficialmente
+- Nunca implementei criptografia
+&lt;/conhecimento_atual&gt;
+
+&lt;objetivo&gt;
+Projete uma arquitetura completa de save/load system, incluindo estrutura de dados, implementação step-by-step e tratamento de erros.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Arquitetura geral do sistema
+2. Estrutura de dados (classes/structs)
+3. Implementação do SaveManager
+4. Sistema de versionamento
+5. Tratamento de erros e corrupção
+6. Testes recomendados
+7. Melhorias futuras possíveis
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Arquitetura completa e profissional de um sistema de save/load, com código estruturado, comentado e modular. Incluirá implementação de segurança, versionamento, tratamento de erros e sugestões de testes, adequado para um projeto de TCC.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Tipo de dados:</strong> Adapte para seu tipo de jogo (puzzle, plataforma, estratégia). <strong>Plataforma:</strong> Mobile, console, web. <strong>Complexidade:</strong> Reduza para projetos menores ou aumente para sistemas mais robustos. <strong>Segurança:</strong> Ajuste o nível conforme necessidade.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="arte" class="task-category">
+            <h2><span class="emoji">🎨</span>Arte e Design Visual</h2>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 4: Criação de Concept Art para Personagens
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge basic">Básico</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um concept artist sênior com 15 anos de experiência na indústria de jogos, especializado em design de personagens. Você trabalhou em títulos famosos e tem domínio tanto de técnicas tradicionais quanto digitais.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 1º período de Jogos Digitais e estou criando meu primeiro personagem original. Tenho habilidades básicas de desenho e uso o Photoshop/Krita.
+&lt;/contexto&gt;
+
+&lt;briefing_personagem&gt;
+- Nome: [Nome do personagem]
+- Papel no jogo: [Protagonista/Antagonista/NPC]
+- Personalidade: [3-5 características principais]
+- Background: [História resumida]
+- Gênero do jogo: [RPG/Plataforma/Aventura/etc.]
+- Estilo visual desejado: [Cartoon/Realista/Pixel art/etc.]
+&lt;/briefing_personagem&gt;
+
+&lt;objetivo&gt;
+Me guie através do processo de criação de concept art, desde as primeiras ideias até o design final, com exercícios práticos e referências visuais.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise do briefing e sugestões de melhorias
+2. Lista de referências visuais para pesquisar
+3. Exercícios de thumbnail sketches
+4. Desenvolvimento de formas e silhuetas
+5. Refinamento de detalhes
+6. Checklist de validação do design
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Guia passo-a-passo para criação de concept art, com exercícios práticos adaptados ao nível iniciante, referências específicas para o estilo desejado e metodologia profissional simplificada para estudantes.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Software:</strong> Especifique Procreate, Clip Studio, etc. <strong>Estilo:</strong> Anime, western, low-poly, 2D flat. <strong>Tipo de personagem:</strong> Criatura, robô, humano, antropomórfico. <strong>Nível de habilidade:</strong> Ajuste a complexidade dos exercícios.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 5: Design de Interface (UI/UX) para Jogos
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um UX/UI designer especializado em interfaces para jogos, com expertise em usabilidade, acessibilidade e design responsivo. Você entende profundamente a psicologia do jogador e as melhores práticas da indústria.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 3º período e desenvolvendo a interface do meu jogo mobile. Preciso criar menus intuitivos que funcionem bem em telas pequenas e sejam acessíveis para diferentes tipos de jogadores.
+&lt;/contexto&gt;
+
+&lt;especificações_projeto&gt;
+- Tipo de jogo: [Puzzle/RPG/Estratégia/etc.]
+- Plataforma: Mobile (Android/iOS)
+- Público-alvo: [Faixa etária e perfil]
+- Telas necessárias: Menu principal, configurações, pausa, inventário, loja
+- Estilo visual: [Minimalista/Fantasy/Sci-fi/etc.]
+- Limitações: Desenvolvimento solo, orçamento limitado
+&lt;/especificações_projeto&gt;
+
+&lt;objetivo&gt;
+Crie wireframes e especificações detalhadas para cada tela, considerando usabilidade, hierarquia visual e padrões mobile. Inclua guidelines de implementação.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise do público e necessidades específicas
+2. Hierarquia de informações para cada tela
+3. Wireframes em texto/ASCII para cada interface
+4. Especificações de cores, tipografia e ícones
+5. Guidelines de interação e feedback
+6. Checklist de acessibilidade básica
+7. Priorização para implementação
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Documentação completa de UI/UX com wireframes textuais, especificações técnicas detalhadas, diretrizes de implementação e considerações de acessibilidade, tudo adaptado para desenvolvimento independente e recursos limitados.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Plataforma:</strong> PC, console, web, VR. <strong>Gênero:</strong> Cada tipo de jogo tem necessidades específicas de UI. <strong>Acessibilidade:</strong> Especifique necessidades (daltonismo, mobilidade, audição). <strong>Ferramentas:</strong> Figma, Adobe XD, Sketch.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 6: Criação de Pixel Art e Sprites
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge basic">Básico</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um pixel artist profissional com especialização em jogos 2D, conhecimento profundo de limitações técnicas de hardware retro e técnicas avançadas de animação em pixel art. Você tem experiência tanto em estilos clássicos quanto modernos.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou começando a aprender pixel art para criar assets do meu jogo 2D. Tenho conhecimento básico de arte digital, mas nunca trabalhei com as limitações e técnicas específicas do pixel art.
+&lt;/contexto&gt;
+
+&lt;especificações_técnicas&gt;
+- Resolução do sprite: [16x16 / 32x32 / 64x64]
+- Paleta de cores: [Quantas cores / estilo específico]
+- Tipo de asset: [Personagem / Tile / Item / Efeito]
+- Estilo desejado: [8-bit / 16-bit / Moderne pixel art]
+- Software: [Aseprite / Photoshop / GIMP / Piskel]
+&lt;/especificações_técnicas&gt;
+
+&lt;objetivo&gt;
+Me ensine a criar pixel art de qualidade profissional, começando com conceitos fundamentais e progredindo para técnicas avançadas de sombreamento e animação.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Fundamentos do pixel art (grid, proporções, limitações)
+2. Técnicas de construção da base
+3. Uso eficiente de paletas limitadas
+4. Sombreamento e volume em baixa resolução
+5. Conceitos básicos de animação
+6. Dicas de workflow e otimização
+7. Erros comuns de iniciantes para evitar
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Tutorial estruturado de pixel art com explicações técnicas acessíveis, exercícios progressivos, dicas de software específico e técnicas para criar sprites funcionais e esteticamente agradáveis dentro das limitações do meio.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Complexidade:</strong> Ajuste entre sprites simples e detalhados. <strong>Tema:</strong> Medieval, sci-fi, moderno, fantasia. <strong>Animação:</strong> Estática ou com movimento. <strong>Uso:</strong> Tilesets, characters, UI elements, efeitos especiais.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="game-design" class="task-category">
+            <h2><span class="emoji">🎯</span>Game Design e Mecânicas</h2>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 7: Desenvolvimento de Game Design Document (GDD)
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um game designer sênior com experiência em múltiplas plataformas e gêneros, especialista em documentação de projetos e comunicação técnica. Você já liderou equipes de desenvolvimento e entende as necessidades tanto criativas quanto técnicas de um projeto.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 2º período e preciso criar um Game Design Document completo para meu projeto semestral. O documento será usado para comunicar minha visão para professores e possíveis colaboradores.
+&lt;/contexto&gt;
+
+&lt;conceito_base&gt;
+- Gênero: [Plataforma/RPG/Puzzle/Estratégia/etc.]
+- Plataforma: [PC/Mobile/Console]
+- Público-alvo: [Idade e perfil]
+- Pilares do gameplay: [3 elementos centrais]
+- Referências principais: [2-3 jogos similares]
+- Escopo: Projeto acadêmico de [X] meses
+&lt;/conceito_base&gt;
+
+&lt;objetivo&gt;
+Crie um template estruturado de GDD adequado para projetos acadêmicos, com orientações específicas para cada seção e exemplos práticos.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Estrutura completa do documento
+2. Orientações para cada seção
+3. Exemplos práticos para preencher
+4. Checklist de validação
+5. Dicas de apresentação e comunicação
+6. Adaptações para diferentes tipos de projeto
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Template profissional de GDD adaptado para ambiente acadêmico, com estrutura clara, orientações específicas para cada seção, exemplos práticos e guidelines para comunicação efetiva do projeto para professores e colegas.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Complexidade:</strong> Ajuste para projetos de 1 mês a TCC. <strong>Audiência:</strong> Professores, investidores, equipe. <strong>Tipo de jogo:</strong> Cada gênero tem necessidades específicas no GDD. <strong>Fase do projeto:</strong> Conceito inicial, protótipo, versão final.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 8: Balanceamento de Mecânicas de Jogo
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge advanced">Avançado</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um game designer especializado em balanceamento e mecânicas de jogo, com expertise em teoria dos jogos, análise matemática e psicologia do jogador. Você trabalhou em jogos competitivos e tem experiência em iteração baseada em dados.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 4º período desenvolvendo um jogo de estratégia em tempo real. Os testes com colegas mostram que certas unidades estão dominando o meta e o jogo não está divertido devido ao desbalanceamento.
+&lt;/contexto&gt;
+
+&lt;mecânicas_atuais&gt;
+- Tipos de unidade: [Guerreiro, Arqueiro, Mago, etc.]
+- Recursos do jogo: [Ouro, Madeira, Comida, etc.]
+- Sistemas de combate: [Como funcionam as batalhas]
+- Progressão: [Sistema de upgrade/evolução]
+- Feedback dos testes: [Problemas específicos identificados]
+&lt;/mecânicas_atuais&gt;
+
+&lt;objetivo&gt;
+Desenvolva uma metodologia de balanceamento sistemática que eu possa aplicar iterativamente, incluindo métricas para acompanhar e ferramentas de análise adequadas para um projeto acadêmico.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise dos problemas atuais de balanceamento
+2. Framework teórico para balanceamento
+3. Métricas e KPIs para acompanhar
+4. Metodologia de testes e iteração
+5. Ferramentas simples para coleta de dados
+6. Plano de ajustes priorizados
+7. Validação com playtests estruturados
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Metodologia científica de balanceamento com ferramentas práticas, métricas objetivas, processo iterativo estruturado e guidelines para testes com usuários, adaptado para o contexto acadêmico e recursos limitados.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Tipo de jogo:</strong> Puzzle, RPG, roguelike, multiplayer. <strong>Mecânicas específicas:</strong> Economia, combate, progressão. <strong>Recursos disponíveis:</strong> Número de testadores, tempo, ferramentas. <strong>Complexidade:</strong> Sistema simples vs. múltiplas variáveis.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 9: Design de Narrativa e Storytelling
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um narrative designer com experiência em jogos narrativos, roteiro interativo e design de personagens. Você entende como integrar história e gameplay de forma orgânica e já trabalhou em jogos premiados.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 3º período desenvolvendo um jogo de aventura com foco narrativo. Tenho uma ideia central interessante, mas preciso estruturar a narrativa de forma que se integre bem com as mecânicas de jogo.
+&lt;/contexto&gt;
+
+&lt;conceito_narrativo&gt;
+- Premissa principal: [Resumo da história em 2-3 frases]
+- Protagonista: [Descrição básica e motivação]
+- Conflito central: [O que está em jogo]
+- Tom/atmosfera: [Sério, cômico, misterioso, etc.]
+- Mecânicas principais: [Como o jogador interage]
+- Duração estimada: [Tempo de jogo planejado]
+&lt;/conceito_narrativo&gt;
+
+&lt;objetivo&gt;
+Desenvolva uma estrutura narrativa coesa que se integre organicamente com as mecânicas de jogo, incluindo técnicas de storytelling interativo adequadas para um desenvolvedor solo.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise da premissa e sugestões de melhorias
+2. Estrutura narrativa em três atos adaptada para jogos
+3. Técnicas de storytelling através do gameplay
+4. Sistema de diálogos e escolhas (se aplicável)
+5. Desenvolvimento de personagens secundários
+6. Métodos de entrega de lore e worldbuilding
+7. Checklist de coesão narrativa
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Estrutura narrativa profissional integrada com gameplay, técnicas específicas de storytelling interativo, guidelines para desenvolvimento de personagens e métodos práticos para implementar a narrativa dentro das limitações de um projeto acadêmico.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Gênero narrativo:</strong> Ficção científica, fantasia, realismo, horror. <strong>Complexidade:</strong> Linear vs. ramificada vs. emergente. <strong>Mecânicas:</strong> Diálogos, exploração, combate narrativo. <strong>Recursos:</strong> Texto vs. áudio vs. cutscenes.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="audio" class="task-category">
+            <h2><span class="emoji">🎵</span>Áudio e Sonorização</h2>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 10: Composição de Trilha Sonora Original
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge basic">Básico</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um compositor de trilhas sonoras para jogos com experiência em múltiplos gêneros musicais e profundo entendimento de como a música afeta a experiência do jogador. Você domina tanto teoria musical quanto produção digital.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 4º período sem formação musical formal, mas tenho interesse e acesso a DAWs básicas. Preciso criar trilhas originais para meu jogo que transmitam as emoções certas sem soar amadoras.
+&lt;/contexto&gt;
+
+&lt;especificações_projeto&gt;
+- Gênero do jogo: [Plataforma/RPG/Horror/etc.]
+- Atmosfera desejada: [Épica/Misteriosa/Nostálgica/etc.]
+- Referências musicais: [Jogos ou artistas que inspiram]
+- Software disponível: [FL Studio/GarageBand/Reaper/etc.]
+- Duração necessária: [Quantidade de faixas e duração]
+- Limitações: Sem orçamento para músicos profissionais
+&lt;/especificações_projeto&gt;
+
+&lt;objetivo&gt;
+Me guie através do processo de composição, desde a teoria básica até a produção final, com foco em criar músicas funcionais e emocionalmente efetivas para jogos.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Fundamentos de música para jogos
+2. Análise de referências e identificação de elementos-chave
+3. Teoria musical básica aplicada
+4. Processo de composição step-by-step
+5. Técnicas de produção em DAW
+6. Implementação e loop seamless
+7. Dicas para superar limitações técnicas
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Guia completo de composição musical para jogos, com teoria acessível para iniciantes, processo prático de criação, técnicas de produção em software gratuito/barato e métodos para criar música profissional mesmo sem formação musical formal.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Gênero musical:</strong> Eletrônica, orquestral, chiptune, ambient. <strong>Software:</strong> Especifique sua DAW. <strong>Instrumentos:</strong> Virtuais vs. reais disponíveis. <strong>Nível técnico:</strong> Ajuste a complexidade da teoria musical.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 11: Design de Efeitos Sonoros (SFX)
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um sound designer especializado em efeitos sonoros para jogos, com expertise em gravação, síntese, processamento de áudio e implementação em engines. Você entende a psicoacústica e como o som afeta o gameplay.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 5º período e preciso criar uma biblioteca de efeitos sonoros para meu jogo. Tenho equipamento básico de gravação e conhecimento intermediário de edição de áudio.
+&lt;/contexto&gt;
+
+&lt;especificações_técnicas&gt;
+- Tipo de jogo: [Ação/Puzzle/RPG/etc.]
+- Plataforma: [PC/Mobile/Console]
+- Tipos de SFX necessários: [UI, ambiente, personagem, efeitos especiais]
+- Software: [Audacity/Reaper/Pro Tools/etc.]
+- Equipamentos: [Microfone disponível, interface de áudio]
+- Orçamento: [Para libraries ou equipamentos adicionais]
+&lt;/especificações_técnicas&gt;
+
+&lt;objetivo&gt;
+Desenvolva um pipeline completo de criação de SFX, desde a conceituação até a implementação no jogo, incluindo técnicas de gravação criativa e processamento eficiente.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Planejamento e categorização de SFX necessários
+2. Técnicas de gravação criativa com recursos limitados
+3. Processamento e edição para diferentes tipos de som
+4. Criação de variações e evitar repetitividade
+5. Normalização e preparação para implementação
+6. Guidelines de integração com a engine
+7. Troubleshooting de problemas comuns
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Pipeline profissional de criação de SFX adaptado para recursos limitados, técnicas criativas de gravação, processamento eficiente e guidelines específicas para implementação em jogos, com soluções para problemas técnicos comuns.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Estilo do jogo:</strong> Realista vs. estilizado vs. retro. <strong>Orçamento:</strong> Zero vs. baixo vs. médio para ferramentas. <strong>Equipamentos:</strong> Celular vs. microfone dedicado vs. setup profissional. <strong>Engine:</strong> Unity, Unreal, Godot, etc.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="gestao" class="task-category">
+            <h2><span class="emoji">📊</span>Gestão de Projetos</h2>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 12: Planejamento de Cronograma de Desenvolvimento
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge basic">Básico</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um gerente de projetos especializado na indústria de jogos, com experiência em metodologias ágeis e tradicionais. Você entende as particularidades do desenvolvimento de jogos e sabe adaptar processos para equipes pequenas e projetos acadêmicos.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 2º período e preciso criar um cronograma realista para meu projeto semestral. Trabalho sozinho e tenho outras disciplinas, então preciso ser eficiente com meu tempo.
+&lt;/contexto&gt;
+
+&lt;parâmetros_projeto&gt;
+- Tipo de jogo: [2D/3D, gênero, plataforma]
+- Prazo total: [X semanas até a entrega]
+- Tempo disponível por semana: [X horas]
+- Experiência prévia: [Iniciante/Intermediário em cada área]
+- Recursos/equipe: [Solo/dupla/grupo]
+- Entregas intermediárias: [Marcos do professor]
+&lt;/parâmetros_projeto&gt;
+
+&lt;objetivo&gt;
+Crie um cronograma detalhado mas flexível, com marcos realistas, buffer para imprevistos e metodologia para acompanhar progresso.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Quebra do projeto em fases principais
+2. Estimativa de tempo para cada tarefa
+3. Identificação de dependências críticas
+4. Cronograma visual (texto/ASCII)
+5. Sistema de acompanhamento de progresso
+6. Plano de contingência para atrasos
+7. Dicas de produtividade para estudantes
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Cronograma estruturado e realista com estimativas baseadas no perfil do estudante, marcos intermediários claros, sistema de acompanhamento simples e estratégias para lidar com a pressão acadêmica e múltiplas disciplinas.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Metodologia:</strong> Waterfall vs. Agile vs. híbrida. <strong>Ferramentas:</strong> Trello, Notion, planilhas, papel. <strong>Complexidade:</strong> Projeto solo vs. equipe vs. multidisciplinar. <strong>Experiência:</strong> Primeiro projeto vs. veterano.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 13: Gestão de Escopo e Recursos
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um consultor de gestão especializado em projetos criativos e startups de jogos. Você tem experiência em ajudar desenvolvedores indies a maximizar recursos limitados e evitar armadilhas comuns de scope creep.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 4º período desenvolvendo meu jogo mais ambicioso até agora. Tenho muitas ideias, mas recursos limitados (tempo, dinheiro, habilidades). Preciso equilibrar ambição com viabilidade.
+&lt;/contexto&gt;
+
+&lt;situação_atual&gt;
+- Visão inicial: [Descrição do jogo dos sonhos]
+- Recursos disponíveis: [Tempo, orçamento, equipe, habilidades]
+- Deadline: [Prazo fixo ou flexível]
+- Prioridades: [Nota vs. aprendizado vs. portfolio]
+- Limitações conhecidas: [Técnicas, artísticas, de tempo]
+&lt;/situação_atual&gt;
+
+&lt;objetivo&gt;
+Desenvolva uma estratégia de gestão de escopo que maximize o impacto do projeto dentro das limitações reais, incluindo critérios para tomar decisões de corte e priorização.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise da viabilidade do escopo atual
+2. Framework para priorização de features
+3. Metodologia MVP (Minimum Viable Product) para jogos
+4. Estratégias de redução de escopo inteligente
+5. Sistema de decisão para features adicionais
+6. Plano de crescimento pós-entrega
+7. Lições aprendidas para próximos projetos
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Estratégia estruturada de gestão de escopo com critérios objetivos para tomada de decisões, metodologia MVP adaptada para jogos acadêmicos, técnicas de priorização e framework para crescimento futuro do projeto.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Tipo de projeto:</strong> Acadêmico vs. comercial vs. portfolio. <strong>Recursos:</strong> Solo vs. equipe vs. orçamento disponível. <strong>Objetivos:</strong> Aprendizado vs. nota vs. lançamento comercial. <strong>Experiência:</strong> Primeiro projeto grande vs. veterano.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="estudo" class="task-category">
+            <h2><span class="emoji">📚</span>Apoio aos Estudos</h2>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 14: Análise de Jogos para Estudo de Caso
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge basic">Básico</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um pesquisador acadêmico e analista de jogos com doutorado em Game Studies, especializado em metodologias de análise formal e crítica de jogos. Você tem experiência em ensinar análise crítica para estudantes de game design.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 1º período e preciso fazer uma análise crítica de um jogo para um trabalho acadêmico. Quero ir além de "gostei/não gostei" e fazer uma análise profissional e estruturada.
+&lt;/contexto&gt;
+
+&lt;parâmetros_análise&gt;
+- Jogo escolhido: [Nome do jogo]
+- Foco da análise: [Mecânicas/Narrativa/Arte/UX/etc.]
+- Extensão do trabalho: [Número de páginas ou palavras]
+- Audiência: [Professor, colegas, público geral]
+- Objetivo acadêmico: [Que conceitos da aula aplicar]
+&lt;/parâmetros_análise&gt;
+
+&lt;objetivo&gt;
+Desenvolva uma metodologia estruturada de análise que me permita examinar o jogo de forma crítica e acadêmica, identificando elementos de design específicos e sua efetividade.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Framework de análise formal de jogos
+2. Perguntas-guia para cada aspecto do jogo
+3. Metodologia de observação e anotação
+4. Estrutura de relatório acadêmico
+5. Critérios de avaliação objetivos
+6. Como conectar análise com teoria de game design
+7. Dicas de escrita acadêmica específicas para jogos
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Metodologia acadêmica estruturada para análise de jogos, com framework teórico sólido, perguntas direcionadas, critérios objetivos de avaliação e guidelines para produzir relatórios acadêmicos de qualidade profissional.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Foco de análise:</strong> Mecânicas, narrativa, arte, áudio, UX/UI, monetização. <strong>Tipo de jogo:</strong> Indie vs. AAA vs. mobile vs. experimental. <strong>Abordagem teórica:</strong> Formalista vs. cultural vs. psicológica. <strong>Nível acadêmico:</strong> Graduação vs. pós-graduação.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 15: Preparação para Apresentações de Projeto
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um consultor de comunicação especializado na indústria de jogos, com experiência em pitches para investidores, apresentações acadêmicas e comunicação técnica. Você ajuda desenvolvedores a comunicar suas ideias de forma clara e convincente.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 3º período e preciso apresentar meu projeto de jogo para uma banca de professores. Tenho dificuldade com apresentações públicas e quero comunicar minha visão de forma profissional e convincente.
+&lt;/contexto&gt;
+
+&lt;especificações_apresentação&gt;
+- Tempo disponível: [X minutos + Y minutos de perguntas]
+- Audiência: [Professores, colegas, profissionais da indústria]
+- Formato: [Presencial/Online/Híbrido]
+- Recursos: [Projetor, demo jogável, protótipo]
+- Objetivos: [Nota, feedback, aprovação para próxima fase]
+- Estado do projeto: [Conceito/Protótipo/Quase pronto/Finalizado]
+&lt;/especificações_apresentação&gt;
+
+&lt;objetivo&gt;
+Crie uma estrutura de apresentação que comunique efetivamente minha visão, demonstre competência técnica e gere engajamento da audiência, mesmo com nervosismo.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Estrutura narrativa da apresentação
+2. Técnicas de abertura e fechamento impactantes
+3. Como demonstrar o jogo efetivamente
+4. Slides essenciais e design visual
+5. Estratégias para lidar com nervosismo
+6. Preparação para sessão de perguntas
+7. Backup plans para problemas técnicos
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Estrutura profissional de apresentação com narrativa envolvente, técnicas práticas para demonstração de jogos, estratégias para gerenciar ansiedade, preparação para Q&A e contingências para problemas técnicos.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Tipo de audiência:</strong> Acadêmica vs. indústria vs. investidores vs. jogadores. <strong>Fase do projeto:</strong> Conceito vs. protótipo vs. beta vs. lançamento. <strong>Formato:</strong> Pitch vs. defesa vs. showcase vs. postmortem. <strong>Personalidade:</strong> Introvertido vs. extrovertido.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 16: Pesquisa e Fundamentação Teórica
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um pesquisador acadêmico sênior em Game Studies com expertise em metodologia de pesquisa, revisão bibliográfica e escrita acadêmica. Você orienta estudantes na fundamentação teórica de seus projetos de jogos.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 5º período desenvolvendo meu TCC e preciso fundamentar teoricamente meu projeto de jogo. Sei que preciso de uma base acadêmica sólida, mas não sei como conectar teoria com prática de design.
+&lt;/contexto&gt;
+
+&lt;especificações_pesquisa&gt;
+- Tema do projeto: [Área específica do seu jogo/pesquisa]
+- Problema de pesquisa: [Que questão você quer responder]
+- Metodologia: [Teórica/Prática/Mista]
+- Prazo: [Tempo disponível para pesquisa]
+- Recursos: [Acesso a bases de dados, biblioteca]
+- Experiência prévia: [Nível de familiaridade com pesquisa acadêmica]
+&lt;/especificações_pesquisa&gt;
+
+&lt;objetivo&gt;
+Desenvolva uma estratégia de pesquisa eficiente que me permita construir fundamentação teórica robusta e conectá-la organicamente com meu projeto prático.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Estratégia de pesquisa bibliográfica
+2. Fontes acadêmicas relevantes para jogos
+3. Metodologia de leitura e fichamento
+4. Como conectar teoria com prática de design
+5. Estrutura de revisão de literatura
+6. Ferramentas de organização de referências
+7. Dicas de escrita acadêmica para game design
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Estratégia estruturada de pesquisa acadêmica específica para Game Studies, metodologia eficiente de revisão bibliográfica, técnicas para conectar teoria e prática, e guidelines para escrita acadêmica aplicada ao game design.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Área de foco:</strong> Game design, programação, arte, áudio, negócios. <strong>Tipo de TCC:</strong> Teórico vs. prático vs. misto. <strong>Metodologia:</strong> Quantitativa vs. qualitativa vs. design research. <strong>Escopo:</strong> Revisão bibliográfica vs. estudo de caso vs. desenvolvimento experimental.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="negocios" class="task-category">
+            <h2><span class="emoji">💼</span>Negócios e Empreendedorismo</h2>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 17: Desenvolvimento de Plano de Negócios para Game Studio
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge advanced">Avançado</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um consultor de negócios especializado na indústria de jogos, com experiência em startups, modelos de monetização e análise de mercado. Você já ajudou diversos estúdios indies a estruturar seus negócios e conseguir investimento.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 6º período e quero transformar meu projeto final em um negócio real. Tenho uma ideia sólida de jogo, mas preciso estruturar um plano de negócios viável para possível investimento ou participação em editais.
+&lt;/contexto&gt;
+
+&lt;especificações_negócio&gt;
+- Conceito do jogo: [Gênero, plataforma, público-alvo]
+- Estágio atual: [Protótipo/Alpha/Beta/Quase pronto]
+- Equipe: [Tamanho, competências, disponibilidade]
+- Recursos disponíveis: [Orçamento inicial, equipamentos, tempo]
+- Objetivos: [Lançamento indie/Buscar publisher/Crescer estúdio]
+- Mercado alvo: [Local/Nacional/Internacional]
+&lt;/especificações_negócio&gt;
+
+&lt;objetivo&gt;
+Desenvolva um plano de negócios estruturado e realista que demonstre viabilidade comercial, inclua análise de mercado e estratégias de monetização adequadas para um estúdio iniciante.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise de mercado e posicionamento
+2. Modelo de negócios e monetização
+3. Estrutura organizacional e legal
+4. Plano financeiro e projeções
+5. Estratégia de marketing e lançamento
+6. Análise de riscos e contingências
+7. Roadmap de crescimento e escalabilidade
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Plano de negócios profissional e abrangente, com análise realista de mercado, modelo financeiro sustentável, estratégias práticas de monetização e roadmap de crescimento adequado para um estúdio iniciante brasileiro.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Modelo de negócio:</strong> Premium, freemium, subscription, DLC. <strong>Escala:</strong> Solo developer vs. pequeno estúdio vs. ambições de crescimento. <strong>Mercado:</strong> Local vs. global vs. nicho específico. <strong>Recursos:</strong> Bootstrap vs. investimento vs. editais públicos.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 18: Estratégias de Marketing Digital para Jogos Indie
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um especialista em marketing digital para a indústria de jogos, com foco em estratégias de baixo orçamento para desenvolvedores indies. Você entende community building, redes sociais e marketing de performance específicos para jogos.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no 5º período e meu jogo está próximo do lançamento. Tenho orçamento zero para marketing, mas quero criar buzz e encontrar meu público-alvo antes e depois do lançamento.
+&lt;/contexto&gt;
+
+&lt;especificações_marketing&gt;
+- Tipo de jogo: [Gênero, plataforma, classificação etária]
+- Público-alvo: [Demografia, interesses, comportamento]
+- Orçamento: [Zero/Muito baixo/Limitado]
+- Tempo disponível: [Horas por semana para marketing]
+- Recursos: [Redes sociais, website, trailer, screenshots]
+- Cronograma: [Tempo até o lançamento]
+&lt;/especificações_marketing&gt;
+
+&lt;objetivo&gt;
+Crie uma estratégia de marketing digital completa e executável com orçamento zero, focada em construir comunidade e gerar interesse orgânico no jogo.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise de público e personas
+2. Estratégia de conteúdo por plataforma
+3. Timeline de marketing pré-lançamento
+4. Táticas de community building
+5. Estratégias de lançamento e pós-lançamento
+6. Métricas para acompanhar sucesso
+7. Plano de crescimento orgânico sustentável
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Estratégia de marketing digital executável sem orçamento, com cronograma detalhado, táticas específicas para cada plataforma, metodologia de community building e métricas para acompanhar o crescimento orgânico.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Plataformas:</strong> Steam, mobile stores, console, itch.io. <strong>Gênero do jogo:</strong> Cada tipo tem comunidades diferentes. <strong>Recursos disponíveis:</strong> Tempo vs. dinheiro vs. habilidades de marketing. <strong>Personalidade:</strong> Introvertido vs. extrovertido para estratégias pessoais.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 19: Participação em Editais e Concursos de Jogos
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge intermediate">Intermediário</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um consultor especializado em editais públicos e concursos da indústria criativa, com expertise específica em programas de fomento para jogos digitais no Brasil. Você já ajudou dezenas de desenvolvedores a conseguir financiamento.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Sou estudante do 6º período e quero participar de editais para financiar meu projeto pós-formatura. Nunca participei de processos seletivos formais e preciso entender como estruturar uma proposta competitiva.
+&lt;/contexto&gt;
+
+&lt;especificações_edital&gt;
+- Tipo de edital: [ANCINE/FINEP/CNPq/Privado/Internacional]
+- Valor solicitado: [Faixa de financiamento desejada]
+- Estado do projeto: [Conceito/Protótipo/Desenvolvimento/Finalização]
+- Categoria: [Primeiro jogo/Estúdio estabelecido/Inovação/etc.]
+- Prazo para submissão: [Tempo disponível para preparar]
+- Experiência prévia: [Nenhuma em editais formais]
+&lt;/especificações_edital&gt;
+
+&lt;objetivo&gt;
+Desenvolva uma estratégia completa para participação em editais, incluindo preparação de documentação, estruturação da proposta e maximização das chances de aprovação.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Análise de adequação do projeto ao edital
+2. Estruturação da proposta técnica
+3. Orçamentação detalhada e justificativas
+4. Documentação necessária e cronograma
+5. Estratégias de diferenciação competitiva
+6. Preparação para apresentação (se houver)
+7. Plano B para outros editais/oportunidades
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Guia estruturado para participação em editais com metodologia de análise de adequação, template de proposta técnica, orientações de orçamentação e estratégias para maximizar competitividade em processos seletivos.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Tipo de fomento:</strong> Governo federal vs. estadual vs. privado vs. internacional. <strong>Foco do edital:</strong> Inovação vs. cultura vs. exportação vs. educação. <strong>Estágio do projeto:</strong> Conceito vs. desenvolvimento vs. finalização vs. distribuição. <strong>Perfil:</strong> Pessoa física vs. jurídica vs. instituição.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-container">
+                <div class="example-header" onclick="toggleExample(this)">
+                    Exemplo 20: Planejamento de Carreira na Indústria de Jogos
+                </div>
+                <div class="example-content">
+                    <div class="complexity-badge basic">Básico</div>
+                    
+                    <div class="prompt-structure">
+&lt;persona&gt;
+Você é um coach de carreira especializado na indústria de jogos, com conhecimento profundo sobre diferentes trajetórias profissionais, competências demandadas e tendências do mercado brasileiro e internacional de games.
+&lt;/persona&gt;
+
+&lt;contexto&gt;
+Estou no final do curso e preciso definir minha trajetória profissional. Tenho interesses múltiplos e quero entender as opções de carreira, como me posicionar no mercado e construir um plano de desenvolvimento profissional.
+&lt;/contexto&gt;
+
+&lt;perfil_atual&gt;
+- Competências técnicas: [Programação/Arte/Design/Áudio/Gestão - nível de cada]
+- Interesses principais: [Áreas que mais me motivam]
+- Projetos realizados: [Portfolio atual]
+- Preferências: [Estúdio grande/indie/freelance/empreender]
+- Localização: [Disposição para mudança geográfica]
+- Objetivos de curto/médio prazo: [1-2 anos / 3-5 anos]
+&lt;/perfil_atual&gt;
+
+&lt;objetivo&gt;
+Desenvolva um plano de carreira estruturado com caminhos alternativos, competências a desenvolver, estratégias de networking e cronograma de evolução profissional.
+&lt;/objetivo&gt;
+
+&lt;formato_resposta&gt;
+1. Mapeamento de opções de carreira disponíveis
+2. Análise de fit entre perfil e oportunidades
+3. Competências prioritárias para desenvolver
+4. Estratégias de construção de portfolio
+5. Plano de networking e presença online
+6. Cronograma de evolução profissional
+7. Alternativas e planos de contingência
+&lt;/formato_resposta&gt;
+                    </div>
+
+                    <div class="expected-result">
+                        <h4>Resultado Esperado:</h4>
+                        <p>Plano de carreira personalizado com análise realista do mercado, identificação de competências-chave para desenvolver, estratégias práticas de posicionamento profissional e cronograma de evolução adequado ao perfil individual.</p>
+                    </div>
+
+                    <div class="customization-tip">
+                        <h4>💡 Como Personalizar:</h4>
+                        <p><strong>Especialização:</strong> Generalista vs. especialista em área específica. <strong>Tipo de empresa:</strong> AAA vs. indie vs. mobile vs. serious games. <strong>Mercado:</strong> Brasil vs. remoto internacional vs. mudança para exterior. <strong>Perfil:</strong> Técnico vs. criativo vs. híbrido vs. gestão.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="tip-box">
+            <h2>💡 Dicas Finais para Maximizar seus Prompts</h2>
+            <blockquote>
+                "Um prompt eficaz é como um briefing bem feito: <strong>claro, específico e contextualizado</strong>.<br>
+                Quanto melhor você definir sua persona e contexto, mais útil será a resposta."
+            </blockquote>
+            <p><strong>Lembre-se sempre:</strong> A IA é uma ferramenta poderosa para potencializar seu aprendizado e criatividade, mas nunca substitui seu pensamento crítico, criatividade e responsabilidade profissional. Use-a para amplificar suas habilidades, não para substituí-las.</p>
+        </div>
+
+        <div class="warning-box">
+            <h4>⚠️ Responsabilidade Acadêmica e Profissional</h4>
+            <p>Todo conteúdo gerado por IA deve ser cuidadosamente revisado, adaptado ao seu contexto específico e validado quanto à qualidade e originalidade. Você permanece totalmente responsável pelo trabalho final que entrega, independentemente das ferramentas utilizadas em sua criação. Sempre cite o uso de IA quando exigido pelas normas acadêmicas.</p>
+        </div>
+    </div>
+
+    <a href="#" class="back-to-top" id="backToTop">↑</a>
+
+    <script>
+        // Function to toggle individual examples
+        function toggleExample(header) {
+            const content = header.nextElementSibling;
+            const isActive = content.classList.contains('active');
+            
+            if (isActive) {
+                content.classList.remove('active');
+                header.style.background = '#48bb78';
+            } else {
+                content.classList.add('active');
+                header.style.background = '#38a169';
+            }
+        }
+
+        // Function to toggle all examples
+        function toggleAllExamples() {
+            const allContents = document.querySelectorAll('.example-content');
+            const allHeaders = document.querySelectorAll('.example-header');
+            
+            // Check if any is open
+            const anyOpen = Array.from(allContents).some(content => content.classList.contains('active'));
+            
+            allContents.forEach((content, index) => {
+                if (anyOpen) {
+                    content.classList.remove('active');
+                    allHeaders[index].style.background = '#48bb78';
+                } else {
+                    content.classList.add('active');
+                    allHeaders[index].style.background = '#38a169';
+                }
+            });
+        }
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Back to top button functionality
+        const backToTopButton = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+
+        backToTopButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Add subtle animation on scroll
+        function animateOnScroll() {
+            const elements = document.querySelectorAll('.example-container');
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+                
+                if (elementTop < window.innerHeight - elementVisible) {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }
+            });
+        }
+
+        // Initialize animation styles
+        document.querySelectorAll('.example-container').forEach(element => {
+            element.style.opacity = '0';
+            element.style.transform = 'translateY(20px)';
+            element.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        });
+
+        window.addEventListener('scroll', animateOnScroll);
+        animateOnScroll(); // Initial call
+
+        // Auto-expand first example of each category for better UX
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstExamples = document.querySelectorAll('.task-category .example-container:first-of-type .example-header');
+            firstExamples.forEach(header => {
+                setTimeout(() => toggleExample(header), 500);
+            });
+        });
+    </script>
+</body>
+</html>

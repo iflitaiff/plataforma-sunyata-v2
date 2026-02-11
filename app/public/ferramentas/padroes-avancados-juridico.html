@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padrões Avançados de Engenharia de Prompts - Grande Escritório RJ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.97);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #1a252f;
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #34495e;
+            font-size: 1.3rem;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+
+        .description {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(155, 89, 182, 0.1));
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #3498db;
+            margin-bottom: 30px;
+            font-size: 1.05rem;
+        }
+
+        .pattern-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .legend-item {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid var(--color);
+        }
+
+        .legend-item.few-shot { --color: #e74c3c; }
+        .legend-item.chain-thought { --color: #f39c12; }
+        .legend-item.cognitive { --color: #9b59b6; }
+        .legend-item.persona { --color: #2ecc71; }
+        .legend-item.template { --color: #3498db; }
+        .legend-item.semantic { --color: #1abc9c; }
+
+        .category {
+            background: rgba(255, 255, 255, 0.97);
+            margin-bottom: 35px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+            transition: all 0.4s ease;
+            backdrop-filter: blur(15px);
+        }
+
+        .category:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18);
+        }
+
+        .category-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 25px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .category:hover .category-header::before {
+            left: 100%;
+        }
+
+        .prompt-item {
+            padding: 30px;
+            border-bottom: 1px solid #ecf0f1;
+            position: relative;
+        }
+
+        .prompt-item:last-child {
+            border-bottom: none;
+        }
+
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .prompt-title {
+            color: #2c3e50;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .prompt-title::before {
+            content: "⚡";
+            margin-right: 12px;
+            font-size: 1.4rem;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .prompt-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .pattern-badge {
+            display: inline-block;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .badge-few-shot { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .badge-chain-thought { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .badge-cognitive { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .badge-persona { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .badge-template { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .badge-semantic { background: linear-gradient(135deg, #1abc9c, #16a085); }
+        .badge-interaction { background: linear-gradient(135deg, #e67e22, #d35400); }
+        .badge-menu { background: linear-gradient(135deg, #34495e, #2c3e50); }
+
+        .difficulty {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+        }
+
+        .prompt-text {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 5px solid #e74c3c;
+            margin: 20px 0;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            white-space: pre-line;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .prompt-text::before {
+            content: 'PROMPT';
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #e74c3c;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .explanation {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.08), rgba(39, 174, 96, 0.08));
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid #2ecc71;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .explanation::before {
+            content: 'EXPLICAÇÃO TÉCNICA';
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #2ecc71;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .explanation-title {
+            font-weight: 700;
+            color: #27ae60;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        .technique-detail {
+            background: rgba(52, 152, 219, 0.08);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 3px solid #3498db;
+        }
+
+        .technique-name {
+            font-weight: 600;
+            color: #2980b9;
+            margin-bottom: 5px;
+        }
+
+        .variables {
+            background: linear-gradient(135deg, rgba(241, 196, 15, 0.1), rgba(243, 156, 18, 0.1));
+            padding: 16px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            border-left: 4px solid #f39c12;
+            position: relative;
+        }
+
+        .variables::before {
+            content: 'VARIÁVEIS PERSONALIZÁVEIS';
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #f39c12;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .variables strong {
+            color: #e67e22;
+        }
+
+        .complexity-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            color: white;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            color: #7f8c8d;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .footer-section {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .footer-section h4 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .prompt-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .prompt-title {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Padrões Avançados de Engenharia de Prompts</h1>
+            <p class="subtitle">Técnicas Sofisticadas para Grandes Escritórios de Advocacia do Rio de Janeiro</p>
+            <div class="description">
+                <strong>🎯 Objetivo:</strong> Esta biblioteca avançada apresenta padrões de engenharia de prompts especificamente desenvolvidos para as complexidades operacionais de grandes escritórios de advocacia no Rio de Janeiro. Cada prompt aplica múltiplas técnicas sofisticadas incluindo <strong>Few-Shot Learning</strong> e <strong>Chain of Thought (CoT)</strong> para maximizar precisão e eficiência.
+                
+                <div class="pattern-legend">
+                    <div class="legend-item few-shot">
+                        <strong>Few-Shot Learning:</strong> Fornece exemplos específicos para orientar o comportamento da IA
+                    </div>
+                    <div class="legend-item chain-thought">
+                        <strong>Chain of Thought:</strong> Força raciocínio passo-a-passo explícito
+                    </div>
+                    <div class="legend-item cognitive">
+                        <strong>Verificação Cognitiva:</strong> Quebra tarefas complexas em etapas verificáveis
+                    </div>
+                    <div class="legend-item persona">
+                        <strong>Persona Especializada:</strong> Define expertise e contexto específicos
+                    </div>
+                    <div class="legend-item template">
+                        <strong>Template Estruturado:</strong> Formatos padronizados e reutilizáveis
+                    </div>
+                    <div class="legend-item semantic">
+                        <strong>Filtro Semântico:</strong> Processamento inteligente de informações sensíveis
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="category">
+            <div class="category-header">🏢 Gestão de Grandes Carteiras de Clientes</div>
+            
+            <div class="prompt-item">
+                <div class="complexity-indicator">EXPERT</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Sistema de Priorização de Demandas Corporativas</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-few-shot">Few-Shot</span>
+                        <span class="pattern-badge badge-chain-thought">Chain of Thought</span>
+                        <span class="pattern-badge badge-cognitive">Verificação Cognitiva</span>
+                        <span class="pattern-badge badge-template">Template</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como um Partner de grande escritório do Rio de Janeiro especializado em direito empresarial, gerenciando carteira de 50+ clientes corporativos.
+
+EXEMPLO DE ANÁLISE DE PRIORIZAÇÃO (Few-Shot Learning):
+
+**CASO EXEMPLO: Petrobras - Investigação Regulatória**
+- Cliente: Petrobras (Tier 1)
+- Demanda: Resposta à CVM sobre práticas de governança
+- Prazo: 15 dias úteis
+- Complexidade: Alta (múltiplas diretorias envolvidas)
+- Impacto: Crítico (reputacional + financeiro)
+- Recursos necessários: 3 sócios + 8 associados + compliance specialist
+- Score final: 95/100 (PRIORIDADE MÁXIMA)
+
+**RACIOCÍNIO APLICADO:**
+1. Análise de Criticidade: Prazo curto + órgão regulador = urgência máxima
+2. Análise de Cliente: Tier 1 + relacionamento estratégico = prioridade alta
+3. Análise de Recursos: Equipe disponível + expertise interna = viabilidade confirmada
+4. Análise de Impacto: Sucesso = fortalecimento do relacionamento / Falha = perda de cliente
+5. Decisão: Alocar recursos imediatamente, cancelar reuniões não-críticas da equipe
+
+Agora, aplique esta metodologia Chain of Thought para a demanda abaixo:
+
+NOVA DEMANDA PARA ANÁLISE:
+Cliente: [NOME_CLIENTE]
+Tipo: [TIPO_DEMANDA]
+Prazo: [PRAZO_ESPECÍFICO]
+Descrição: [DESCRIÇÃO_DETALHADA]
+
+PROCESSO DE ANÁLISE (siga exatamente esta sequência):
+
+1. **CLASSIFICAÇÃO INICIAL**
+   - Identifique o tier do cliente (1-4, sendo 1 o mais estratégico)
+   - Categorize o tipo de demanda (contencioso, consultivo, transacional, compliance)
+   - Avalie a urgência real vs. percebida pelo cliente
+
+2. **ANÁLISE DE COMPLEXIDADE**
+   - Mapeie as áreas jurídicas envolvidas
+   - Identifique stakeholders internos e externos
+   - Estime horas de trabalho por senioridade
+   - Avalie necessidade de especialistas externos
+
+3. **AVALIAÇÃO DE IMPACTO**
+   - Consequências do sucesso para o relacionamento
+   - Riscos do insucesso (financeiro, reputacional, operacional)
+   - Potencial de geração de trabalhos futuros
+   - Impacto na carteira de outros clientes
+
+4. **ANÁLISE DE RECURSOS**
+   - Disponibilidade da equipe ideal
+   - Conflitos com outras prioridades
+   - Necessidade de realocação de recursos
+   - Viabilidade de terceirização parcial
+
+5. **SCORING E DECISÃO**
+   - Atribua pontuação (0-100) para cada critério
+   - Calcule score ponderado final
+   - Defina categoria de prioridade (A/B/C/D)
+   - Estabeleça timeline e alocação de recursos
+
+FORMATO DE SAÍDA:
+Estruture sua análise seguindo exatamente o template do exemplo, explicando cada etapa do raciocínio.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Few-Shot Learning:</div>
+                        Fornece exemplo concreto e detalhado (caso Petrobras) para estabelecer o padrão de análise esperado, incluindo formato, profundidade e tipo de raciocínio.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Chain of Thought (CoT):</div>
+                        Força a IA a explicitar cada etapa do raciocínio através de um processo estruturado em 5 passos sequenciais, similar ao processo decisório de um partner experiente.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Verificação Cognitiva:</div>
+                        Quebra a análise complexa em componentes verificáveis (classificação, complexidade, impacto, recursos, scoring) para garantir análise sistemática.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Define formato padronizado que pode ser aplicado consistentemente a qualquer demanda, facilitando comparações e tomada de decisão.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [NOME_CLIENTE], [TIPO_DEMANDA], [PRAZO_ESPECÍFICO], [DESCRIÇÃO_DETALHADA]
+                </div>
+            </div>
+
+            <div class="prompt-item">
+                <div class="complexity-indicator">AVANÇADO</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Coordenação de Equipes Multidisciplinares</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-few-shot">Few-Shot</span>
+                        <span class="pattern-badge badge-persona">Persona</span>
+                        <span class="pattern-badge badge-template">Template</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como um Sócio-Coordenador de grande escritório carioca gerenciando projeto multidisciplinar complexo.
+
+EXEMPLO DE COORDENAÇÃO EFICAZ (Few-Shot Learning):
+
+**PROJETO EXEMPLO: Aquisição da Rede D'Or pela UnitedHealth**
+- Equipes: M&A (5 advogados) + Regulatório (3 advogados) + Concorrencial (2 advogados) + Trabalhista (2 advogados)
+- Timeline: 6 meses
+- Desafio: Coordenar múltiplas workstreams com interdependências críticas
+
+**ESTRUTURA DE COORDENAÇÃO APLICADA:**
+
+📋 **KICK-OFF MEETING**
+- Apresentação do projeto e objetivos gerais
+- Definição de workstreams e responsáveis
+- Estabelecimento de protocolos de comunicação
+- Criação de cronograma integrado com marcos críticos
+
+📞 **WEEKLY COORDINATION CALLS** (Segundas, 9h)
+- Update de cada workstream (5 min por área)
+- Identificação de blockers e interdependências
+- Alinhamento de próximos passos
+- Escalonamento de issues críticas
+
+📊 **DASHBOARD DE PROJETO**
+- Status visual de cada workstream
+- Marcos cumpridos vs. planejados
+- Red flags e riscos identificados
+- Recursos alocados vs. necessários
+
+🚨 **PROTOCOLO DE ESCALAÇÃO**
+- Issues operacionais: Coordenador resolve diretamente
+- Conflitos entre áreas: Reunião específica em 24h
+- Decisões estratégicas: Envolvimento do cliente em 48h
+- Crises: Call de emergência em 2h
+
+Agora aplique esta estrutura para coordenar o projeto:
+
+NOVO PROJETO MULTIDISCIPLINAR:
+Descrição: [DESCRIÇÃO_PROJETO]
+Áreas envolvidas: [LISTAR_ÁREAS]
+Timeline: [PRAZO_TOTAL]
+Cliente: [NOME_CLIENTE]
+
+DESENVOLVA SEU PLANO DE COORDENAÇÃO:
+
+1. **ESTRUTURA DE GOVERNANÇA**
+   - Defina hierarquia de decisão
+   - Estabeleça frequência e formato de reuniões
+   - Crie protocolos de comunicação interna
+   - Determine interfaces com o cliente
+
+2. **GESTÃO DE RECURSOS**
+   - Aloque equipes por workstream
+   - Identifique recursos compartilhados
+   - Estabeleça backup para funções críticas
+   - Planeje escalação de recursos se necessário
+
+3. **CONTROLE DE QUALIDADE**
+   - Defina templates e padrões de entrega
+   - Estabeleça processo de review cruzado
+   - Crie checkpoints de qualidade
+   - Determine critérios de aprovação final
+
+4. **GESTÃO DE RISCOS**
+   - Identifique riscos de coordenação
+   - Estabeleça contingências para atrasos
+   - Crie planos B para recursos críticos
+   - Defina comunicação de crises
+
+Estruture seu plano seguindo o formato do exemplo, com seções claras e acionáveis.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Few-Shot Learning:</div>
+                        Utiliza caso real complexo (UnitedHealth/D'Or) como modelo, demonstrando estruturas específicas de coordenação que funcionaram na prática.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Persona Especializada:</div>
+                        Define papel específico (Sócio-Coordenador) com responsabilidades e perspectiva próprias de gestão de projetos jurídicos complexos.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Fornece framework em 4 componentes (governança, recursos, qualidade, riscos) replicável para qualquer projeto multidisciplinar.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [DESCRIÇÃO_PROJETO], [LISTAR_ÁREAS], [PRAZO_TOTAL], [NOME_CLIENTE]
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <div class="category-header">⚖️ Contencioso Estratégico e Arbitragem</div>
+            
+            <div class="prompt-item">
+                <div class="complexity-indicator">EXPERT</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Estratégia de Contencioso de Alto Valor</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-chain-thought">Chain of Thought</span>
+                        <span class="pattern-badge badge-few-shot">Few-Shot</span>
+                        <span class="pattern-badge badge-cognitive">Verificação Cognitiva</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como um sócio especialista em contencioso estratégico de grande escritório do Rio de Janeiro, com histórico de casos de R$ 100MM+.
+
+EXEMPLO DE ANÁLISE ESTRATÉGICA (Few-Shot Learning):
+
+**CASO EXEMPLO: Vale vs. Samarco - Disputa Societária**
+- Valor: R$ 15 bilhões
+- Foro: Arbitragem CCI
+- Questão: Responsabilidade por danos ambientais de Mariana
+
+**ANÁLISE ESTRATÉGICA APLICADA:**
+
+**FASE 1: DIAGNÓSTICO JURÍDICO**
+- Mapeamento de 15 questões jurídicas interconectadas
+- Identificação de 3 teses principais e 8 subsidiárias
+- Análise de precedentes em 4 jurisdições
+- Probabilidade de êxito: 65% na tese principal
+
+**FASE 2: ANÁLISE DE CENÁRIOS**
+- Cenário otimista: Sucesso total + honorários (5% probabilidade)
+- Cenário realista: Acordo por 40% do valor (70% probabilidade)  
+- Cenário pessimista: Derrota total + custas (25% probabilidade)
+
+**FASE 3: ESTRATÉGIA DE EXECUÇÃO**
+- Equipe: 2 sócios + 6 seniors + 4 juniors + 1 consultor internacional
+- Orçamento: R$ 12MM (3 anos)
+- Milestone 1: Contestação robusta (6 meses)
+- Milestone 2: Prova pericial convincente (18 meses)
+- Milestone 3: Audiência final estratégica (30 meses)
+
+Agora, aplique este processo Chain of Thought para o caso:
+
+NOVO CASO PARA ESTRATÉGIA:
+Parte: [NOME_CLIENTE]
+Contra: [PARTE_ADVERSA]  
+Valor: [VALOR_CAUSA]
+Objeto: [DESCRIÇÃO_DISPUTA]
+Foro: [JUSTIÇA_COMUM/ARBITRAGEM]
+
+DESENVOLVA SUA ANÁLISE ESTRATÉGICA (siga exatamente esta sequência de raciocínio):
+
+**ETAPA 1: ANÁLISE JURÍDICA PROFUNDA**
+1.1. Identifique e hierarquize todas as questões jurídicas envolvidas
+1.2. Para cada questão, analise:
+    - Fundamentação normativa disponível
+    - Precedentes favoráveis e contrários
+    - Força probatória necessária
+    - Complexidade de demonstração
+1.3. Atribua probabilidade de êxito (0-100%) para cada tese
+1.4. Identifique teses com maior potencial de convencimento
+
+**ETAPA 2: MAPEAMENTO DE RISCOS E OPORTUNIDADES**
+2.1. Analise força da parte adversa:
+    - Recursos financeiros disponíveis
+    - Qualidade da representação legal
+    - Apoio institucional/político
+    - Histórico em casos similares
+2.2. Avalie contexto decisório:
+    - Perfil do julgador/tribunal arbitral
+    - Jurisprudência recente do foro
+    - Pressões externas (mídia, opinião pública)
+    - Timing político/econômico
+
+**ETAPA 3: MODELAGEM DE CENÁRIOS**
+3.1. Cenário otimista (probabilidade + impacto)
+3.2. Cenário mais provável (probabilidade + impacto)
+3.3. Cenário pessimista (probabilidade + impacto)
+3.4. Cenário de ruptura/evento inesperado
+
+**ETAPA 4: ESTRATÉGIA DE EXECUÇÃO**
+4.1. Defina estratégia processual:
+    - Sequência de petições e defesas
+    - Estratégia probatória (documentos, perícias, testemunhas)
+    - Táticas de timing (celeridade vs. delonga estratégica)
+4.2. Monte estrutura de equipe:
+    - Composição por senioridade
+    - Especialistas externos necessários
+    - Consultores e peritos
+4.3. Estabeleça orçamento realista:
+    - Custos por fase processual
+    - Investimento em provas
+    - Contingências (10-15% do orçamento total)
+
+**ETAPA 5: PLANO DE COMUNICAÇÃO E GESTÃO**
+5.1. Estratégia de comunicação com cliente
+5.2. Gestão de expectativas ao longo do processo
+5.3. Marcos de reavaliação estratégica
+5.4. Protocolos de tomada de decisão crítica
+
+Explicite seu raciocínio em cada etapa, justificando suas conclusões com base nos fatos apresentados.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Chain of Thought (CoT):</div>
+                        Estrutura o raciocínio estratégico em 5 etapas sequenciais e interdependentes, forçando análise sistemática que espelha o processo decisório de sócios experientes.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Few-Shot Learning:</div>
+                        Utiliza caso real de alta complexidade (Vale/Samarco) como referência, demonstrando profundidade de análise e estrutura de raciocínio esperadas.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Verificação Cognitiva:</div>
+                        Cada etapa contém sub-componentes específicos que podem ser verificados independentemente, garantindo completude da análise estratégica.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [NOME_CLIENTE], [PARTE_ADVERSA], [VALOR_CAUSA], [DESCRIÇÃO_DISPUTA], [JUSTIÇA_COMUM/ARBITRAGEM]
+                </div>
+            </div>
+
+            <div class="prompt-item">
+                <div class="complexity-indicator">AVANÇADO</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Preparação de Arbitragem Internacional</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-few-shot">Few-Shot</span>
+                        <span class="pattern-badge badge-template">Template</span>
+                        <span class="pattern-badge badge-semantic">Filtro Semântico</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como especialista em arbitragem internacional de grande escritório do Rio de Janeiro, com experiência em tribunais CCI, ICC e ICSID.
+
+EXEMPLO DE PREPARAÇÃO ESTRATÉGICA (Few-Shot Learning):
+
+**CASO EXEMPLO: Petrobras vs. Repsol - Disputa de Joint Venture**
+- Tribunal: ICC Paris
+- Lei aplicável: Direito brasileiro + Convenção de Viena
+- Valor: USD 2.8 bilhões
+- Idioma: Inglês
+- Árbitros: 1 brasileiro, 1 espanhol, 1 suíço (presidente)
+
+**ESTRATÉGIA DE PREPARAÇÃO EXECUTADA:**
+
+🎯 **FASE 1: ANÁLISE DE TRIBUNAL (Meses 1-2)**
+- Pesquisa de histórico dos árbitros indicados
+- Análise de 47 decisões anteriores dos árbitros
+- Identificação de padrões decisórios e preferências argumentativas
+- Mapeamento de expertise técnica de cada árbitro
+
+📚 **FASE 2: ESTRATÉGIA JURÍDICA (Meses 2-4)**
+- Análise comparativa: Direito brasileiro vs. direito espanhol vs. direito suíço
+- Identificação de 12 precedentes de arbitragem em casos similares
+- Desenvolvimento de 3 linhas argumentativas principais
+- Preparação de argumentos subsidiários para cada linha principal
+
+🔍 **FASE 3: ESTRATÉGIA PROBATÓRIA (Meses 3-6)**
+- Document production: 45.000 documentos em 3 idiomas
+- Seleção de 8 testemunhas de fato (4 por parte)
+- Contratação de 3 peritos: financeiro, técnico-operacional, regulatório
+- Preparação de chronology detalhada (timeline de 15 anos)
+
+Agora aplique esta metodologia para preparar:
+
+NOVA ARBITRAGEM INTERNACIONAL:
+Requerente: [PARTE_BRASILEIRA]
+Requerida: [PARTE_ESTRANGEIRA]
+Objeto: [DESCRIÇÃO_DISPUTA]
+Tribunal: [INSTITUIÇÃO_ARBITRAL]
+Valor: [VALOR_USD]
+Lei aplicável: [LEI_APLICÁVEL]
+
+DESENVOLVA SUA ESTRATÉGIA DE PREPARAÇÃO:
+
+**MÓDULO 1: ANÁLISE DE TRIBUNAL E CONTEXTO**
+```
+PERFIL DO TRIBUNAL:
+├── Árbitro Parte Brasileira: [Nome/Background]
+├── Árbitro Parte Estrangeira: [Nome/Background]  
+├── Presidente: [Nome/Background]
+└── Análise de Compatibilidade: [Avaliação estratégica]
+
+FATORES CONTEXTUAIS:
+├── Jurisdição sede: [Implicações procedimentais]
+├── Lei aplicável: [Vantagens/desvantagens]
+├── Idioma: [Impacto na estratégia]
+└── Timeline: [Marcos críticos]
+```
+
+**MÓDULO 2: ESTRATÉGIA ARGUMENTATIVA**
+```
+LINHA PRINCIPAL 1: [Argumento central]
+├── Fundamentação jurídica
+├── Precedentes de apoio
+├── Evidências necessárias
+└── Contrapontos esperados
+
+LINHA PRINCIPAL 2: [Argumento alternativo]
+├── Fundamentação jurídica
+├── Precedentes de apoio  
+├── Evidências necessárias
+└── Contrapontos esperados
+
+ARGUMENTOS SUBSIDIÁRIOS:
+├── [Argumento A]: [Fundamento + evidência]
+├── [Argumento B]: [Fundamento + evidência]
+└── [Argumento C]: [Fundamento + evidência]
+```
+
+**MÓDULO 3: ESTRATÉGIA PROBATÓRIA**
+```
+DOCUMENTOS:
+├── Document Production: [Escopo e estratégia]
+├── Documentos chave: [Top 20 documentos críticos]
+├── Privileged documents: [Estratégia de proteção]
+└── E-discovery: [Metodologia e custos]
+
+TESTEMUNHAS DE FATO:
+├── [Nome 1]: [Área de conhecimento + pontos-chave]
+├── [Nome 2]: [Área de conhecimento + pontos-chave]
+├── [Nome 3]: [Área de conhecimento + pontos-chave]
+└── Witness preparation: [Metodologia e timeline]
+
+PERITOS:
+├── [Área 1]: [Escopo + perfil do perito]
+├── [Área 2]: [Escopo + perfil do perito]
+└── Expert reports: [Timeline e coordenação]
+```
+
+**PROTOCOLO DE CONFIDENCIALIDADE:**
+Anonimize informações sensíveis usando códigos (Ex: Parte A, Parte B, Projeto X) e classifique documentos por nível de sensibilidade.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Few-Shot Learning:</div>
+                        Demonstra preparação real de arbitragem de alto valor com cronograma, recursos e estratégias específicas aplicadas com sucesso.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Organiza a preparação em 3 módulos com subseções padronizadas, permitindo replicação sistemática para qualquer arbitragem.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Filtro Semântico:</div>
+                        Inclui protocolo automático de anonimização e classificação de confidencialidade para proteger informações sensíveis do cliente.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [PARTE_BRASILEIRA], [PARTE_ESTRANGEIRA], [DESCRIÇÃO_DISPUTA], [INSTITUIÇÃO_ARBITRAL], [VALOR_USD], [LEI_APLICÁVEL]
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <div class="category-header">🏗️ Fusões, Aquisições e Reestruturações</div>
+            
+            <div class="prompt-item">
+                <div class="complexity-indicator">EXPERT</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Due Diligence de Operações Bilionárias</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-chain-thought">Chain of Thought</span>
+                        <span class="pattern-badge badge-template">Template</span>
+                        <span class="pattern-badge badge-semantic">Filtro Semântico</span>
+                        <span class="pattern-badge badge-menu">Menu de Ações</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como sócio de M&A de grande escritório carioca conduzindo due diligence para operação de R$ 5+ bilhões.
+
+PROCESSO CHAIN OF THOUGHT PARA DUE DILIGENCE:
+
+**ETAPA 1: PLANEJAMENTO ESTRATÉGICO**
+Antes de iniciar qualquer investigação, analise:
+- Tipo de operação (aquisição, fusão, joint venture, reestruturação)
+- Setor regulado vs. não regulado
+- Urgência da operação (competitive process vs. bilateral)
+- Recursos disponíveis (equipe + orçamento + tempo)
+- Questões específicas identificadas pelo cliente
+
+**ETAPA 2: MAPEAMENTO DE RISCOS SETORIAIS**
+Para o setor específico, identifique:
+- Principais órgãos reguladores e suas competências
+- Normas setoriais críticas e tendências regulatórias
+- Licenças e autorizações essenciais para operação
+- Questões trabalhistas típicas do setor
+- Exposições ambientais características
+- Estruturas contratuais padrão
+
+**ETAPA 3: ESTRUTURAÇÃO DA INVESTIGAÇÃO**
+Organize workstreams por especialidade:
+- Corporate (estrutura societária, governança, M&A anteriores)
+- Regulatory (licenças, compliance, relacionamento com órgãos)
+- Commercial (contratos principais, questões concorrenciais)
+- Employment (questões trabalhistas, sindicais, benefícios)
+- Litigation (contencioso ativo, contingências, seguros)
+- Tax (estrutura tributária, planejamentos, autuações)
+- Environmental (licenças ambientais, passivos, remediação)
+- IP (propriedade intelectual, marcas, patentes, know-how)
+
+COMANDOS DE NAVEGAÇÃO:
+
+**MAPEAR [workstream]** → Desenvolva checklist detalhado para área específica
+**INVESTIGAR [questão_específica]** → Aprofunde investigação de ponto identificado
+**AVALIAR [documento/informação]** → Analise documento conforme matriz de riscos
+**QUANTIFICAR [risco]** → Estime impacto financeiro e probabilidade
+**ESCALAR [red_flag]** → Identifique questões para atenção dos sócios/cliente
+**REPORTAR [workstream]** → Gere relatório executivo da área
+**CONSOLIDAR** → Compile relatório final integrado de due diligence
+
+TARGET DA OPERAÇÃO:
+Empresa: [NOME_TARGET]
+Setor: [SETOR_ATIVIDADE]
+Receita anual: [RECEITA_ANUAL]
+Operação: [TIPO_OPERAÇÃO]
+Urgência: [ALTA/MÉDIA/BAIXA]
+
+INICIE SEU PROCESSO (responda seguindo o Chain of Thought):
+
+**ANÁLISE INICIAL (Etapa 1):**
+Com base nas informações da target, explique seu raciocínio para:
+1. Que tipo de complexidades você antecipa para esta operação?
+2. Quais workstreams serão mais críticos e por quê?
+3. Que recursos (equipe + tempo) você estimaria necessários?
+4. Quais seriam as 5 primeiras perguntas para o cliente?
+
+**MAPEAMENTO SETORIAL (Etapa 2):**
+Para o setor identificado, detalhe:
+1. Principais riscos regulatórios típicos
+2. Órgãos reguladores relevantes e suas prerrogativas
+3. Questões trabalhistas/ambientais características
+4. Estruturas contratuais usuais a investigar
+
+**ESTRUTURAÇÃO (Etapa 3):**
+Proponha:
+1. Priorização dos workstreams (1-8, sendo 1 mais crítico)
+2. Alocação de recursos por workstream
+3. Timeline de 60 dias com marcos semanais
+4. Protocolo de comunicação com cliente e target
+
+Comando inicial: MAPEAR corporate
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Chain of Thought (CoT):</div>
+                        Estrutura o processo de due diligence em 3 etapas sequenciais de raciocínio, forçando análise estratégica antes da execução tática.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Organiza a investigação em 8 workstreams padronizados com comandos de navegação específicos para eficiência operacional.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Filtro Semântico:</div>
+                        Incorpora classificação automática de confidencialidade e protocolo de anonimização para proteção de informações sensíveis.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Menu de Ações:</div>
+                        Sistema de comandos permite navegação eficiente entre diferentes aspectos da due diligence conforme necessidades específicas.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [NOME_TARGET], [SETOR_ATIVIDADE], [RECEITA_ANUAL], [TIPO_OPERAÇÃO], [ALTA/MÉDIA/BAIXA]
+                </div>
+            </div>
+
+            <div class="prompt-item">
+                <div class="complexity-indicator">AVANÇADO</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Estruturação de Operações Complexas</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-few-shot">Few-Shot</span>
+                        <span class="pattern-badge badge-chain-thought">Chain of Thought</span>
+                        <span class="pattern-badge badge-cognitive">Verificação Cognitiva</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como sócio especialista em estruturação de operações de M&A de grande escritório do Rio de Janeiro.
+
+EXEMPLO DE ESTRUTURAÇÃO COMPLEXA (Few-Shot Learning):
+
+**CASO EXEMPLO: Aquisição da BR Distribuidora pela Vibra**
+- Operação: Spin-off + IPO + aquisição estratégica
+- Valor: R$ 37 bilhões
+- Desafios: Empresa pública + setor regulado + questões concorrenciais
+
+**ESTRUTURAÇÃO EXECUTADA:**
+
+**FASE 1: ANÁLISE DE OBJETIVOS E RESTRIÇÕES**
+- Objetivo Petrobras: Monetização + manutenção de controle estratégico
+- Objetivo Vibra: Consolidação de mercado + sinergias operacionais
+- Restrições regulatórias: CADE + ANP + CVM
+- Restrições fiscais: Isenção de IR + neutralidade tributária
+
+**FASE 2: MODELAGEM DE ALTERNATIVAS ESTRUTURAIS**
+- Alternativa A: Aquisição direta (rejeitada - questões concorrenciais)
+- Alternativa B: Joint venture (rejeitada - governança complexa)
+- Alternativa C: Spin-off + IPO + aquisição posterior (selecionada)
+
+**FASE 3: ESTRUTURA FINAL IMPLEMENTADA**
+```
+Petrobras (100%)
+     ↓
+BR Distribuidora
+     ↓ (spin-off)
+Petrobras (37.5%) + Mercado (37.5%) + Vibra (25%)
+     ↓ (aquisição posterior via OPA)
+Vibra (100%)
+```
+
+**FASE 4: IMPLEMENTAÇÃO E APROVAÇÕES**
+- CVM: Aprovação do spin-off + prospecto de IPO
+- CADE: Aprovação condicionada com remédios estruturais
+- ANP: Aprovação da transferência de autorizações
+- Timeline total: 18 meses
+
+Agora aplique este processo Chain of Thought para estruturar:
+
+NOVA OPERAÇÃO PARA ESTRUTURAÇÃO:
+Comprador: [NOME_COMPRADOR]
+Vendedor: [NOME_VENDEDOR]
+Target: [NOME_TARGET]
+Valor: [VALOR_OPERAÇÃO]
+Objetivos: [OBJETIVOS_ESTRATÉGICOS]
+Restrições conhecidas: [RESTRIÇÕES_IDENTIFICADAS]
+
+DESENVOLVA SUA ESTRUTURAÇÃO (siga exatamente esta sequência):
+
+**ETAPA 1: DIAGNÓSTICO ESTRATÉGICO**
+1.1. Analise os objetivos de cada parte:
+    - O que cada parte busca alcançar com a operação?
+    - Quais são os drivers de valor para comprador e vendedor?
+    - Existem objetivos conflitantes que precisam ser conciliados?
+
+1.2. Mapeie todas as restrições relevantes:
+    - Regulatórias (órgãos, normas, precedentes)
+    - Fiscais (neutralidade, eficiência tributária)
+    - Societárias (estrutura atual, minoritários)
+    - Contratuais (change of control, consentimentos)
+    - Concorrenciais (concentração, remédios necessários)
+
+**ETAPA 2: GERAÇÃO DE ALTERNATIVAS**
+2.1. Desenvolva 3-4 estruturas alternativas viáveis
+2.2. Para cada alternativa, analise:
+    - Vantagens e desvantagens para cada parte
+    - Complexidade de implementação
+    - Riscos regulatórios e de aprovação
+    - Custos e timing de execução
+    - Flexibilidade para ajustes futuros
+
+**ETAPA 3: AVALIAÇÃO COMPARATIVA**
+3.1. Crie matriz de avaliação com critérios ponderados:
+    - Probabilidade de aprovação regulatória (peso 30%)
+    - Eficiência fiscal (peso 25%)
+    - Complexidade de implementação (peso 20%)
+    - Atendimento aos objetivos das partes (peso 25%)
+
+3.2. Score cada alternativa (1-10) em cada critério
+3.3. Calcule score ponderado final
+3.4. Identifique estrutura preferencial + backup
+
+**ETAPA 4: ESTRUTURA RECOMENDADA**
+4.1. Apresente estrutura selecionada com:
+    - Diagrama visual da estrutura
+    - Sequência de passos para implementação
+    - Documentação necessária
+    - Aprovações regulatórias requeridas
+    - Timeline estimado com marcos críticos
+
+4.2. Identifique riscos da estrutura escolhida:
+    - Pontos de falha potencial
+    - Estratégias de mitigação
+    - Planos de contingência
+
+Explicite seu raciocínio em cada etapa, demonstrando como chegou às suas conclusões.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Few-Shot Learning:</div>
+                        Utiliza caso real de alta complexidade (Petrobras/Vibra) demonstrando processo completo de estruturação com desafios e soluções específicas.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Chain of Thought (CoT):</div>
+                        Força raciocínio estrutural em 4 etapas sequenciais, desde diagnóstico estratégico até implementação, espelhando processo decisório real.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Verificação Cognitiva:</div>
+                        Cada etapa possui componentes específicos verificáveis (objetivos, restrições, alternativas, avaliação) garantindo análise sistemática.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [NOME_COMPRADOR], [NOME_VENDEDOR], [NOME_TARGET], [VALOR_OPERAÇÃO], [OBJETIVOS_ESTRATÉGICOS], [RESTRIÇÕES_IDENTIFICADAS]
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <div class="category-header">🏛️ Direito Público e Regulatório</div>
+            
+            <div class="prompt-item">
+                <div class="complexity-indicator">EXPERT</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Estratégia de Relacionamento com Órgãos Reguladores</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-few-shot">Few-Shot</span>
+                        <span class="pattern-badge badge-persona">Persona</span>
+                        <span class="pattern-badge badge-template">Template</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como sócio especialista em direito regulatório de grande escritório carioca, com 15+ anos assessorando empresas em relacionamento com ANATEL, ANEEL, ANP, ANTAQ, ANAC e órgãos federais.
+
+EXEMPLO DE ESTRATÉGIA REGULATÓRIA (Few-Shot Learning):
+
+**CASO EXEMPLO: Oi - Recuperação Judicial e ANATEL**
+- Contexto: Maior recuperação judicial do Brasil + setor de telecomunicações
+- Desafio: Manter licenças durante RJ + transferir autorizações para novos controladores
+- Órgão: ANATEL (alta complexidade regulatória)
+
+**ESTRATÉGIA EXECUTADA:**
+
+📋 **FASE 1: MAPEAMENTO REGULATÓRIO DETALHADO**
+- Análise de 47 autorizações ANATEL da Oi
+- Identificação de 12 obrigações críticas de continuidade
+- Mapeamento de precedentes de RJ em telecomunicações
+- Análise de posicionamento histórico da ANATEL sobre transferências
+
+🤝 **FASE 2: ENGAJAMENTO ESTRATÉGICO COM ANATEL**
+- Reuniões técnicas preliminares (superintendência específica)
+- Apresentação proativa do plano de recuperação
+- Esclarecimentos sobre garantias de continuidade do serviço
+- Alinhamento sobre procedimentos de transferência futura
+
+📄 **FASE 3: DOCUMENTAÇÃO E SUBMISSÕES FORMAIS**
+- Petição principal: Autorização para RJ sem perda de licenças
+- Documentos complementares: Plano de continuidade + garantias
+- Acompanhamento: 23 ofícios de esclarecimento respondidos
+- Resultado: Aprovação unânime do Conselho Diretor
+
+🎯 **FASE 4: EXECUÇÃO E MONITORAMENTO**
+- Cumprimento pontual de todas as condicionantes
+- Reporting trimestral de indicadores acordados
+- Gestão proativa de eventuais descumprimentos
+- Preparação antecipada para transferências de controle
+
+Agora desenvolva estratégia para o caso:
+
+NOVO CASO REGULATÓRIO:
+Cliente: [NOME_CLIENTE]
+Setor: [SETOR_REGULADO]
+Órgão principal: [ÓRGÃO_REGULADOR]
+Questão central: [DESCRIÇÃO_QUESTÃO]
+Urgência: [ALTA/MÉDIA/BAIXA]
+Complexidade: [ALTA/MÉDIA/BAIXA]
+
+DESENVOLVA SUA ESTRATÉGIA REGULATÓRIA:
+
+**MÓDULO 1: DIAGNÓSTICO REGULATÓRIO**
+```
+PERFIL DO ÓRGÃO:
+├── Estrutura decisória: [Conselho/Diretoria/Superintendência]
+├── Histórico de posicionamentos: [Precedentes relevantes]
+├── Timing decisório típico: [Prazos históricos]
+├── Sensibilidades conhecidas: [Questões que prioriza]
+└── Interlocutores-chave: [Superintendentes/Conselheiros]
+
+ANÁLISE DA QUESTÃO:
+├── Fundamentação normativa: [Base legal]
+├── Precedentes favoráveis: [Casos similares aprovados]
+├── Precedentes contrários: [Casos rejeitados + razões]
+├── Discricionariedade do órgão: [Margem de interpretação]
+└── Impacto setorial: [Repercussão para outros players]
+```
+
+**MÓDULO 2: ESTRATÉGIA DE ENGAJAMENTO**
+```
+ENGAJAMENTO PRELIMINAR:
+├── Reuniões técnicas: [Agenda + participantes + objetivos]
+├── Esclarecimentos informais: [Dúvidas a antecipar]
+├── Construção de entendimento: [Pontos de convergência]
+└── Mapeamento de resistências: [Objeções esperadas]
+
+STAKEHOLDER MAPPING:
+├── Área técnica responsável: [Superintendência X]
+├── Decisores finais: [Conselheiros/Diretores]
+├── Influenciadores: [Outras áreas do órgão]
+├── Terceiros interessados: [Concorrentes, associações]
+└── Formadores de opinião: [Mídia, academia, sociedade civil]
+```
+
+**MÓDULO 3: EXECUÇÃO DA ESTRATÉGIA**
+```
+PETICIONAMENTO FORMAL:
+├── Petição principal: [Estrutura + argumentos centrais]
+├── Estudos de apoio: [Econômicos, técnicos, jurídicos]
+├── Documentação complementar: [Garantias, compromissos]
+└── Timeline de submissão: [Sequência estratégica]
+
+GESTÃO DO PROCESSO:
+├── Acompanhamento: [Protocolo de follow-up]
+├── Complementações: [Antecipação de questionamentos]
+├── Gestão de timing: [Marcos críticos para decisão]
+└── Comunicação externa: [Mídia, mercado, stakeholders]
+```
+
+**MÓDULO 4: CONTINGÊNCIAS E PLANO B**
+```
+CENÁRIOS ALTERNATIVOS:
+├── Aprovação condicionada: [Condicionantes aceitáveis]
+├── Rejeição parcial: [Elementos negociáveis]
+├── Rejeição total: [Recursos disponíveis]
+└── Delays procedimentais: [Estratégias de aceleração]
+
+PLANOS DE MITIGAÇÃO:
+├── Ajustes à proposta: [Flexibilidades disponíveis]
+├── Commitments adicionais: [Contrapartidas oferecíveis]
+├── Alternativas regulatórias: [Outros instrumentos]
+└── Judicial: [Viabilidade de questionamento]
+```
+
+Desenvolva sua estratégia seguindo o template, adaptando-o às especificidades do caso.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Few-Shot Learning:</div>
+                        Demonstra estratégia real de alta complexidade (Oi/ANATEL) com fases específicas, táticas e resultados, servindo como modelo de abordagem.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Persona Especializada:</div>
+                        Define expertise específica em múltiplos órgãos reguladores com 15+ anos de experiência, ativando conhecimento técnico profundo.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Organiza a estratégia em 4 módulos estruturados (diagnóstico, engajamento, execução, contingências) replicáveis para qualquer órgão.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [NOME_CLIENTE], [SETOR_REGULADO], [ÓRGÃO_REGULADOR], [DESCRIÇÃO_QUESTÃO], [ALTA/MÉDIA/BAIXA]
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <div class="category-header">💼 Gestão de Compliance e Governança</div>
+            
+            <div class="prompt-item">
+                <div class="complexity-indicator">AVANÇADO</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Programa de Compliance para Multinacionais</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-chain-thought">Chain of Thought</span>
+                        <span class="pattern-badge badge-template">Template</span>
+                        <span class="pattern-badge badge-interaction">Interação Invertida</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como sócio especialista em compliance de grande escritório carioca, assessorando multinacionais com operações no Brasil em adequação à Lei Anticorrupção, LGPD, regulamentações setoriais e standards internacionais.
+
+PROCESSO CHAIN OF THOUGHT PARA COMPLIANCE:
+
+**ETAPA 1: DIAGNÓSTICO ORGANIZACIONAL**
+Antes de desenhar qualquer programa, analise sistematicamente:
+- Estrutura societária e operacional da empresa
+- Setores de atuação e respectivas regulamentações
+- Jurisdições envolvidas (matriz + subsidiárias)
+- Histórico de compliance (gaps, incidentes, investigações)
+- Cultura organizacional e apetite a risco
+- Recursos disponíveis (orçamento, pessoas, tecnologia)
+
+**ETAPA 2: MAPEAMENTO DE RISCOS E NORMAS APLICÁVEIS**
+Para cada área operacional, identifique:
+- Normas brasileiras específicas (setoriais + gerais)
+- Standards internacionais aplicáveis (matriz/controladora)
+- Riscos específicos do setor e geografia
+- Interfaces com terceiros (fornecedores, distribuidores, governo)
+- Exposições específicas (corrupção, dados pessoais, concorrência, ESG)
+
+**ETAPA 3: DESIGN DO PROGRAMA INTEGRADO**
+Desenvolva programa que combine:
+- Elementos obrigatórios da legislação brasileira
+- Best practices internacionais da controladora
+- Especificidades setoriais e operacionais
+- Capacidade de implementação da organização
+
+Vou conduzir diagnóstico através de perguntas estruturadas antes de recomendar programa específico.
+
+EMPRESA PARA DIAGNÓSTICO:
+Nome: [NOME_EMPRESA]
+Setor: [SETOR_PRINCIPAL]
+Origem: [PAÍS_MATRIZ]
+Faturamento BR: [RECEITA_BRASIL]
+
+PROCESSO DE DIAGNÓSTICO (responda uma questão por vez):
+
+**CATEGORIA 1: PERFIL ORGANIZACIONAL**
+
+PERGUNTA 1: Qual a estrutura societária da empresa no Brasil?
+a) Subsidiária integral da matriz estrangeira
+b) Joint venture com parceiro local
+c) Representação comercial/escritório
+d) Estrutura multi-subsidiárias por segmento
+e) Outro: [especificar]
+
+[Aguardo sua resposta para prosseguir com próxima pergunta...]
+
+**METODOLOGIA DE COLETA:**
+Após cada resposta, farei a próxima pergunta da sequência:
+- Perfil Organizacional (5 perguntas)
+- Mapeamento Regulatório (4 perguntas)  
+- Estrutura Atual de Compliance (6 perguntas)
+- Identificação de Riscos (5 perguntas)
+
+**ENTREGA FINAL:**
+Após coleta completa, fornecerei:
+
+```
+PROGRAMA DE COMPLIANCE CUSTOMIZADO:
+├── Executive Summary
+├── Matriz de Riscos Identificados
+├── Gap Analysis vs. Regulamentação
+├── Programa Recomendado (10 pilares)
+├── Roadmap de Implementação (18 meses)
+├── Orçamento por Iniciativa
+├── Métricas de Monitoramento (KRIs/KPIs)
+└── Governança do Programa
+```
+
+Responda à Pergunta 1 para iniciarmos o diagnóstico.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Chain of Thought (CoT):</div>
+                        Estrutura o desenvolvimento do programa de compliance em 3 etapas de raciocínio sequencial (diagnóstico → mapeamento → design).
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Define entrega final padronizada com 8 componentes específicos, garantindo completude e profissionalismo.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Interação Invertida:</div>
+                        O modelo conduz diagnóstico através de perguntas estruturadas em 4 categorias antes de gerar recomendações customizadas.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [NOME_EMPRESA], [SETOR_PRINCIPAL], [PAÍS_MATRIZ], [RECEITA_BRASIL]
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <div class="category-header">📊 Suporte Paralegal e Operacional</div>
+            
+            <div class="prompt-item">
+                <div class="complexity-indicator">INTERMEDIÁRIO</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Sistema de Gestão de Prazos Processuais</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-template">Template</span>
+                        <span class="pattern-badge badge-menu">Menu de Ações</span>
+                        <span class="pattern-badge badge-cognitive">Verificação Cognitiva</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como coordenador de suporte paralegal de grande escritório do Rio de Janeiro, responsável pela gestão de prazos de 500+ processos ativos.
+
+COMANDOS DO SISTEMA DE PRAZOS:
+
+**PROCESSAR [tipo_documento]** → Analise documento e extraia prazos automaticamente
+**PRIORIZAR [lista_prazos]** → Organize prazos por criticidade e urgência
+**ALERTAR [prazo_específico]** → Configure sistema de alertas para prazo
+**DISTRIBUIR [tarefa]** → Aloque tarefa para advogado responsável conforme especialidade
+**MONITORAR [período]** → Gere relatório de status de prazos para período
+**ESCALAR [atraso]** → Identifique e comunique atrasos críticos
+**CONTINGÊNCIA [prazo_perdido]** → Ative protocolo para prazo perdido
+**REPORTAR [dashboard]** → Gere dashboard executivo de performance
+
+METODOLOGIA DE PROCESSAMENTO:
+
+**ETAPA 1: ANÁLISE DE DOCUMENTO**
+Para cada documento recebido:
+1. Identifique tipo de documento (citação, intimação, decisão, etc.)
+2. Extraia todos os prazos mencionados
+3. Calcule datas de vencimento considerando:
+   - Prazos processuais em dias úteis/corridos
+   - Feriados nacionais, estaduais e municipais (RJ)
+   - Suspensões de prazos (recesso, calamidade)
+   - Regras específicas por tribunal/instância
+
+**ETAPA 2: CLASSIFICAÇÃO DE URGÊNCIA**
+```
+MATRIZ DE PRIORIZAÇÃO:
+├── CRÍTICO (Prazo ≤ 3 dias úteis)
+│   ├── Contestações, recursos, embargos
+│   ├── Cumprimento de liminar
+│   └── Resposta a órgão regulador
+├── ALTO (Prazo 4-10 dias úteis)
+│   ├── Tréplicas, manifestações sobre provas
+│   ├── Alegações finais
+│   └── Recursos adesivos
+├── MÉDIO (Prazo 11-30 dias úteis)
+│   ├── Perícias, diligências
+│   ├── Juntada de documentos
+│   └── Cumprimento de diligências
+└── BAIXO (Prazo > 30 dias úteis)
+    ├── Cumprimento de sentenças
+    ├── Arquivamento de processos
+    └── Atividades administrativas
+```
+
+**ETAPA 3: DISTRIBUIÇÃO E CONTROLE**
+Para cada prazo classificado:
+1. Identifique advogado responsável pelo processo
+2. Verifique carga de trabalho atual do responsável
+3. Aloque tarefa com alertas escalonados:
+   - 1º alerta: 50% do prazo decorrido
+   - 2º alerta: 75% do prazo decorrido  
+   - 3º alerta: 90% do prazo decorrido
+   - Alerta crítico: 95% do prazo decorrido
+
+DOCUMENTO PARA PROCESSAMENTO:
+Tipo: [TIPO_DOCUMENTO]
+Tribunal: [TRIBUNAL_ORIGEM]
+Processo: [NÚMERO_PROCESSO]
+Conteúdo: [TEXTO_DO_DOCUMENTO]
+
+EXECUTE O COMANDO: PROCESSAR [TIPO_DOCUMENTO]
+
+Sua análise deve incluir:
+
+**IDENTIFICAÇÃO DE PRAZOS:**
+```
+PRAZOS EXTRAÍDOS:
+├── Prazo Principal: [X dias para Y]
+│   ├── Data base: [data da intimação]
+│   ├── Data limite: [data calculada]
+│   ├── Classificação: [CRÍTICO/ALTO/MÉDIO/BAIXO]
+│   └── Observações: [feriados, suspensões]
+├── Prazos Secundários: [outros prazos mencionados]
+└── Prazos Implícitos: [decorrentes de outros atos]
+```
+
+**AÇÕES REQUERIDAS:**
+```
+DISTRIBUIÇÃO:
+├── Advogado responsável: [nome + área]
+├── Complexidade estimada: [horas de trabalho]
+├── Recursos necessários: [pesquisa, pareceres]
+└── Precedência sobre outras tarefas: [sim/não]
+
+SISTEMA DE ALERTAS:
+├── 1º Alerta: [data + meio de comunicação]
+├── 2º Alerta: [data + meio de comunicação]
+├── 3º Alerta: [data + meio de comunicação]
+└── Escalação: [sócio responsável se não cumprido]
+```
+
+**CHECKLIST DE VERIFICAÇÃO:**
+- [ ] Todas as datas foram calculadas corretamente?
+- [ ] Feriados e suspensões foram considerados?
+- [ ] Advogado tem disponibilidade para cumprimento?
+- [ ] Documentos necessários estão disponíveis?
+- [ ] Cliente foi notificado sobre prazo crítico?
+- [ ] Sistema de backup foi ativado para prazo crítico?
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Organiza o processamento em etapas padronizadas (análise → classificação → distribuição) com formatos específicos de output.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Menu de Ações:</div>
+                        Sistema de comandos permite navegação eficiente entre diferentes funções de gestão de prazos conforme necessidade operacional.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Verificação Cognitiva:</div>
+                        Checklist final garante que todos os aspectos críticos foram verificados antes de finalizar o processamento do prazo.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [TIPO_DOCUMENTO], [TRIBUNAL_ORIGEM], [NÚMERO_PROCESSO], [TEXTO_DO_DOCUMENTO]
+                </div>
+            </div>
+
+            <div class="prompt-item">
+                <div class="complexity-indicator">INTERMEDIÁRIO</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Pesquisa Jurisprudencial Estruturada</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-few-shot">Few-Shot</span>
+                        <span class="pattern-badge badge-template">Template</span>
+                        <span class="pattern-badge badge-semantic">Filtro Semântico</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como analista sênior de pesquisa jurisprudencial de grande escritório carioca, especializado em análise de precedentes para fundamentação de teses jurídicas.
+
+EXEMPLO DE PESQUISA ESTRUTURADA (Few-Shot Learning):
+
+**SOLICITAÇÃO EXEMPLO: "Responsabilidade Civil por Dano Ambiental - Nexo Causal"**
+
+**METODOLOGIA APLICADA:**
+
+🔍 **FASE 1: ESTRATÉGIA DE BUSCA**
+- Tribunais priorizados: STJ, STF, TRF2, TJRJ
+- Palavras-chave: "responsabilidade civil" AND "dano ambiental" AND "nexo causal"
+- Filtros: Últimos 5 anos + decisões colegiadas
+- Exclusões: Recursos repetitivos sobrestados
+
+📊 **FASE 2: TRIAGEM E CLASSIFICAÇÃO**
+- Total encontrado: 147 acórdãos
+- Pré-selecionados: 23 acórdãos relevantes
+- Categorizados por: Favorabilidade + Força persuasiva + Atualidade
+
+📋 **FASE 3: ANÁLISE QUALITATIVA**
+- Top 8 precedentes analisados detalhadamente
+- Padrões argumentativos identificados: 3 linhas principais
+- Tendência evolutiva: Flexibilização do nexo causal em crimes ambientais
+- Divergências identificadas: STJ vs. Tribunais locais sobre presunções
+
+**RESULTADO ENTREGUE:**
+
+```
+RESUMO EXECUTIVO:
+├── Tese majoritária: Responsabilidade objetiva + nexo causal flexibilizado
+├── Probabilidade de êxito: 75% (baseada em 8 precedentes favoráveis)
+├── Argumentos mais eficazes: Presunção de causalidade + inversão do ônus
+└── Precedente paradigma: REsp 1.373.788/SP (STJ, 2019)
+
+TOP 3 PRECEDENTES:
+├── REsp 1.373.788/SP: [Ratio decidendi + aplicabilidade]
+├── REsp 1.114.398/PR: [Ratio decidendi + aplicabilidade]  
+└── AI 0000123-45.2020.8.19.0001: [Ratio decidendi + aplicabilidade]
+```
+
+Agora execute pesquisa para:
+
+NOVA SOLICITAÇÃO DE PESQUISA:
+Tema: [TEMA_JURÍDICO]
+Finalidade: [CONTESTAÇÃO/RECURSO/PARECER/PETIÇÃO_INICIAL]
+Tribunal de interesse: [TRIBUNAL_ESPECÍFICO]
+Prazo: [URGÊNCIA]
+Foco específico: [ASPECTO_ESPECÍFICO]
+
+EXECUTE SUA PESQUISA ESTRUTURADA:
+
+**MÓDULO 1: PLANEJAMENTO DA PESQUISA**
+```
+ESTRATÉGIA DE BUSCA:
+├── Tribunais prioritários: [ordem de relevância]
+├── Palavras-chave principais: [termos exatos]
+├── Palavras-chave alternativas: [sinônimos e variações]
+├── Filtros temporais: [período de interesse]
+├── Filtros por tipo: [acórdãos, decisões monocráticas]
+└── Exclusões: [critérios de eliminação]
+
+EXPECTATIVA DE RESULTADOS:
+├── Volume estimado: [X decisões]
+├── Meta de seleção: [Y decisões relevantes]
+├── Profundidade de análise: [detalhada/média/superficial]
+└── Tempo estimado: [horas de trabalho]
+```
+
+**MÓDULO 2: EXECUÇÃO E TRIAGEM**
+```
+RESULTADOS BRUTOS:
+├── STJ: [X decisões encontradas]
+├── STF: [X decisões encontradas]
+├── TRFs: [X decisões encontradas]
+├── TJs: [X decisões encontradas]
+└── Total: [X decisões]
+
+CRITÉRIOS DE SELEÇÃO:
+├── Relevância temática: [escala 1-5]
+├── Favorabilidade: [favorável/neutro/contrário]
+├── Força persuasiva: [tribunal + composição]
+├── Atualidade: [ano da decisão]
+└── Aplicabilidade: [similaridade factual]
+
+PRÉ-SELEÇÃO FINAL: [Y decisões para análise detalhada]
+```
+
+**MÓDULO 3: ANÁLISE QUALITATIVA**
+```
+ANÁLISE POR PRECEDENTE:
+├── [Precedente 1]:
+│   ├── Ratio decidendi: [fundamento central]
+│   ├── Obiter dicta: [comentários auxiliares]
+│   ├── Fatos relevantes: [similaridades com nosso caso]
+│   ├── Força persuasiva: [score 1-10]
+│   └── Aplicabilidade: [direta/analógica/distinguível]
+├── [Precedente 2]: [mesma estrutura]
+└── [Precedente N]: [mesma estrutura]
+
+PADRÕES IDENTIFICADOS:
+├── Linha argumentativa principal: [tendência majoritária]
+├── Argumentos subsidiários: [teses de apoio]
+├── Evolução jurisprudencial: [mudanças ao longo do tempo]
+└── Divergências: [posições conflitantes + razões]
+```
+
+**MÓDULO 4: SÍNTESE ESTRATÉGICA**
+```
+RECOMENDAÇÕES:
+├── Tese principal a sustentar: [baseada em X precedentes]
+├── Teses subsidiárias: [alternativas de fundamentação]
+├── Precedentes paradigma: [top 3 para citação]
+├── Argumentos a evitar: [teses rejeitadas pelos tribunais]
+└── Probabilidade de êxito: [percentual baseado na análise]
+
+ALERTAS ESPECÍFICOS:
+├── Precedentes contrários: [como distinguir/superar]
+├── Mudanças recentes: [alterações jurisprudenciais]
+├── Recursos repetitivos: [temas afetados ou potenciais]
+└── Questões processuais: [competência, prescrição, etc.]
+```
+
+**PROTOCOLO DE ANONIMIZAÇÃO:**
+Ao citar precedentes, use apenas: número do processo, tribunal, ano e fundamentos jurídicos. Remova nomes de partes e detalhes que permitam identificação.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Few-Shot Learning:</div>
+                        Demonstra metodologia completa de pesquisa com caso específico (dano ambiental), incluindo estratégia, execução e formato de entrega.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Organiza a pesquisa em 4 módulos padronizados (planejamento → execução → análise → síntese) replicáveis para qualquer tema.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Filtro Semântico:</div>
+                        Protocolo de anonimização automática protege informações das partes mantendo utilidade jurídica dos precedentes.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [TEMA_JURÍDICO], [CONTESTAÇÃO/RECURSO/PARECER/PETIÇÃO_INICIAL], [TRIBUNAL_ESPECÍFICO], [URGÊNCIA], [ASPECTO_ESPECÍFICO]
+                </div>
+            </div>
+
+            <div class="prompt-item">
+                <div class="complexity-indicator">BÁSICO</div>
+                <div class="prompt-header">
+                    <div class="prompt-title">Controle de Qualidade de Documentos</div>
+                    <div class="prompt-badges">
+                        <span class="pattern-badge badge-template">Template</span>
+                        <span class="pattern-badge badge-cognitive">Verificação Cognitiva</span>
+                    </div>
+                </div>
+                
+                <div class="prompt-text">
+Atue como coordenador de qualidade de grande escritório do Rio de Janeiro, responsável pela revisão final de todos os documentos antes da entrega/protocolo.
+
+PROTOCOLO DE CONTROLE DE QUALIDADE:
+
+**CHECKLIST GERAL (aplicar a todo documento):**
+
+📋 **CATEGORIA 1: ASPECTOS FORMAIS**
+- [ ] Cabeçalho padrão do escritório completo e correto
+- [ ] Identificação correta das partes e processo
+- [ ] Numeração de páginas consecutiva e completa
+- [ ] Assinatura digital/física em local apropriado
+- [ ] Data atual e cidade de elaboração
+- [ ] Formatação consistente (fonte, espaçamento, margens)
+- [ ] Numeração de parágrafos quando aplicável
+
+📝 **CATEGORIA 2: CONTEÚDO JURÍDICO**
+- [ ] Fundamentação legal adequada e atualizada
+- [ ] Citações de jurisprudência pertinentes e recentes
+- [ ] Argumentação lógica e sequencial
+- [ ] Pedidos claros e objetivos
+- [ ] Valor da causa correto (quando aplicável)
+- [ ] Competência territorial e material verificada
+- [ ] Pressupostos processuais atendidos
+
+🔍 **CATEGORIA 3: PRECISÃO E COERÊNCIA**
+- [ ] Nomes, datas e valores conferidos em todo documento
+- [ ] Consistência entre narrativa fática e pedidos
+- [ ] Eliminação de contradições internas
+- [ ] Verificação de prazos e cronologia
+- [ ] Adequação do tom ao tipo de documento
+- [ ] Revisão de português (gramática, ortografia)
+
+📎 **CATEGORIA 4: DOCUMENTOS E ANEXOS**
+- [ ] Procuração/substabelecimento anexados
+- [ ] Documentos essenciais incluídos
+- [ ] Numeração de anexos sequencial
+- [ ] Legibilidade de documentos digitalizados
+- [ ] Autenticação quando necessária
+
+DOCUMENTO PARA REVISÃO:
+Tipo: [TIPO_DOCUMENTO]
+Destinatário: [TRIBUNAL/ÓRGÃO/CONTRAPARTE]
+Processo: [NÚMERO_PROCESSO]
+Advogado responsável: [NOME_ADVOGADO]
+Prazo de protocolo: [DATA_LIMITE]
+
+EXECUTE A REVISÃO SISTEMÁTICA:
+
+**FASE 1: REVISÃO AUTOMATIZADA**
+Verifique cada item do checklist geral e reporte:
+
+```
+CONFORMIDADE FORMAL: [X/Y itens aprovados]
+├── ✅ Aprovado: [listar itens conformes]
+├── ⚠️  Atenção: [listar itens com ressalvas]
+└── ❌ Reprovado: [listar itens não conformes]
+
+CONFORMIDADE JURÍDICA: [X/Y itens aprovados]
+├── ✅ Aprovado: [listar itens conformes]  
+├── ⚠️  Atenção: [listar itens com ressalvas]
+└── ❌ Reprovado: [listar itens não conformes]
+```
+
+**FASE 2: ANÁLISE ESPECÍFICA POR TIPO**
+Dependendo do tipo de documento, aplique checklist específico adicional:
+
+```
+CHECKLIST ESPECÍFICO PARA [TIPO_DOCUMENTO]:
+├── Item específico 1: [status]
+├── Item específico 2: [status]
+├── Item específico 3: [status]
+└── Item específico N: [status]
+```
+
+**FASE 3: RECOMENDAÇÕES DE MELHORIA**
+Para cada item não conforme, forneça:
+
+```
+CORREÇÕES OBRIGATÓRIAS:
+├── [Problema 1]: [Solução específica]
+├── [Problema 2]: [Solução específica]
+└── [Problema N]: [Solução específica]
+
+SUGESTÕES DE APRIMORAMENTO:
+├── [Aspecto 1]: [Como melhorar]
+├── [Aspecto 2]: [Como melhorar]
+└── [Aspecto N]: [Como melhorar]
+```
+
+**FASE 4: DECISÃO FINAL**
+```
+STATUS DO DOCUMENTO: [APROVADO/APROVADO COM RESSALVAS/REPROVADO]
+
+JUSTIFICATIVA: [Explicação da decisão]
+
+PRÓXIMOS PASSOS:
+├── Se aprovado: [Liberado para protocolo]
+├── Se aprovado com ressalvas: [Ajustes menores necessários]
+└── Se reprovado: [Retorno para reelaboração]
+
+PRAZO PARA CORREÇÕES: [Data limite considerando prazo de protocolo]
+```
+
+Execute esta revisão detalhada e forneça relatório completo de qualidade.
+                </div>
+                
+                <div class="explanation">
+                    <div class="explanation-title">💡 Explicação das Técnicas Aplicadas:</div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Template Estruturado:</div>
+                        Organiza a revisão em 4 categorias padronizadas (formal, jurídico, precisão, anexos) com checklists específicos para cada tipo.
+                    </div>
+                    
+                    <div class="technique-detail">
+                        <div class="technique-name">Verificação Cognitiva:</div>
+                        Processo estruturado em 4 fases sequenciais (automatizada → específica → recomendações → decisão) garante revisão sistemática.
+                    </div>
+                </div>
+                
+                <div class="variables">
+                    <strong>Variáveis a personalizar:</strong> [TIPO_DOCUMENTO], [TRIBUNAL/ÓRGÃO/CONTRAPARTE], [NÚMERO_PROCESSO], [NOME_ADVOGADO], [DATA_LIMITE]
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <h2 style="color: #2c3e50; margin-bottom: 20px;">Guia Avançado de Utilização</h2>
+            
+            <div class="footer-grid">
+                <div class="footer-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(192, 57, 43, 0.1)); border-left: 4px solid #e74c3c;">
+                    <h4 style="color: #c0392b;">🎯 Few-Shot Learning</h4>
+                    <p><strong>Como usar:</strong> Os exemplos fornecidos não são apenas ilustrativos - são templates de alta qualidade que devem ser replicados. Adapte os detalhes mas mantenha a estrutura e profundidade.</p>
+                    <p><strong>Dica:</strong> Substitua apenas os dados específicos (nomes, valores, datas) mantendo a metodologia demonstrada.</p>
+                </div>
+                
+                <div class="footer-section" style="background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(230, 126, 34, 0.1)); border-left: 4px solid #f39c12;">
+                    <h4 style="color: #e67e22;">🧠 Chain of Thought</h4>
+                    <p><strong>Como usar:</strong> Nunca pule as etapas de raciocínio. Cada passo deve ser explicitamente trabalhado antes de passar para o próximo.</p>
+                    <p><strong>Dica:</strong> Use frases como "Primeiro, vou analisar...", "Com base nisso, agora examino..." para forçar sequencialidade.</p>
+                </div>
+                
+                <div class="footer-section" style="background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(142, 68, 173, 0.1)); border-left: 4px solid #9b59b6;">
+                    <h4 style="color: #8e44ad;">✅ Verificação Cognitiva</h4>
+                    <p><strong>Como usar:</strong> Cada etapa deve produzir outputs verificáveis independentemente. Use checklists e validações cruzadas.</p>
+                    <p><strong>Dica:</strong> Sempre inclua seção de "verificação" ou "validação" ao final de processos complexos.</p>
+                </div>
+                
+                <div class="footer-section" style="background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.1)); border-left: 4px solid #2ecc71;">
+                    <h4 style="color: #27ae60;">👤 Persona Especializada</h4>
+                    <p><strong>Como usar:</strong> Seja específico sobre experiência, especialidade e contexto. "Sócio de M&A com 15 anos" é melhor que "advogado experiente".</p>
+                    <p><strong>Dica:</strong> Inclua detalhes sobre o tipo de clientes, valores de operações e expertise específica.</p>
+                </div>
+                
+                <div class="footer-section" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.1)); border-left: 4px solid #3498db;">
+                    <h4 style="color: #2980b9;">📋 Templates Estruturados</h4>
+                    <p><strong>Como usar:</strong> Os templates são reutilizáveis para casos similares. Mantenha a estrutura e adapte o conteúdo.</p>
+                    <p><strong>Dica:</strong> Crie biblioteca interna de templates testados e aprovados para diferentes tipos de demandas.</p>
+                </div>
+                
+                <div class="footer-section" style="background: linear-gradient(135deg, rgba(26, 188, 156, 0.1), rgba(22, 160, 133, 0.1)); border-left: 4px solid #1abc9c;">
+                    <h4 style="color: #16a085;">🔒 Filtro Semântico</h4>
+                    <p><strong>Como usar:</strong> Sempre ative protocolos de confidencialidade. Use códigos para informações sensíveis (Empresa A, Projeto X).</p>
+                    <p><strong>Dica:</strong> Classifique informações por nível de sensibilidade antes de processar com IA.</p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, rgba(52, 73, 94, 0.1), rgba(44, 62, 80, 0.1)); border-radius: 15px; border: 2px solid #34495e;">
+                <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">⚖️ Framework de Implementação para Grandes Escritórios</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
+                    
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; border-left: 5px solid #3498db;">
+                        <h4 style="color: #2980b9; margin-bottom: 15px;">📈 Fase 1: Implementação Gradual</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #34495e;">
+                            <li><strong>Semana 1-2:</strong> Treinamento de sócios em Few-Shot Learning e Chain of Thought</li>
+                            <li><strong>Semana 3-4:</strong> Teste de prompts com casos reais de baixa complexidade</li>
+                            <li><strong>Mês 2:</strong> Implementação em departamentos piloto (M&A, Contencioso)</li>
+                            <li><strong>Mês 3-6:</strong> Expansão gradual para todas as áreas de prática</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; border-left: 5px solid #e74c3c;">
+                        <h4 style="color: #c0392b; margin-bottom: 15px;">🛡️ Controles de Qualidade</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #34495e;">
+                            <li><strong>Revisão Obrigatória:</strong> Todo output de IA deve ser revisado por advogado sênior</li>
+                            <li><strong>Validação Cruzada:</strong> Informações jurídicas devem ser verificadas em fontes primárias</li>
+                            <li><strong>Auditoria de Prompts:</strong> Documentar prompts utilizados para rastreabilidade</li>
+                            <li><strong>Feedback Loop:</strong> Melhoramento contínuo baseado em resultados práticos</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; border-left: 5px solid #2ecc71;">
+                        <h4 style="color: #27ae60; margin-bottom: 15px;">📊 Métricas de Sucesso</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #34495e;">
+                            <li><strong>Eficiência:</strong> Redução de 30-50% no tempo de tarefas rotineiras</li>
+                            <li><strong>Qualidade:</strong> Manutenção ou melhoria dos padrões de entrega</li>
+                            <li><strong>Satisfação:</strong> Aprovação de 80%+ dos advogados usuários</li>
+                            <li><strong>ROI:</strong> Payback do investimento em 6-12 meses</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; border-left: 5px solid #f39c12;">
+                        <h4 style="color: #e67e22; margin-bottom: 15px;">⚠️ Gestão de Riscos</h4>
+                        <ul style="margin: 0; padding-left: 20px; color: #34495e;">
+                            <li><strong>Confidencialidade:</strong> Política rigorosa de anonimização de dados</li>
+                            <li><strong>Responsabilidade:</strong> Advogados permanecem responsáveis por todo conteúdo</li>
+                            <li><strong>Compliance:</strong> Adequação às normas da OAB e regulamentações setoriais</li>
+                            <li><strong>Backup:</strong> Processos manuais para casos de falha tecnológica</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 25px; padding: 20px; background: rgba(155, 89, 182, 0.1); border-radius: 10px; text-align: center;">
+                    <h4 style="color: #8e44ad; margin-bottom: 15px;">🎓 Programa de Capacitação Contínua</h4>
+                    <p style="margin: 0; color: #34495e; font-size: 1rem;">
+                        <strong>Treinamentos Mensais:</strong> Novos padrões, casos de uso, melhores práticas<br>
+                        <strong>Workshops Práticos:</strong> Hands-on com casos reais do escritório<br>
+                        <strong>Certificação Interna:</strong> Níveis de proficiência em engenharia de prompts jurídicos
+                    </p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 15px; color: white;">
+                <h3 style="margin-bottom: 15px;">🚀 Sunyata Consulting - Pioneiros em IA Jurídica</h3>
+                <p style="font-size: 1.1rem; margin-bottom: 20px;">
+                    Transformando a advocacia brasileira através da aplicação inteligente de Inteligência Artificial
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 25px;">
+                    <div>
+                        <strong>📧 Contato Comercial</strong><br>
+                        vendas@sunyataconsulting.com
+                    </div>
+                    <div>
+                        <strong>🎓 Treinamentos</strong><br>
+                        treinamentos@sunyataconsulting.com
+                    </div>
+                    <div>
+                        <strong>🌐 Website</strong><br>
+                        www.sunyataconsulting.com
+                    </div>
+                    <div>
+                        <strong>📱 WhatsApp</strong><br>
+                        +55 21 99999-9999
+                    </div>
+                </div>
+                
+                <div style="margin-top: 25px; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 10px;">
+                    <p style="margin: 0; font-size: 0.95rem; font-style: italic;">
+                        "A diferença entre escritórios que prosperam e os que ficam para trás não está na tecnologia que usam,<br>
+                        mas na inteligência com que a aplicam ao direito." - Sunyata Consulting
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

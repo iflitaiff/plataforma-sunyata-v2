@@ -1,0 +1,421 @@
+<?php
+/**
+ * Admin - Histórico de Prompts
+ * Visualizar todos os prompts enviados ao Claude por usuários
+ */
+
+require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../config/config.php';
+
+session_name(SESSION_NAME);
+session_start();
+
+use Sunyata\Core\Database;
+
+require_login();
+
+// Verificar se é admin
+if (!isset($_SESSION['user']['access_level']) || $_SESSION['user']['access_level'] !== 'admin') {
+    $_SESSION['error'] = 'Acesso negado. Área restrita a administradores.';
+    redirect(BASE_URL . '/dashboard.php');
+}
+
+$db = Database::getInstance();
+
+// Parâmetros de filtro
+$filters = [
+    'user_id' => $_GET['user_id'] ?? null,
+    'vertical' => $_GET['vertical'] ?? null,
+    'tool_name' => $_GET['tool_name'] ?? null,
+    'status' => $_GET['status'] ?? null,
+    'date_from' => $_GET['date_from'] ?? null,
+    'date_to' => $_GET['date_to'] ?? null,
+    'search' => $_GET['search'] ?? null
+];
+
+// Paginação
+$page = max(1, intval($_GET['page'] ?? 1));
+$perPage = 20;
+$offset = ($page - 1) * $perPage;
+
+// Construir query
+$where = [];
+$params = [];
+
+if ($filters['user_id']) {
+    $where[] = "ph.user_id = :user_id";
+    $params['user_id'] = $filters['user_id'];
+}
+
+if ($filters['vertical']) {
+    $where[] = "ph.vertical = :vertical";
+    $params['vertical'] = $filters['vertical'];
+}
+
+if ($filters['tool_name']) {
+    $where[] = "ph.tool_name LIKE :tool_name";
+    $params['tool_name'] = '%' . $filters['tool_name'] . '%';
+}
+
+if ($filters['status']) {
+    $where[] = "ph.status = :status";
+    $params['status'] = $filters['status'];
+}
+
+if ($filters['date_from']) {
+    $where[] = "DATE(ph.created_at) >= :date_from";
+    $params['date_from'] = $filters['date_from'];
+}
+
+if ($filters['date_to']) {
+    $where[] = "DATE(ph.created_at) <= :date_to";
+    $params['date_to'] = $filters['date_to'];
+}
+
+if ($filters['search']) {
+    $where[] = "(u.name LIKE :search OR u.email LIKE :search)";
+    $params['search'] = '%' . $filters['search'] . '%';
+}
+
+$whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+// Total de registros
+$totalQuery = "
+    SELECT COUNT(*) as total
+    FROM prompt_history ph
+    LEFT JOIN users u ON ph.user_id = u.id
+    {$whereClause}
+";
+$totalResult = $db->fetchOne($totalQuery, $params);
+$total = $totalResult['total'] ?? 0;
+$totalPages = ceil($total / $perPage);
+
+// Buscar histórico
+$query = "
+    SELECT
+        ph.*,
+        u.name as user_name,
+        u.email as user_email
+    FROM prompt_history ph
+    LEFT JOIN users u ON ph.user_id = u.id
+    {$whereClause}
+    ORDER BY ph.created_at DESC
+    LIMIT :limit OFFSET :offset
+";
+
+$params['limit'] = $perPage;
+$params['offset'] = $offset;
+
+$history = $db->fetchAll($query, $params);
+
+// Obter listas para filtros
+$users = $db->fetchAll("
+    SELECT DISTINCT u.id, u.name, u.email
+    FROM users u
+    INNER JOIN prompt_history ph ON u.id = ph.user_id
+    ORDER BY u.name
+");
+
+$verticals = $db->fetchAll("
+    SELECT DISTINCT vertical
+    FROM prompt_history
+    WHERE vertical IS NOT NULL
+    ORDER BY vertical
+");
+
+$tools = $db->fetchAll("
+    SELECT DISTINCT tool_name
+    FROM prompt_history
+    WHERE tool_name IS NOT NULL
+    ORDER BY tool_name
+");
+
+$pageTitle = 'Histórico de Prompts';
+
+// Include responsive header
+include __DIR__ . '/../../src/views/admin-header.php';
+?>
+                <h1 class="mb-4">📊 Histórico de Prompts</h1>
+
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" class="row g-3">
+                            <!-- Busca por nome/email -->
+                            <div class="col-md-3">
+                                <label for="search" class="form-label">Buscar Usuário</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="search"
+                                       name="search"
+                                       placeholder="Nome ou email..."
+                                       value="<?= sanitize_output($filters['search'] ?? '') ?>">
+                            </div>
+
+                            <!-- Usuário -->
+                            <div class="col-md-3">
+                                <label for="user_id" class="form-label">Usuário</label>
+                                <select class="form-select" id="user_id" name="user_id">
+                                    <option value="">Todos</option>
+                                    <?php foreach ($users as $user): ?>
+                                        <option value="<?= $user['id'] ?>"
+                                                <?= ($filters['user_id'] == $user['id']) ? 'selected' : '' ?>>
+                                            <?= sanitize_output($user['name']) ?> (<?= sanitize_output($user['email']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Vertical -->
+                            <div class="col-md-2">
+                                <label for="vertical" class="form-label">Vertical</label>
+                                <select class="form-select" id="vertical" name="vertical">
+                                    <option value="">Todas</option>
+                                    <?php foreach ($verticals as $v): ?>
+                                        <option value="<?= $v['vertical'] ?>"
+                                                <?= ($filters['vertical'] == $v['vertical']) ? 'selected' : '' ?>>
+                                            <?= sanitize_output($v['vertical']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Canvas/Tool -->
+                            <div class="col-md-2">
+                                <label for="tool_name" class="form-label">Canvas</label>
+                                <select class="form-select" id="tool_name" name="tool_name">
+                                    <option value="">Todos</option>
+                                    <?php foreach ($tools as $tool): ?>
+                                        <option value="<?= $tool['tool_name'] ?>"
+                                                <?= ($filters['tool_name'] == $tool['tool_name']) ? 'selected' : '' ?>>
+                                            <?= sanitize_output($tool['tool_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Status -->
+                            <div class="col-md-2">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="">Todos</option>
+                                    <option value="success" <?= ($filters['status'] == 'success') ? 'selected' : '' ?>>Sucesso</option>
+                                    <option value="error" <?= ($filters['status'] == 'error') ? 'selected' : '' ?>>Erro</option>
+                                    <option value="pending" <?= ($filters['status'] == 'pending') ? 'selected' : '' ?>>Pendente</option>
+                                </select>
+                            </div>
+
+                            <!-- Data início -->
+                            <div class="col-md-2">
+                                <label for="date_from" class="form-label">Data Início</label>
+                                <input type="date"
+                                       class="form-control"
+                                       id="date_from"
+                                       name="date_from"
+                                       value="<?= sanitize_output($filters['date_from'] ?? '') ?>">
+                            </div>
+
+                            <!-- Data fim -->
+                            <div class="col-md-2">
+                                <label for="date_to" class="form-label">Data Fim</label>
+                                <input type="date"
+                                       class="form-control"
+                                       id="date_to"
+                                       name="date_to"
+                                       value="<?= sanitize_output($filters['date_to'] ?? '') ?>">
+                            </div>
+
+                            <!-- Botões -->
+                            <div class="col-md-8 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="bi bi-search"></i> Filtrar
+                                </button>
+                                <a href="prompt-history.php" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle"></i> Limpar
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Estatísticas -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <strong>Total de registros:</strong> <?= number_format($total) ?> prompts
+                            <?php if (!empty($filters['user_id']) || !empty($filters['vertical']) || !empty($filters['tool_name'])): ?>
+                                | <strong>Filtros ativos</strong>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Histórico -->
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Histórico (Página <?= $page ?> de <?= max(1, $totalPages) ?>)</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <?php if (empty($history)): ?>
+                            <div class="alert alert-warning m-3">
+                                Nenhum registro encontrado com os filtros aplicados.
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 60px;">ID</th>
+                                            <th>Usuário</th>
+                                            <th>Vertical</th>
+                                            <th>Canvas</th>
+                                            <th>Status</th>
+                                            <th>Tokens</th>
+                                            <th>Custo</th>
+                                            <th>Data</th>
+                                            <th style="width: 80px;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($history as $item): ?>
+                                            <tr>
+                                                <td><code><?= $item['id'] ?></code></td>
+                                                <td>
+                                                    <strong><?= sanitize_output($item['user_name']) ?></strong><br>
+                                                    <small class="text-muted"><?= sanitize_output($item['user_email']) ?></small>
+                                                </td>
+                                                <td><span class="badge bg-secondary"><?= sanitize_output($item['vertical']) ?></span></td>
+                                                <td><?= sanitize_output($item['tool_name']) ?></td>
+                                                <td>
+                                                    <?php if ($item['status'] == 'success'): ?>
+                                                        <span class="badge bg-success">✓ Sucesso</span>
+                                                    <?php elseif ($item['status'] == 'error'): ?>
+                                                        <span class="badge bg-danger">✗ Erro</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-warning">⏳ Pendente</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <small>
+                                                        <?= number_format($item['tokens_total'] ?? 0) ?>
+                                                        <span class="text-muted">(<?= number_format($item['tokens_input'] ?? 0) ?>↑ / <?= number_format($item['tokens_output'] ?? 0) ?>↓)</span>
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <small>$<?= number_format($item['cost_usd'] ?? 0, 4) ?></small>
+                                                </td>
+                                                <td>
+                                                    <small><?= date('d/m/Y H:i', strtotime($item['created_at'])) ?></small>
+                                                </td>
+                                                <td>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-primary"
+                                                            data-bs-toggle="collapse"
+                                                            data-bs-target="#details-<?= $item['id'] ?>">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <!-- Detalhes expandíveis -->
+                                            <tr class="collapse" id="details-<?= $item['id'] ?>">
+                                                <td colspan="9" class="bg-light">
+                                                    <div class="p-3">
+                                                        <h6 class="mb-3">📋 Detalhes Completos - ID <?= $item['id'] ?></h6>
+
+                                                        <!-- Input Data -->
+                                                        <div class="mb-3">
+                                                            <h6>📝 Input Data (Formulário):</h6>
+                                                            <pre class="bg-white p-3 border rounded" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;"><?= sanitize_output($item['input_data']) ?></pre>
+                                                        </div>
+
+                                                        <!-- Generated Prompt -->
+                                                        <div class="mb-3">
+                                                            <h6>🤖 Prompt Enviado ao Claude:</h6>
+                                                            <pre class="bg-white p-3 border rounded" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem;"><?= sanitize_output($item['generated_prompt']) ?></pre>
+                                                            <small class="text-muted">Length: <?= number_format(strlen($item['generated_prompt'])) ?> chars</small>
+                                                        </div>
+
+                                                        <!-- Claude Response -->
+                                                        <?php if ($item['claude_response']): ?>
+                                                            <div class="mb-3">
+                                                                <h6>💬 Resposta do Claude:</h6>
+                                                                <pre class="bg-white p-3 border rounded" style="max-height: 400px; overflow-y: auto; font-size: 0.85rem;"><?= sanitize_output($item['claude_response']) ?></pre>
+                                                                <small class="text-muted">Length: <?= number_format(strlen($item['claude_response'])) ?> chars</small>
+                                                            </div>
+                                                        <?php endif; ?>
+
+                                                        <!-- Error Message -->
+                                                        <?php if ($item['error_message']): ?>
+                                                            <div class="mb-3">
+                                                                <h6 class="text-danger">❌ Mensagem de Erro:</h6>
+                                                                <div class="alert alert-danger">
+                                                                    <?= sanitize_output($item['error_message']) ?>
+                                                                </div>
+                                                            </div>
+                                                        <?php endif; ?>
+
+                                                        <!-- Metadata -->
+                                                        <div class="row">
+                                                            <div class="col-md-3">
+                                                                <strong>Modelo:</strong> <?= sanitize_output($item['claude_model'] ?? 'N/A') ?>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <strong>Tempo Resposta:</strong> <?= $item['response_time_ms'] ?? 'N/A' ?>ms
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <strong>IP:</strong> <?= sanitize_output($item['ip_address'] ?? 'N/A') ?>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <strong>User Agent:</strong>
+                                                                <small><?= sanitize_output(substr($item['user_agent'] ?? 'N/A', 0, 50)) ?>...</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Paginação -->
+                <?php if ($totalPages > 1): ?>
+                    <nav aria-label="Paginação" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <!-- Anterior -->
+                            <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                                <a class="page-link" href="?page=<?= $page - 1 ?><?= http_build_query(array_filter($filters)) ? '&' . http_build_query(array_filter($filters)) : '' ?>">
+                                    ← Anterior
+                                </a>
+                            </li>
+
+                            <!-- Páginas -->
+                            <?php
+                            $start = max(1, $page - 2);
+                            $end = min($totalPages, $page + 2);
+                            for ($i = $start; $i <= $end; $i++):
+                            ?>
+                                <li class="page-item <?= ($i == $page) ? 'active' : '' ?>">
+                                    <a class="page-link" href="?page=<?= $i ?><?= http_build_query(array_filter($filters)) ? '&' . http_build_query(array_filter($filters)) : '' ?>">
+                                        <?= $i ?>
+                                    </a>
+                                </li>
+                            <?php endfor; ?>
+
+                            <!-- Próxima -->
+                            <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                                <a class="page-link" href="?page=<?= $page + 1 ?><?= http_build_query(array_filter($filters)) ? '&' . http_build_query(array_filter($filters)) : '' ?>">
+                                    Próxima →
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                <?php endif; ?>
+
+<?php include __DIR__ . '/../../src/views/admin-footer.php'; ?>

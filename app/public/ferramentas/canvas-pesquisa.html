@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas de Delimitação - IA na Pesquisa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B1538 0%, #A0405C 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .temp-notice {
+            background: #8B1538;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .canvas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .canvas-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            border-left: 5px solid #8B1538;
+            transition: all 0.3s ease;
+        }
+        
+        .canvas-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .canvas-item h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+            background: #8B1538;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .canvas-item textarea {
+            width: 100%;
+            min-height: 100px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+        
+        .canvas-item textarea:focus {
+            outline: none;
+            border-color: #8B1538;
+        }
+        
+        .canvas-item .hint {
+            color: #6c757d;
+            font-size: 13px;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .examples {
+            background: #fdf2f8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+            border-left: 5px solid #8B1538;
+        }
+        
+        .examples h3 {
+            color: #8B1538;
+            margin-bottom: 15px;
+        }
+        
+        .example-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tab-button {
+            background: #8B1538;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .tab-button:hover, .tab-button.active {
+            background: #A0405C;
+            transform: translateY(-2px);
+        }
+        
+        .example-content {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .example-content.active {
+            display: block;
+        }
+        
+        .example-content h4 {
+            color: #8B1538;
+            margin-bottom: 10px;
+        }
+        
+        .example-content p {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .generate-button {
+            background: linear-gradient(135deg, #8B1538 0%, #A0405C 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto;
+            transition: all 0.3s ease;
+        }
+        
+        .generate-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .output {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+            border: 2px solid #e9ecef;
+            display: none;
+        }
+        
+        .output.show {
+            display: block;
+        }
+        
+        .output h3 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .prompt-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .copy-button {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .copy-button:hover {
+            background: #38a169;
+        }
+        
+        .contacts-section {
+            background: #8B1538;
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 40px 0 20px 0;
+            text-align: center;
+        }
+        
+        .contacts-section h3 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .contacts-section p {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .contacts-section a {
+            color: #ffd700;
+            text-decoration: none;
+        }
+        
+        .contacts-section a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+        }
+        
+        .copyright {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .copyright a {
+            color: #8B1538;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .copyright a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .canvas-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Canvas de Delimitação</h1>
+            <p>Transforme necessidades vagas em instruções precisas para IA</p>
+            <div class="temp-notice">
+                ⚠️ <strong>Artefato Temporário</strong> - Faz parte do treinamento "IA para a Pesquisa Acadêmica"
+            </div>
+        </div>
+
+        <div class="examples">
+            <h3>📋 Exemplos de Aplicação</h3>
+            <div class="example-tabs">
+                <button class="tab-button active" onclick="showExample('revisao')">Revisão de Literatura</button>
+                <button class="tab-button" onclick="showExample('analise')">Análise Qualitativa</button>
+                <button class="tab-button" onclick="showExample('dados')">Limpeza de Dados</button>
+            </div>
+            
+            <div id="revisao" class="example-content active">
+                <h4>Exemplo: Revisão de Literatura</h4>
+                <p><strong>Tarefa:</strong> Planejar revisão sistemática sobre inovação digital no setor financeiro brasileiro (2020-2024)</p>
+                <p><strong>Contexto:</strong> Dissertação de mestrado, foco em fintechs, regulação e impacto no sistema bancário tradicional</p>
+                <p><strong>Entradas:</strong> Bases Scopus, Web of Science, SciELO; palavras-chave já definidas</p>
+                <p><strong>Restrições:</strong> Idiomas português e inglês, estudos empíricos, normas PRISMA</p>
+                <p><strong>Saída:</strong> Protocolo de busca + planilha de triagem + matriz de síntese</p>
+                <p><strong>Critérios:</strong> Reprodutibilidade da busca, transparência de inclusão/exclusão</p>
+            </div>
+            
+            <div id="analise" class="example-content">
+                <h4>Exemplo: Análise Qualitativa</h4>
+                <p><strong>Tarefa:</strong> Desenvolver protocolo de análise temática para 15 entrevistas sobre cultura organizacional</p>
+                <p><strong>Contexto:</strong> Pesquisa em startup brasileira, base teórica Schein (2010), epistemologia interpretativista</p>
+                <p><strong>Entradas:</strong> Transcrições, memos de campo, diário reflexivo</p>
+                <p><strong>Restrições:</strong> Ética/privacidade, compatibilidade com NVivo, critérios de saturação</p>
+                <p><strong>Saída:</strong> Guia de códigos + regras de codificação + critérios de saturação</p>
+                <p><strong>Critérios:</strong> Confiabilidade intercodificador (κ > 0.7), rastreabilidade</p>
+            </div>
+            
+            <div id="dados" class="example-content">
+                <h4>Exemplo: Limpeza de Dados</h4>
+                <p><strong>Tarefa:</strong> Preparar dataset de indicadores financeiros para análise estatística</p>
+                <p><strong>Contexto:</strong> 500 empresas, 5 anos, 12 variáveis, análise de regressão planejada</p>
+                <p><strong>Entradas:</strong> Planilhas Excel brutas, dicionário parcial, dados de diferentes fontes</p>
+                <p><strong>Restrições:</strong> Convenções de nomes, domínios válidos, controle de versões</p>
+                <p><strong>Saída:</strong> Script R + dataset limpo + dicionário completo + log de transformações</p>
+                <p><strong>Critérios:</strong> Zero NAs em variáveis críticas, testes de validação, documentação reproduzível</p>
+            </div>
+        </div>
+
+        <div class="canvas-grid">
+            <div class="canvas-item">
+                <h3><span class="icon">1</span>Tarefa/Objetivo</h3>
+                <textarea id="tarefa" placeholder="Descreva exatamente o que você quer produzir ou decidir. Use verbos precisos (analisar, comparar, extrair, organizar...)"></textarea>
+                <div class="hint">Ex: "Desenvolver protocolo de análise temática para 15 entrevistas"</div>
+            </div>
+            
+            <div class="canvas-item">
+                <h3><span class="icon">2</span>Contexto & Escopo</h3>
+                <textarea id="contexto" placeholder="Domínio, tema, população, recorte temporal/geográfico, propósito acadêmico, nível (graduação, mestrado, doutorado)"></textarea>
+                <div class="hint">Ex: "Dissertação mestrado, startups brasileiras, cultura organizacional, base teórica Schein"</div>
+            </div>
+            
+            <div class="canvas-item">
+                <h3><span class="icon">3</span>Entradas Disponíveis</h3>
+                <textarea id="entradas" placeholder="Dados, fontes, instrumentos, literatura já coletada, limitações conhecidas"></textarea>
+                <div class="hint">Ex: "25 transcrições, memos de campo, diário reflexivo, limitação: acesso restrito a gerentes"</div>
+            </div>
+            
+            <div class="canvas-item">
+                <h3><span class="icon">4</span>Restrições & Regras</h3>
+                <textarea id="restricoes" placeholder="Métodos aceitos, questões éticas/privacidade, normas (ABNT, PRISMA), prazos, software específico"></textarea>
+                <div class="hint">Ex: "Normas PRISMA, idiomas português/inglês, compatível com NVivo, prazo 2 semanas"</div>
+            </div>
+            
+            <div class="canvas-item full-width">
+                <h3><span class="icon">5</span>Saída/Formato Esperado</h3>
+                <textarea id="saida" placeholder="Formato específico da resposta (tabela, checklist, script, texto estruturado, planilha...)"></textarea>
+                <div class="hint">Ex: "Planilha Excel com: guia de códigos inicial + regras de codificação + critérios de saturação teórica"</div>
+            </div>
+            
+            <div class="canvas-item full-width">
+                <h3><span class="icon">6</span>Critérios de Aceitação</h3>
+                <textarea id="criterios" placeholder="Como você julgará se está 'pronto o suficiente'? Métricas de qualidade, validações necessárias"></textarea>
+                <div class="hint">Ex: "Confiabilidade intercodificador κ > 0.7, rastreabilidade código→trecho, saturação demonstrável"</div>
+            </div>
+        </div>
+
+        <button class="generate-button" onclick="generatePrompt()">✨ Gerar Prompt Estruturado</button>
+
+        <div class="output" id="output">
+            <h3>🎯 Seu Prompt Estruturado</h3>
+            <div class="prompt-output" id="promptOutput"></div>
+            <button class="copy-button" onclick="copyPrompt()">📋 Copiar Prompt</button>
+        </div>
+
+        <div class="contacts-section">
+            <h3>📞 Contatos</h3>
+            <p><strong>Prof. Filipe Litaiff, PhD</strong></p>
+            <p>🔗 <a href="https://www.linkedin.com/in/flitaiff/" target="_blank">LinkedIn: flitaiff</a></p>
+            <p>🌐 <a href="https://sunyataconsulting.com/" target="_blank">sunyataconsulting.com</a></p>
+            <p>📷 Instagram: @prof_filipe_litaiff</p>
+            <p>📧 contato@sunyataconsulting.com</p>
+        </div>
+
+        <div class="footer">
+            <p>Framework Sunyata para uso responsável de IA Generativa na pesquisa científica</p>
+            <div class="copyright">
+                © 2025 <a href="https://sunyataconsulting.com/" target="_blank">sunyataconsulting.com</a> - Todos os direitos reservados
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showExample(exampleId) {
+            // Hide all examples
+            const contents = document.querySelectorAll('.example-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Hide all buttons
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(button => button.classList.remove('active'));
+            
+            // Show selected example
+            document.getElementById(exampleId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function generatePrompt() {
+            const tarefa = document.getElementById('tarefa').value.trim();
+            const contexto = document.getElementById('contexto').value.trim();
+            const entradas = document.getElementById('entradas').value.trim();
+            const restricoes = document.getElementById('restricoes').value.trim();
+            const saida = document.getElementById('saida').value.trim();
+            const criterios = document.getElementById('criterios').value.trim();
+
+            if (!tarefa || !contexto) {
+                alert('Por favor, preencha pelo menos os campos "Tarefa/Objetivo" e "Contexto & Escopo"');
+                return;
+            }
+
+            let prompt = `Você é um especialista em metodologia de pesquisa científica com experiência acadêmica e prática.\n\n`;
+            
+            prompt += `**TAREFA/OBJETIVO:**\n${tarefa}\n\n`;
+            
+            prompt += `**CONTEXTO & ESCOPO:**\n${contexto}\n\n`;
+            
+            if (entradas) {
+                prompt += `**ENTRADAS DISPONÍVEIS:**\n${entradas}\n\n`;
+            }
+            
+            if (restricoes) {
+                prompt += `**RESTRIÇÕES & REGRAS:**\n${restricoes}\n\n`;
+            }
+            
+            if (saida) {
+                prompt += `**FORMATO DE SAÍDA ESPERADO:**\n${saida}\n\n`;
+            }
+            
+            if (criterios) {
+                prompt += `**CRITÉRIOS DE ACEITAÇÃO/QUALIDADE:**\n${criterios}\n\n`;
+            }
+            
+            prompt += `**INSTRUÇÕES IMPORTANTES:**\n- Mantenha rigor metodológico científico em todas as sugestões\n- Se alguma informação crucial estiver ausente, faça perguntas específicas antes de prosseguir\n- Considere as melhores práticas da área e normas acadêmicas aplicáveis\n- Estruture sua resposta de forma clara e acionável\n\n`;
+            
+            prompt += `Faça-me perguntas sequenciais, uma por vez, até que você julgue entender suficientemente o contexto da tarefa e a qualidade esperada da sua resposta.`;
+
+            document.getElementById('promptOutput').textContent = prompt;
+            document.getElementById('output').classList.add('show');
+            
+            // Smooth scroll to output
+            document.getElementById('output').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyPrompt() {
+            const promptText = document.getElementById('promptOutput').textContent;
+            navigator.clipboard.writeText(promptText).then(function() {
+                const button = document.querySelector('.copy-button');
+                const originalText = button.textContent;
+                button.textContent = '✅ Copiado!';
+                button.style.background = '#38a169';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '#48bb78';
+                }, 2000);
+            });
+        }
+
+        // Auto-save functionality
+        const inputs = ['tarefa', 'contexto', 'entradas', 'restricoes', 'saida', 'criterios'];
+        inputs.forEach(id => {
+            const element = document.getElementById(id);
+            // Load saved content
+            const saved = localStorage.getItem(`canvas_${id}`);
+            if (saved) {
+                element.value = saved;
+            }
+            
+            // Save on change
+            element.addEventListener('input', () => {
+                localStorage.setItem(`canvas_${id}`, element.value);
+            });
+        });
+    </script>
+</body>
+</html>

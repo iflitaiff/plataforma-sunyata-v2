@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Estruturação de Prompts para Profissionais Jurídicos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+            border-bottom: 3px solid #1e3a8a;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #1e3a8a, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #4a5568;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .nav {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            border-left: 4px solid #1e3a8a;
+        }
+
+        .nav h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .nav a {
+            color: #1e3a8a;
+            text-decoration: none;
+            padding: 0.5rem;
+            display: block;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav a:hover {
+            background: #1e3a8a;
+            color: white;
+            padding-left: 1rem;
+        }
+
+        h2 {
+            color: #2d3748;
+            font-size: 1.8rem;
+            margin: 2.5rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        h3 {
+            color: #4a5568;
+            font-size: 1.4rem;
+            margin: 2rem 0 1rem 0;
+        }
+
+        .template-box {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            border-left: 4px solid #1e3a8a;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .example-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border-left: 4px solid #059669;
+        }
+
+        .example-title {
+            background: #059669;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: inline-block;
+            font-size: 1.1rem;
+        }
+
+        .adaptation-tip {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .adaptation-tip h4 {
+            color: #92400e;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .adaptation-tip p {
+            color: #92400e;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .tip-box {
+            background: linear-gradient(135deg, #fbbf24 0%, #1e3a8a 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 2rem 0;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .tip-box blockquote {
+            font-style: italic;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .warning-box {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #dc2626;
+        }
+
+        .warning-box h4 {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+        }
+
+        .warning-box p {
+            color: #7f1d1d;
+            margin: 0;
+        }
+
+        ul, ol {
+            margin: 1rem 0 1rem 2rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+        }
+
+        code {
+            background: #edf2f7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .emoji {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .nav ul {
+                grid-template-columns: 1fr;
+            }
+            
+            .template-box, .example-box {
+                padding: 1rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #1e3a8a;
+            color: white;
+            padding: 1rem;
+            border-radius: 50%;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><span class="emoji">⚖️</span>Guia de Estruturação de Prompts para Profissionais Jurídicos</h1>
+            <p class="subtitle">Este guia foi desenvolvido especificamente para <strong>advogados, paralegais e profissionais de escritórios de advocacia</strong> otimizarem suas interações com Inteligência Artificial. Baseado nas práticas jurídicas brasileiras e na realidade dos escritórios cariocas.</p>
+        </header>
+
+        <div class="warning-box">
+            <h4>⚠️ Aviso Importante sobre Confidencialidade</h4>
+            <p>Nunca inclua informações confidenciais, dados pessoais de clientes ou detalhes sensíveis de casos reais em prompts. Use sempre exemplos fictícios ou dados anonimizados. A IA pode processar e armazenar informações inseridas.</p>
+        </div>
+
+        <nav class="nav">
+            <h3>📋 Navegação pelos Exemplos</h3>
+            <ul>
+                <li><a href="#estrutura">⚖️ Estrutura do Prompt Jurídico</a></li>
+                <li><a href="#exemplo1">📄 Petição Inicial - Ação de Cobrança</a></li>
+                <li><a href="#exemplo2">📋 Análise de Contrato Empresarial</a></li>
+                <li><a href="#exemplo3">📝 Parecer Jurídico Consultivo</a></li>
+                <li><a href="#exemplo4">🎯 Estratégia Processual</a></li>
+                <li><a href="#exemplo5">🔍 Due Diligence Empresarial</a></li>
+                <li><a href="#exemplo6">📄 Cláusulas Contratuais</a></li>
+                <li><a href="#exemplo7">⚖️ Pesquisa Jurisprudencial</a></li>
+                <li><a href="#exemplo8">👥 Defesa Trabalhista</a></li>
+                <li><a href="#exemplo9">🏢 Estruturação Societária</a></li>
+                <li><a href="#exemplo10">✅ Compliance e Políticas</a></li>
+                <li><a href="#dica">💡 Dicas Finais</a></li>
+            </ul>
+        </nav>
+
+        <section id="estrutura" class="section">
+            <h2><span class="emoji">⚖️</span>Estrutura do Prompt Jurídico (Template Adaptado)</h2>
+            
+            <div class="template-box">
+&lt;persona&gt;
+[Defina o perfil jurídico específico: "Você é um advogado especialista em Direito Civil", 
+"Você é um consultor jurídico em Direito Empresarial", "Você é um parecerista sênior", etc.]
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+[Descreva a tarefa jurídica específica usando verbos precisos: 
+elaborar, analisar, revisar, fundamentar, estruturar, avaliar riscos, etc.]
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+[Explique o cenário: área do direito, jurisdição (se aplicável), fase processual, 
+tipo de cliente (pessoa física/jurídica), urgência, complexidade, etc.]
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+[Indique a base legal relevante: Códigos, Leis específicas, Súmulas, 
+jurisprudência consolidada, doutrina aplicável, etc.]
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - [Elementos que devem aparecer: linguagem técnica, estrutura formal, etc.]
+2. Desejáveis:
+   - [Elementos que agregariam valor: precedentes, argumentos alternativos, etc.]
+3. Restrições:
+   - [O que evitar: linguagem informal, argumentos fracos, teses superadas, etc.]
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+[Dados relevantes do caso FICTÍCIO ou anonimizado: valores, datas, 
+partes envolvidas (usar nomes genéricos), fatos relevantes]
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+[Especifique o formato: petição estruturada, parecer técnico, 
+minuta de contrato, análise de riscos, etc.]
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, 
+se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+            </div>
+        </section>
+
+        <section class="section">
+            <h2><span class="emoji">💼</span>Exemplos Práticos para Escritórios de Advocacia</h2>
+
+            <div id="exemplo1" class="example-box">
+                <div class="example-title">📄 Exemplo 1 – Elaboração de Petição Inicial (Ação de Cobrança)</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado especialista em Direito Civil e Processo Civil, com ampla experiência em ações de cobrança no Tribunal de Justiça do Rio de Janeiro.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Elaborar uma petição inicial completa para ação de cobrança, incluindo fundamentação jurídica, pedidos e valor da causa, seguindo o CPC/2015.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Ação de cobrança a ser ajuizada na 1ª Vara Cível da Comarca da Capital/RJ. Cliente é pessoa jurídica (fornecedor) contra devedor pessoa física. Valor: R$ 45.000,00 (quarenta e cinco mil reais). Dívida vencida há 8 meses, sem pagamento.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- Código Civil (arts. 389, 395, 404, 407)
+- CPC/2015 (arts. 319-320, procedimento comum)
+- Súmula 54 do STJ (juros moratórios)
+- Lei 10.406/2002 (inadimplemento contratual)
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Endereçamento correto ao juízo
+   - Qualificação completa das partes
+   - Causa de pedir próxima e remota
+   - Pedidos claros e determinados
+   - Valor da causa fundamentado
+   - Requerimentos processuais (citação, etc.)
+2. Desejáveis:
+   - Jurisprudência do TJRJ
+   - Argumentação sobre juros e correção
+   - Pedido de tutela de urgência (se aplicável)
+3. Restrições:
+   - Não usar linguagem coloquial
+   - Evitar argumentos genéricos
+   - Não incluir pedidos excessivos
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Autor: Empresa ABC Ltda. (CNPJ fictício)
+Réu: João Silva Santos (CPF fictício)
+Contrato: Fornecimento de materiais de construção
+Data do vencimento: março de 2024
+Valor principal: R$ 45.000,00
+Juros contratuais: 1% ao mês
+Mora: desde 15/03/2024
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Petição inicial estruturada com: preâmbulo, qualificação, dos fatos, do direito, dos pedidos, valor da causa, requerimentos finais.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para diferentes valores:</strong> Ajuste se é competência dos Juizados Especiais (até 40 salários mínimos) ou Vara Cível comum. <strong>Para outros tipos de dívida:</strong> Modifique a fundamentação legal (ex: contratos bancários, aluguéis, prestação de serviços). <strong>Para clientes pessoas físicas:</strong> Considere benefício da gratuidade de justiça. <strong>Para urgência:</strong> Adicione fundamentação para tutela antecipada.</p>
+                </div>
+            </div>
+
+            <div id="exemplo2" class="example-box">
+                <div class="example-title">📋 Exemplo 2 – Análise de Contrato Empresarial</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado empresarial sênior especializado em contratos comerciais B2B, com experiência em empresas de médio e grande porte no mercado carioca.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Analisar minuta de contrato de distribuição, identificando riscos jurídicos, cláusulas problemáticas e sugerindo melhorias para proteção do cliente.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Contrato de distribuição exclusiva entre fabricante nacional (cliente) e distribuidor regional. Prazo de 3 anos, território RJ/ES. Produtos: equipamentos médicos. Faturamento estimado: R$ 2 milhões/ano. Empresa cliente quer proteção máxima.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- Código Civil (Livro I, Título VI - contratos)
+- Lei 8.078/90 (CDC - relações de consumo indireta)
+- Lei 8.884/94 (defesa da concorrência)
+- Lei 6.729/79 (representação comercial)
+- Marco Civil da Internet (proteção de dados)
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Análise cláusula por cláusula
+   - Identificação de riscos alto/médio/baixo
+   - Sugestões de redação alternativa
+   - Pontos de negociação críticos
+2. Desejáveis:
+   - Benchmarking com práticas de mercado
+   - Estratégias de mitigação de riscos
+   - Cláusulas de saída/rompimento
+3. Restrições:
+   - Não sugerir cláusulas abusivas
+   - Evitar linguagem excessivamente técnica
+   - Não criar desequilíbrio contratual extremo
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Cliente: MedTech Brasil Ltda. (fabricante)
+Contraparte: Distribuidora Regional Sul-Sudeste Ltda.
+Território: RJ, ES (exclusivo)
+Produtos: 15 linhas de equipamentos hospitalares
+Metas de vendas: R$ 500k/trimestre
+Comissão: 8% sobre vendas líquidas
+Prazo: 36 meses (renovação automática)
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Relatório executivo com: resumo de riscos, análise detalhada por seção, matriz de riscos, recomendações prioritárias, minutas de cláusulas revisadas.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para contratos de tecnologia:</strong> Incluir LGPD e Marco Civil. <strong>Para contratos internacionais:</strong> Adicionar aspectos de direito internacional privado. <strong>Para startups:</strong> Focar em flexibilidade e crescimento. <strong>Para análise em urgência:</strong> Priorizar apenas riscos críticos. <strong>Para diferentes setores:</strong> Ajustar regulamentações específicas (saúde, financeiro, etc.).</p>
+                </div>
+            </div>
+
+            <div id="exemplo3" class="example-box">
+                <div class="example-title">📝 Exemplo 3 – Parecer Jurídico Consultivo</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um parecerista sênior especializado em Direito Tributário e Empresarial, com reconhecida expertise em planejamento fiscal para empresas no Estado do Rio de Janeiro.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Elaborar parecer jurídico sobre a viabilidade de reestruturação societária visando otimização tributária, analisando riscos e benefícios da operação proposta.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Cliente é grupo empresarial com 4 empresas (holding + 3 operacionais). Faturamento conjunto: R$ 50 milhões/ano. Regime: Lucro Real. Quer criar estrutura de participações para otimizar impostos. Operação complexa com aspectos societários e tributários.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- CTN (arts. 116, 149-A - elisão e evasão)
+- Lei 6.404/76 (Lei das S.A.)
+- Código Civil (sociedades limitadas)
+- IN RFB 1.470/14 (preços de transferência)
+- Lei Complementar 104/01 (normas anti-elisivas)
+- Jurisprudência CARF e STJ
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Análise jurídica fundamentada
+   - Quantificação de riscos tributários
+   - Opinião conclusiva clara
+   - Recomendações práticas
+   - Bibliografia especializada
+2. Desejáveis:
+   - Precedentes administrativos
+   - Alternativas estruturais
+   - Cronograma de implementação
+   - Análise custo-benefício
+3. Restrições:
+   - Não sugerir elisão agressiva
+   - Evitar interpretações questionáveis
+   - Não ignorar substância econômica
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Estrutura atual: 4 empresas independentes
+Proposta: Holding + 3 subsidiárias integrais
+Benefício estimado: Economia de R$ 2 milhões/ano em impostos
+Operações: Incorporação reversa + cisão
+Prazo desejado: 6 meses
+Setor: Tecnologia e serviços digitais
+Regime tributário atual: Lucro Real
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Parecer estruturado: introdução, consulta, fundamentação legal, análise de riscos, conclusão, recomendações, cronograma sugerido.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para operações menores:</strong> Simplificar análise e focar em aspectos práticos. <strong>Para setores regulados:</strong> Incluir órgãos reguladores específicos. <strong>Para empresas familiares:</strong> Considerar aspectos sucessórios. <strong>Para consultoria urgente:</strong> Focar apenas em viabilidade preliminar. <strong>Para diferentes tributos:</strong> Ajustar fundamentação (ICMS, ISS, IPI, etc.).</p>
+                </div>
+            </div>
+
+            <div id="exemplo4" class="example-box">
+                <div class="example-title">🎯 Exemplo 4 – Estratégia Processual (Recurso ao TJRJ)</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado processualista com especialização em recursos e ampla experiência no Tribunal de Justiça do Rio de Janeiro, conhecido por estratégias recursais eficazes.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Desenvolver estratégia processual para interposição de apelação contra sentença desfavorável em ação de danos morais, identificando os melhores argumentos e chances de sucesso.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Ação de danos morais por negativação indevida. Sentença de procedência: R$ 15.000,00 + custas. Cliente é banco (réu/apelante). Prazo para apelação: 15 dias. Necessário avaliar viabilidade recursal e estratégia mais eficaz no TJRJ.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- CPC/2015 (arts. 1009-1014 - apelação)
+- Código Civil (art. 186 - responsabilidade civil)
+- CDC (art. 14 - responsabilidade objetiva)
+- Súmulas STJ: 385, 403, 472
+- Jurisprudência consolidada TJRJ
+- Temas repetitivos STJ
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Análise das chances de reforma
+   - Identificação dos pontos recursais
+   - Estratégia de argumentação
+   - Precedentes favoráveis específicos
+   - Avaliação custo-benefício
+2. Desejáveis:
+   - Argumentos subsidiários
+   - Possibilidade de acordo
+   - Recursos especiais futuros
+   - Impacto em casos similares
+3. Restrições:
+   - Não criar expectativas irreais
+   - Evitar argumentos superados
+   - Não ignorar jurisprudência consolidada
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Autor: Maria Silva (aposentada, 65 anos)
+Réu/Cliente: Banco Nacional S.A.
+Negativação: R$ 3.500,00 (dívida quitada)
+Período da negativação: 45 dias
+Comprovação do pagamento: clara
+Sentença: R$ 15.000,00 (10x salário mínimo)
+Fundamento da sentença: responsabilidade objetiva + dano presumido
+Valor econômico para o banco: alto (casos similares)
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Memorando estratégico com: análise da sentença, pontos recursais, fundamentação, precedentes aplicáveis, estratégia recomendada, cronograma, estimativa de custos/benefícios.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para recursos especiais:</strong> Focar em violação de lei federal e divergência jurisprudencial. <strong>Para outros tipos de ação:</strong> Ajustar matéria de fundo e precedentes. <strong>Para clientes diferentes:</strong> Considerar capacidade financeira e risco. <strong>Para recursos em outros tribunais:</strong> Adaptar jurisprudência específica. <strong>Para urgência:</strong> Priorizar argumentos mais sólidos.</p>
+                </div>
+            </div>
+
+            <div id="exemplo5" class="example-box">
+                <div class="example-title">🔍 Exemplo 5 – Due Diligence Empresarial</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado especialista em fusões e aquisições (M&A) com ampla experiência em due diligence jurídica para transações empresariais no mercado brasileiro.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Estruturar checklist completo de due diligence jurídica para aquisição de empresa de tecnologia, identificando pontos críticos de análise e possíveis red flags.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Aquisição de 80% de startup de fintech brasileira. Valor da transação: R$ 25 milhões. Target tem 50 funcionários, atua há 5 anos, tem clientes PJ e PF. Comprador é fundo de investimento estrangeiro. Necessário DD completo em 45 dias.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- Lei 6.404/76 (societário)
+- CLT e legislação trabalhista
+- LGPD (Lei 13.709/18)
+- Marco Civil da Internet
+- Regulamentação BACEN (fintech)
+- Lei de Inovação (10.973/04)
+- Código Civil (contratos)
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Checklist estruturado por área
+   - Identificação de riscos por categoria
+   - Documentos essenciais para análise
+   - Timeline de due diligence
+   - Modelo de relatório final
+2. Desejáveis:
+   - Benchmarking setorial
+   - Análise de compliance específico
+   - Estratégias de mitigação
+   - Estruturação de garantias
+3. Restrições:
+   - Não incluir análises contábeis/financeiras
+   - Manter foco jurídico-regulatório
+   - Considerar especificidades do setor fintech
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Target: TechPay Solutions Ltda.
+Setor: Pagamentos digitais e carteiras virtuais
+Funcionários: 50 (30 desenvolvedores)
+Clientes: 10.000 empresas + 500.000 pessoas físicas
+Faturamento anual: R$ 15 milhões
+Principais contratos: 5 bancos parceiros
+Propriedade intelectual: 3 softwares proprietários
+Regulamentação: Instituição de pagamento (BACEN)
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Manual de due diligence com: checklist por área jurídica, matriz de riscos, cronograma de atividades, template de relatórios, recomendações de estruturação.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para outros setores:</strong> Ajustar regulamentações específicas (saúde, educação, energia). <strong>Para transações menores:</strong> Simplificar checklist e focar em essenciais. <strong>Para aquisições internacionais:</strong> Incluir aspectos cambiais e tributários internacionais. <strong>Para joint ventures:</strong> Focar em aspectos de governança. <strong>Para diferentes porcentagens:</strong> Ajustar análise de controle societário.</p>
+                </div>
+            </div>
+
+            <div id="exemplo6" class="example-box">
+                <div class="example-title">📄 Exemplo 6 – Redação de Cláusulas Contratuais Específicas</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado contratualista sênior, especializado em contratos de tecnologia e propriedade intelectual, com expertise em cláusulas de proteção e mitigação de riscos.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Redigir cláusulas contratuais específicas para contrato de desenvolvimento de software sob medida, incluindo propriedade intelectual, SLA, confidencialidade e LGPD.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Contrato entre empresa de software (prestadora) e cliente corporativo para desenvolvimento de sistema ERP customizado. Prazo: 12 meses. Valor: R$ 800.000. Equipe dedicada. Dados sensíveis envolvidos. Necessário máxima proteção.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- Lei 9.609/98 (software)
+- Lei 9.610/98 (direitos autorais)
+- LGPD (Lei 13.709/18)
+- Marco Civil da Internet
+- Código Civil (contratos)
+- CDC (relações B2B)
+- Regulamentação ANPD
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Cláusulas equilibradas
+   - Linguagem jurídica precisa
+   - Compliance com LGPD
+   - Proteção de PI clara
+   - SLA mensurável
+   - Confidencialidade robusta
+2. Desejáveis:
+   - Cláusulas de adaptação
+   - Mecanismos de resolução de disputas
+   - Proteção contra vazamentos
+   - Cláusulas de audit
+3. Restrições:
+   - Não criar desequilíbrio excessivo
+   - Evitar cláusulas inexequíveis
+   - Manter viabilidade comercial
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Prestadora: DevSolutions Tech Ltda.
+Cliente: Industrial RJ Manufatura S.A.
+Projeto: Sistema ERP com módulos: financeiro, estoque, RH, vendas
+Prazo: 12 meses (4 fases de 3 meses)
+Equipe: 8 desenvolvedores + 2 analistas
+Dados: informações financeiras, dados de funcionários, clientes
+SLA desejado: 99,5% uptime, suporte 24/7
+Propriedade: código-fonte fica com o cliente
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Conjunto de cláusulas contratuais específicas, cada uma com: redação completa, justificativa jurídica, alternativas de redação, pontos de negociação.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para contratos SaaS:</strong> Focar em licenciamento e disponibilidade. <strong>Para desenvolvimento mobile:</strong> Incluir aspectos de app stores. <strong>Para contratos internacionais:</strong> Adicionar cláusulas de jurisdição e lei aplicável. <strong>Para startups:</strong> Flexibilizar prazos e marcos. <strong>Para setores regulados:</strong> Incluir compliance específico do setor.</p>
+                </div>
+            </div>
+
+            <div id="exemplo7" class="example-box">
+                <div class="example-title">⚖️ Exemplo 7 – Pesquisa Jurisprudencial Estratégica</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um pesquisador jurídico sênior especializado em jurisprudência dos tribunais superiores e do TJRJ, com metodologia específica para identificar precedentes estratégicos.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Desenvolver estratégia de pesquisa jurisprudencial para fundamentar tese sobre responsabilidade civil de plataformas digitais por conteúdo de terceiros, mapeando evolução jurisprudencial.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Caso envolvendo plataforma de marketplace que hospeda anúncios fraudulentos. Cliente da plataforma foi lesado em R$ 50.000. Questão: responsabilidade da plataforma por atos de terceiros. Jurisprudência está em evolução. Necessário mapeamento completo.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- Marco Civil da Internet (art. 19)
+- Código Civil (arts. 186, 927)
+- CDC (art. 14 - responsabilidade por vício)
+- STF (RE com repercussão geral)
+- STJ (Temas repetitivos)
+- Súmulas aplicáveis
+- TJRJ (jurisprudência local)
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Metodologia de pesquisa estruturada
+   - Evolução cronológica da jurisprudência
+   - Identificação de tendências
+   - Casos paradigmáticos
+   - Análise de argumentos vencedores/perdedores
+2. Desejáveis:
+   - Comparação com direito estrangeiro
+   - Análise estatística de decisões
+   - Identificação de ministros/desembargadores
+   - Argumentos emergentes
+3. Restrições:
+   - Não incluir decisões isoladas
+   - Focar em precedentes qualificados
+   - Manter atualização recente (últimos 3 anos)
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Plataforma: "VendeFácil Marketplace"
+Tipo de fraude: Anúncios de produtos inexistentes
+Valor da lesão: R$ 50.000 (equipamentos industriais)
+Consumidor: Empresa de pequeno porte
+Mecanismos da plataforma: Sistema de avaliações, política de uso
+Alegação da plataforma: Mero intermediário, art. 19 MCI
+Tese do autor: Responsabilidade por falha na fiscalização
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Relatório de pesquisa com: metodologia utilizada, mapeamento jurisprudencial, análise evolutiva, identificação de tendências, recomendações estratégicas, banco de precedentes.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para outras matérias:</strong> Ajustar tribunais e bases de dados relevantes. <strong>Para pesquisa urgente:</strong> Focar apenas em precedentes recentes de tribunais superiores. <strong>Para temas novos:</strong> Incluir doutrina e direito comparado. <strong>Para recursos especiais:</strong> Priorizar divergência jurisprudencial. <strong>Para casos complexos:</strong> Segmentar pesquisa por subtemas.</p>
+                </div>
+            </div>
+
+            <div id="exemplo8" class="example-box">
+                <div class="example-title">👥 Exemplo 8 – Defesa Trabalhista (Reclamação Trabalhista)</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado trabalhista experiente, especializado na defesa de empresas em reclamações trabalhistas no Tribunal Regional do Trabalho da 1ª Região (Rio de Janeiro).
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Elaborar estratégia completa de defesa para reclamação trabalhista envolvendo pedidos de horas extras, adicional noturno, equiparação salarial e danos morais.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Reclamante: Ex-funcionário, cargo de analista, trabalhou 3 anos. Pedidos: R$ 80.000 (horas extras + reflexos), equiparação com colega, danos morais por assédio moral. Empresa nega alegações. Audiência em 30 dias. TRT-1 tem jurisprudência específica.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- CLT (arts. 73, 461, 818, 818-A)
+- Súmula 338 TST (equiparação)
+- Súmula 428 TST (sobreaviso)
+- Precedentes TRT-1
+- Lei 13.467/17 (Reforma Trabalhista)
+- Instrução Normativa 41/2018 (INSS)
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Contestação fundamentada ponto a ponto
+   - Estratégia probatória
+   - Documentos essenciais
+   - Cálculos de eventual condenação
+   - Argumentos sobre ônus da prova
+2. Desejáveis:
+   - Possibilidade de acordo
+   - Recursos prováveis
+   - Impacto em outros casos
+   - Precedentes favoráveis específicos
+3. Restrições:
+   - Não negar fatos comprovados
+   - Evitar argumentos protelatórios
+   - Manter ética processual
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Reclamante: João Santos (analista de sistemas)
+Período: janeiro/2021 a dezembro/2023
+Salário: R$ 5.000,00 + benefícios
+Alegações: 4h extras diárias, trabalho noturno, equiparação com Maria Silva (mesmo cargo, R$ 7.000)
+Empresa: TechSolutions Rio Ltda. (50 funcionários)
+Gestão de ponto: Sistema eletrônico biométrico
+Assédio alegado: Pressão excessiva, metas inalcançáveis
+Documentos: Contratos, cartão ponto, e-mails, organograma
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Peça de defesa estruturada + memorando estratégico com análise de riscos, provas necessárias, possibilidade de acordo, cronograma processual.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para diferentes cargos:</strong> Ajustar jurisprudência sobre equiparação e horas extras. <strong>Para casos de terceirização:</strong> Incluir Súmula 331 TST. <strong>Para demissões por justa causa:</strong> Focar em proporcionalidade e provas. <strong>Para acordos:</strong> Priorizar análise de custo-benefício. <strong>Para recursos:</strong> Identificar teses de tribunais superiores.</p>
+                </div>
+            </div>
+
+            <div id="exemplo9" class="example-box">
+                <div class="example-title">🏢 Exemplo 9 – Estruturação Societária para Holding Familiar</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado especialista em Direito Societário e Sucessório, com ampla experiência em estruturação de holdings familiares e planejamento patrimonial para famílias empresárias.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Estruturar modelo de holding familiar para família empresária, organizando participações societárias, sucessão geracional e proteção patrimonial, considerando aspectos tributários e sucessórios.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Família proprietária de 5 empresas (setor imobiliário). Patrimônio: R$ 100 milhões. Patriarca (70 anos) quer organizar sucessão. 3 filhos ativos no negócio, 1 herdeiro não operacional. Objetivo: proteção + sucessão + otimização fiscal.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- Código Civil (sucessões, sociedades)
+- Lei 6.404/76 (sociedades anônimas)
+- CTN (tributação de holdings)
+- Lei 11.101/05 (proteção patrimonial)
+- ITCMD - legislação estadual RJ
+- Precedentes sobre planejamento sucessório
+- Instrução CVM (quando aplicável)
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Estrutura societária clara
+   - Aspectos sucessórios definidos
+   - Proteção patrimonial efetiva
+   - Governança familiar
+   - Compliance tributário
+   - Documentação societária
+2. Desejáveis:
+   - Flexibilidade para mudanças
+   - Mecanismos de resolução de conflitos
+   - Planejamento de longo prazo
+   - Otimização tributária lícita
+3. Restrições:
+   - Não violar ordem pública
+   - Respeitar legítima sucessória
+   - Manter substância econômica
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Patriarca: Eduardo Silva (70 anos, casado, regime parcial)
+Filhos: Ana (45, ativa), Carlos (42, ativo), Bruno (38, ativo), Diana (35, não operacional)
+Empresas: 3 incorporadoras + 1 construtora + 1 administradora de imóveis
+Faturamento conjunto: R$ 50 milhões/ano
+Patrimônio pessoal: R$ 50 milhões (imóveis)
+Objetivo: Sucessão em 10 anos, proteção contra credores, redução ITCMD
+Regime tributário atual: Lucro Real (todas)
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Projeto de estruturação com: organograma societário, contratos societários, acordo de acionistas, cronograma de implementação, análise tributária, plano de governança familiar.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para famílias menores:</strong> Simplificar estrutura e focar em essenciais. <strong>Para outros setores:</strong> Ajustar aspectos regulatórios específicos. <strong>Para patrimônios menores:</strong> Considerar custo-benefício da estruturação. <strong>Para conflitos familiares:</strong> Priorizar governança e resolução de disputas. <strong>Para urgência sucessória:</strong> Acelerar transferências essenciais.</p>
+                </div>
+            </div>
+
+            <div id="exemplo10" class="example-box">
+                <div class="example-title">✅ Exemplo 10 – Programa de Compliance e Políticas Internas</div>
+                <div class="template-box">
+&lt;persona&gt;
+Você é um advogado especialista em Compliance e Governança Corporativa, com experiência em implementação de programas de integridade em empresas de médio e grande porte no Brasil.
+&lt;/persona&gt;
+
+&lt;objetivo&gt;
+Desenvolver programa de compliance abrangente para empresa de construção civil, incluindo políticas anti-corrupção, LGPD, trabalhista e ambiental, adequado à Lei Anticorrupção brasileira.
+&lt;/objetivo&gt;
+
+&lt;contexto jurídico&gt;
+Empresa de construção civil com 200 funcionários, obras públicas e privadas, faturamento R$ 80 milhões/ano. Quer implementar compliance robusto para participar de licitações e reduzir riscos. Setor de alto risco para corrupção.
+&lt;/contexto jurídico&gt;
+
+&lt;fundamentação legal&gt;
+- Lei 12.846/13 (Lei Anticorrupção)
+- Decreto 8.420/15 (regulamentação)
+- LGPD (Lei 13.709/18)
+- Lei 8.666/93 (licitações)
+- Marco Legal das Licitações (14.133/21)
+- Resolução CGU 09/2015
+- ISO 37001 (referência internacional)
+&lt;/fundamentação legal&gt;
+
+&lt;requisitos técnicos&gt;
+1. Obrigatórios:
+   - Programa estruturado por pilares
+   - Políticas específicas por área de risco
+   - Treinamentos obrigatórios
+   - Canal de denúncias
+   - Processo de due diligence de terceiros
+   - Monitoramento e auditoria
+2. Desejáveis:
+   - Certificação ISO 37001
+   - Integração com sistemas existentes
+   - Métricas de efetividade
+   - Plano de comunicação
+3. Restrições:
+   - Adequação ao porte da empresa
+   - Custos proporcionais
+   - Implementação gradual viável
+&lt;/requisitos técnicos&gt;
+
+&lt;informações do caso&gt;
+Empresa: Construtora Sul-Sudeste Ltda.
+Setor: Construção civil pesada (pontes, viadutos, edifícios)
+Funcionários: 200 (50% obra, 50% administrativo)
+Contratos públicos: 60% do faturamento
+Contratos privados: 40% do faturamento
+Áreas de risco: Licitações, licenças ambientais, segurança do trabalho
+Estrutura atual: Departamento jurídico (3 advogados)
+Prazo para implementação: 12 meses
+Orçamento: R$ 500.000 (implementação + treinamento)
+&lt;/informações do caso&gt;
+
+&lt;formato esperado&gt;
+Manual de compliance com: estrutura do programa, políticas específicas, procedimentos operacionais, cronograma de implementação, matriz de riscos, plano de treinamento.
+&lt;/formato esperado&gt;
+
+&lt;verificação de qualidade&gt;
+Revise se a resposta atende aos padrões técnicos do Direito brasileiro, se está fundamentada adequadamente e se segue as formalidades processuais aplicáveis.
+&lt;/verificação de qualidade&gt;
+                </div>
+                
+                <div class="adaptation-tip">
+                    <h4>💡 Como Adaptar Este Prompt:</h4>
+                    <p><strong>Para outros setores:</strong> Ajustar riscos específicos (saúde, financeiro, tecnologia). <strong>Para empresas menores:</strong> Simplificar estrutura e reduzir custos. <strong>Para multinacionais:</strong> Incluir compliance internacional (FCPA, UK Bribery Act). <strong>Para setores regulados:</strong> Adicionar órgãos reguladores específicos. <strong>Para implementação urgente:</strong> Priorizar áreas de maior risco.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="dica" class="section">
+            <div class="tip-box">
+                <h2><span class="emoji">💡</span>Dicas Finais para Advocacia</h2>
+                <blockquote>
+                    "Um prompt jurídico eficaz nasce de <strong>uma questão bem delimitada</strong>.<br>
+                    Uma questão bem delimitada vem de <strong>quem conhece tanto o direito quanto o problema do cliente</strong>."
+                </blockquote>
+                <p><strong>Lembre-se sempre:</strong> A IA é uma ferramenta poderosa, mas jamais substitui o conhecimento jurídico, a análise crítica e a responsabilidade profissional do advogado. Use-a para potencializar seu trabalho, nunca para delegá-lo integralmente.</p>
+            </div>
+            
+            <div class="warning-box">
+                <h4>⚠️ Responsabilidade Profissional</h4>
+                <p>Todo conteúdo gerado por IA deve ser cuidadosamente revisado, adaptado ao caso concreto e validado quanto à atualização legal. O advogado permanece integralmente responsável pelos documentos e pareceres que assina, independentemente das ferramentas utilizadas em sua elaboração.</p>
+            </div>
+        </section>
+    </div>
+
+    <a href="#" class="back-to-top" id="backToTop">↑</a>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Back to top button functionality
+        const backToTopButton = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+
+        backToTopButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    </script>
+</body>
+</html>

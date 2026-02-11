@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas de Delimitação - Atividades Docentes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .progress-bar {
+            background: #e2e8f0;
+            height: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .step {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .step.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .step-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+        
+        .step-title {
+            font-size: 24px;
+            color: #2d3748;
+            font-weight: 600;
+        }
+        
+        .activity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .activity-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border: 3px solid transparent;
+            border-radius: 15px;
+            padding: 30px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .activity-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .activity-card.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #4c51bf;
+            transform: scale(1.05);
+        }
+        
+        .activity-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .activity-name {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        
+        .delimiter-section {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .delimiter-section h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .delimiter-section h3::before {
+            content: '▸';
+            color: #667eea;
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+        
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .input-group small {
+            display: block;
+            margin-top: 5px;
+            color: #718096;
+            font-size: 12px;
+        }
+        
+        .tag-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .tag {
+            padding: 8px 16px;
+            background: #e2e8f0;
+            border: 2px solid #cbd5e0;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .tag:hover {
+            background: #cbd5e0;
+        }
+        
+        .tag.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #cbd5e0;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .summary-box {
+            background: linear-gradient(135deg, #fef5e7 0%, #fef9e8 100%);
+            border: 2px solid #f39c12;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-box h4 {
+            color: #f39c12;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .summary-item {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .summary-label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-right: 5px;
+        }
+        
+        .summary-value {
+            color: #4a5568;
+        }
+        
+        .output-section {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 25px;
+            border-left: 4px solid #48bb78;
+        }
+        
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .output-header h3 {
+            color: #2d3748;
+            font-size: 20px;
+        }
+        
+        .copy-btn {
+            padding: 10px 24px;
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .copy-btn:hover {
+            background: #38a169;
+            transform: scale(1.05);
+        }
+        
+        .copy-btn.copied {
+            background: #4299e1;
+        }
+        
+        #finalPrompt {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            border: 1px solid #e2e8f0;
+            max-height: 500px;
+            overflow-y: auto;
+            color: #2d3748;
+        }
+        
+        .framework-reminder {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+        
+        .framework-reminder h4 {
+            color: #2c5282;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .framework-reminder ul {
+            margin-left: 20px;
+        }
+        
+        .framework-reminder li {
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .activity-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Canvas de Delimitação - Atividades Docentes</h1>
+            <p>Delimite progressivamente sua atividade para criar prompts estruturados</p>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="content">
+            <!-- PASSO 1: ESCOLHA DA ATIVIDADE -->
+            <div class="step active" id="step1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Escolha a Atividade Docente</div>
+                </div>
+                
+                <p style="color: #4a5568; margin-bottom: 20px;">
+                    Selecione qual atividade você quer realizar com apoio da IA:
+                </p>
+                
+                <div class="activity-grid">
+                    <div class="activity-card" onclick="selectActivity('planejamento')">
+                        <div class="activity-icon">📝</div>
+                        <div class="activity-name">Planejamento de Aulas</div>
+                    </div>
+                    
+                    <div class="activity-card" onclick="selectActivity('adaptacao')">
+                        <div class="activity-icon">🎨</div>
+                        <div class="activity-name">Adaptação de Conteúdo</div>
+                    </div>
+                    
+                    <div class="activity-card" onclick="selectActivity('materiais')">
+                        <div class="activity-icon">📚</div>
+                        <div class="activity-name">Criação de Materiais</div>
+                    </div>
+                    
+                    <div class="activity-card" onclick="selectActivity('avaliacao')">
+                        <div class="activity-icon">✅</div>
+                        <div class="activity-name">Elaboração de Avaliações</div>
+                    </div>
+                    
+                    <div class="activity-card" onclick="selectActivity('feedback')">
+                        <div class="activity-icon">💬</div>
+                        <div class="activity-name">Feedback para Alunos</div>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>
+                        Avançar para Delimitação →
+                    </button>
+                </div>
+            </div>
+            
+            <!-- PASSO 2: DELIMITAÇÃO CONTEXTUAL -->
+            <div class="step" id="step2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Delimitação Contextual</div>
+                </div>
+                
+                <div id="contextoDelimitacao"></div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        ← Voltar
+                    </button>
+                    <button class="btn btn-primary" onclick="nextStep()">
+                        Avançar para Especificações →
+                    </button>
+                </div>
+            </div>
+            
+            <!-- PASSO 3: DELIMITAÇÃO DE ESPECIFICAÇÕES -->
+            <div class="step" id="step3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Delimitação de Especificações</div>
+                </div>
+                
+                <div id="especificacoesDelimitacao"></div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        ← Voltar
+                    </button>
+                    <button class="btn btn-primary" onclick="nextStep()">
+                        Avançar para Formato →
+                    </button>
+                </div>
+            </div>
+            
+            <!-- PASSO 4: DELIMITAÇÃO DE FORMATO E TOM -->
+            <div class="step" id="step4">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div class="step-title">Delimitação de Formato e Tom</div>
+                </div>
+                
+                <div id="formatoDelimitacao"></div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        ← Voltar
+                    </button>
+                    <button class="btn btn-primary" onclick="generatePrompt()">
+                        ✨ Gerar Prompt Estruturado
+                    </button>
+                </div>
+            </div>
+            
+            <!-- PASSO 5: PROMPT GERADO -->
+            <div class="step" id="step5">
+                <div class="step-header">
+                    <div class="step-number">✓</div>
+                    <div class="step-title">Seu Prompt Estruturado</div>
+                </div>
+                
+                <div class="summary-box">
+                    <h4>📋 Resumo da Delimitação</h4>
+                    <div id="summaryContent"></div>
+                </div>
+                
+                <div class="output-section">
+                    <div class="output-header">
+                        <h3>Prompt Pronto para Usar</h3>
+                        <button class="copy-btn" onclick="copyPrompt()">
+                            <span id="copyText">📋 Copiar</span>
+                        </button>
+                    </div>
+                    <div id="finalPrompt"></div>
+                </div>
+                
+                <div class="framework-reminder">
+                    <h4>🎯 Aplique o Framework EDUCAR ao usar este prompt:</h4>
+                    <ul>
+                        <li><strong>[E] Ética:</strong> Use com transparência e responsabilidade</li>
+                        <li><strong>[D] Domínio:</strong> Revise e adapte - você é o autor final</li>
+                        <li><strong>[U] Uso Crítico:</strong> Verifique fatos, citações e dados</li>
+                        <li><strong>[C] Contextualização:</strong> Ajuste à sua realidade específica</li>
+                        <li><strong>[A] Autonomia:</strong> Mantenha suas decisões pedagógicas</li>
+                        <li><strong>[R] Reflexão:</strong> Questione criticamente o resultado</li>
+                    </ul>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="resetCanvas()">
+                        ↺ Criar Novo Prompt
+                    </button>
+                    <button class="btn btn-primary" onclick="prevStep()">
+                        ← Editar Delimitação
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let selectedActivity = null;
+        let delimitationData = {};
+        
+        function updateProgress() {
+            const progress = (currentStep / 5) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+        
+        function selectActivity(activity) {
+            selectedActivity = activity;
+            delimitationData = { activity: activity };
+            
+            // Remove seleção anterior
+            document.querySelectorAll('.activity-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Adiciona nova seleção
+            event.target.closest('.activity-card').classList.add('selected');
+            
+            // Habilita botão
+            document.getElementById('step1Next').disabled = false;
+        }
+        
+        function nextStep() {
+            if (currentStep < 5) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                currentStep++;
+                
+                if (currentStep === 2) {
+                    loadContextoDelimitacao();
+                } else if (currentStep === 3) {
+                    loadEspecificacoesDelimitacao();
+                } else if (currentStep === 4) {
+                    loadFormatoDelimitacao();
+                }
+                
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                updateProgress();
+                window.scrollTo(0, 0);
+            }
+        }
+        
+        function prevStep() {
+            if (currentStep > 1) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                currentStep--;
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                updateProgress();
+                window.scrollTo(0, 0);
+            }
+        }
+        
+        function resetCanvas() {
+            currentStep = 1;
+            selectedActivity = null;
+            delimitationData = {};
+            
+            document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
+            document.getElementById('step1').classList.add('active');
+            document.querySelectorAll('.activity-card').forEach(card => card.classList.remove('selected'));
+            document.getElementById('step1Next').disabled = true;
+            
+            updateProgress();
+            window.scrollTo(0, 0);
+        }
+        
+        function loadContextoDelimitacao() {
+            const container = document.getElementById('contextoDelimitacao');
+            let html = '';
+            
+            switch(selectedActivity) {
+                case 'planejamento':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Contexto Básico</h3>
+                            <div class="input-group">
+                                <label>Disciplina / Componente Curricular:</label>
+                                <input type="text" id="disciplina" placeholder="Ex: Física, Matemática, Literatura...">
+                            </div>
+                            <div class="input-group">
+                                <label>Nível de Ensino:</label>
+                                <select id="nivel">
+                                    <option value="">Selecione...</option>
+                                    <option value="Ensino Médio Integrado - 1º ano">EM Integrado - 1º ano</option>
+                                    <option value="Ensino Médio Integrado - 2º ano">EM Integrado - 2º ano</option>
+                                    <option value="Ensino Médio Integrado - 3º ano">EM Integrado - 3º ano</option>
+                                    <option value="Curso Técnico">Curso Técnico</option>
+                                    <option value="Tecnólogo">Tecnólogo</option>
+                                    <option value="Licenciatura">Licenciatura</option>
+                                    <option value="Bacharelado">Bacharelado</option>
+                                    <option value="EJA">EJA</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação do Conteúdo</h3>
+                            <div class="input-group">
+                                <label>Tópico / Conteúdo Específico:</label>
+                                <input type="text" id="topico" placeholder="Ex: Leis de Newton, Fotossíntese, Romantismo...">
+                                <small>Seja específico sobre o que será abordado</small>
+                            </div>
+                            <div class="input-group">
+                                <label>Duração da Aula (minutos):</label>
+                                <input type="number" id="duracao" value="50" min="20" max="240">
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação do Contexto</h3>
+                            <div class="input-group">
+                                <label>Recursos Disponíveis:</label>
+                                <textarea id="recursos" placeholder="Ex: Laboratório básico, datashow, quadro, materiais de baixo custo..."></textarea>
+                                <small>Liste o que você TEM disponível para usar</small>
+                            </div>
+                            <div class="input-group">
+                                <label>Particularidades da Turma (opcional):</label>
+                                <textarea id="particularidades" placeholder="Ex: Turma heterogênea, alunos trabalhadores, dificuldade em X..."></textarea>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'adaptacao':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Material Original</h3>
+                            <div class="input-group">
+                                <label>Cole o material que deseja adaptar:</label>
+                                <textarea id="materialOriginal" style="min-height: 150px;" placeholder="Cole aqui o texto, atividade ou conteúdo que você quer adaptar..."></textarea>
+                                <small>Pode ser texto didático, exercício, atividade etc.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação da Adaptação</h3>
+                            <div class="input-group">
+                                <label>Nível Atual do Material:</label>
+                                <input type="text" id="nivelAtual" placeholder="Ex: Graduação, 3º ano EM, texto técnico...">
+                            </div>
+                            <div class="input-group">
+                                <label>Tipo de Adaptação:</label>
+                                <select id="tipoAdaptacao">
+                                    <option value="">Selecione...</option>
+                                    <option value="simplificar">Simplificar (tornar mais acessível)</option>
+                                    <option value="complexificar">Complexificar (tornar mais desafiador)</option>
+                                    <option value="diferentes-niveis">Criar versões para diferentes níveis</option>
+                                    <option value="acessibilidade">Adaptar para acessibilidade</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Público-Alvo da Adaptação:</label>
+                                <input type="text" id="publicoAlvo" placeholder="Ex: Alunos com dificuldade de leitura, EJA, estudantes avançados...">
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Restrições</h3>
+                            <div class="input-group">
+                                <label>O que DEVE ser preservado:</label>
+                                <textarea id="preservar" placeholder="Ex: Conceitos essenciais, estrutura da atividade, objetivos de aprendizagem..."></textarea>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'materiais':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Tipo de Material</h3>
+                            <div class="input-group">
+                                <label>Selecione o tipo:</label>
+                                <select id="tipoMaterial">
+                                    <option value="">Escolha...</option>
+                                    <option value="exercicios">Lista de Exercícios</option>
+                                    <option value="roteiro-pratica">Roteiro de Atividade Prática</option>
+                                    <option value="texto-apoio">Texto de Apoio</option>
+                                    <option value="slides">Roteiro para Apresentação</option>
+                                    <option value="estudo-caso">Estudo de Caso</option>
+                                    <option value="projeto">Projeto Integrador</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Contexto</h3>
+                            <div class="input-group">
+                                <label>Disciplina e Nível:</label>
+                                <input type="text" id="disciplinaNivel" placeholder="Ex: Biologia - 2º ano EM Integrado">
+                            </div>
+                            <div class="input-group">
+                                <label>Tema / Conteúdo Central:</label>
+                                <input type="text" id="temaConteudo" placeholder="Ex: Ciclo do carbono, Circuitos elétricos...">
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Extensão</h3>
+                            <div class="input-group">
+                                <label>Quantidade / Duração:</label>
+                                <input type="text" id="quantidade" placeholder="Ex: 10 questões, 30 minutos, 2 páginas...">
+                            </div>
+                            <div class="input-group">
+                                <label>Objetivo do Material:</label>
+                                <textarea id="objetivoMaterial" placeholder="Ex: Fixar conceitos básicos, desenvolver análise crítica, preparar para avaliação..."></textarea>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'avaliacao':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Tipo de Avaliação</h3>
+                            <div class="input-group">
+                                <label>Selecione:</label>
+                                <select id="tipoAvaliacao">
+                                    <option value="">Escolha...</option>
+                                    <option value="diagnostica">Diagnóstica (conhecimentos prévios)</option>
+                                    <option value="formativa">Formativa (acompanhamento)</option>
+                                    <option value="somativa">Somativa (avaliação final)</option>
+                                    <option value="prova">Prova / Teste</option>
+                                    <option value="trabalho">Trabalho / Projeto</option>
+                                    <option value="rubrica">Rubrica de Avaliação</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Contexto</h3>
+                            <div class="input-group">
+                                <label>Disciplina e Turma:</label>
+                                <input type="text" id="disciplinaTurma" placeholder="Ex: Matemática - 1º ano Técnico em Informática">
+                            </div>
+                            <div class="input-group">
+                                <label>Conteúdos a Avaliar:</label>
+                                <textarea id="conteudosAvaliar" placeholder="Liste tópicos/competências que devem ser avaliados..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Estrutura</h3>
+                            <div class="input-group">
+                                <label>Formato Desejado:</label>
+                                <textarea id="formatoAvaliacao" placeholder="Ex: 10 múltipla escolha (5pts) + 2 dissertativas (5pts)"></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>Tempo Disponível:</label>
+                                <input type="text" id="tempoAvaliacao" placeholder="Ex: 50 minutos, 2 semanas...">
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'feedback':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Contexto do Feedback</h3>
+                            <div class="input-group">
+                                <label>Tipo de Atividade Avaliada:</label>
+                                <input type="text" id="tipoAtividade" placeholder="Ex: Trabalho escrito, Apresentação oral, Projeto prático...">
+                            </div>
+                            <div class="input-group">
+                                <label>Disciplina e Nível:</label>
+                                <input type="text" id="disciplinaContexto" placeholder="Ex: História - Ensino Médio, trabalho sobre Revolução Industrial">
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Critérios</h3>
+                            <div class="input-group">
+                                <label>Critérios de Avaliação Utilizados:</label>
+                                <textarea id="criteriosAvaliacao" placeholder="Liste aspectos avaliados: argumentação, uso de fontes, organização..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação do Desempenho</h3>
+                            <div class="input-group">
+                                <label>Desempenho do Aluno (resumo):</label>
+                                <textarea id="desempenhoAluno" style="min-height: 100px;" placeholder="Descreva objetivamente: pontos fortes e áreas de melhoria identificadas..."></textarea>
+                                <small>Seja factual e específico</small>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function loadEspecificacoesDelimitacao() {
+            const container = document.getElementById('especificacoesDelimitacao');
+            let html = '';
+            
+            switch(selectedActivity) {
+                case 'planejamento':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Objetivos</h3>
+                            <div class="input-group">
+                                <label>Objetivo(s) de Aprendizagem:</label>
+                                <textarea id="objetivos" placeholder="Ex: Compreender conceito de X, aplicar cálculos de Y, analisar criticamente Z..."></textarea>
+                                <small>Preferencialmente alinhado à BNCC ou PPC do curso</small>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Metodologia</h3>
+                            <div class="input-group">
+                                <label>Metodologia Preferencial:</label>
+                                <div class="tag-selector">
+                                    <div class="tag" onclick="toggleTag(this, 'expositiva')">Expositiva</div>
+                                    <div class="tag" onclick="toggleTag(this, 'dialogada')">Dialogada</div>
+                                    <div class="tag" onclick="toggleTag(this, 'pratica')">Prática/Experimental</div>
+                                    <div class="tag" onclick="toggleTag(this, 'colaborativa')">Colaborativa</div>
+                                    <div class="tag" onclick="toggleTag(this, 'problema')">Baseada em Problemas</div>
+                                    <div class="tag" onclick="toggleTag(this, 'projeto')">Baseada em Projetos</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Avaliação</h3>
+                            <div class="input-group">
+                                <label>Tipo de Avaliação na Aula:</label>
+                                <select id="avaliacaoTipo">
+                                    <option value="formativa">Formativa (observação/perguntas)</option>
+                                    <option value="atividade">Atividade avaliativa</option>
+                                    <option value="discussao">Discussão em grupo</option>
+                                    <option value="producao">Produção individual/coletiva</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'adaptacao':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Adaptações Linguísticas</h3>
+                            <div class="input-group">
+                                <label>Ajustes na Linguagem:</label>
+                                <div class="tag-selector">
+                                    <div class="tag" onclick="toggleTag(this, 'vocab')">Simplificar vocabulário</div>
+                                    <div class="tag" onclick="toggleTag(this, 'sentencas')">Encurtar sentenças</div>
+                                    <div class="tag" onclick="toggleTag(this, 'exemplos')">Adicionar exemplos</div>
+                                    <div class="tag" onclick="toggleTag(this, 'analogias')">Incluir analogias</div>
+                                    <div class="tag" onclick="toggleTag(this, 'jargao')">Remover jargão técnico</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Scaffolding</h3>
+                            <div class="input-group">
+                                <label>Suporte Adicional Necessário:</label>
+                                <textarea id="scaffolding" placeholder="Ex: Incluir glossário, adicionar perguntas-guia, fornecer organizadores gráficos..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Orientações Específicas</h3>
+                            <div class="input-group">
+                                <label>Instruções Adicionais (opcional):</label>
+                                <textarea id="orientacoesAdicionais" placeholder="Ex: Manter tom formal, incluir elementos visuais sugeridos, adequar a X contexto..."></textarea>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'materiais':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Requisitos</h3>
+                            <div class="input-group">
+                                <label>Requisitos Específicos:</label>
+                                <textarea id="requisitos" placeholder="Ex: Diferentes níveis de dificuldade, contexto regional (RJ), espaço para respostas..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Restrições</h3>
+                            <div class="input-group">
+                                <label>O que NÃO deve ter:</label>
+                                <div class="tag-selector">
+                                    <div class="tag" onclick="toggleTag(this, 'caros')">Materiais caros</div>
+                                    <div class="tag" onclick="toggleTag(this, 'internet')">Depender de internet</div>
+                                    <div class="tag" onclick="toggleTag(this, 'avancados')">Conceitos não vistos ainda</div>
+                                    <div class="tag" onclick="toggleTag(this, 'laboratorio')">Laboratório avançado</div>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>Outras Restrições (opcional):</label>
+                                <input type="text" id="outrasRestricoes" placeholder="Ex: Tempo máximo 20 min, usar apenas papel/lápis...">
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'avaliacao':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Dificuldade</h3>
+                            <div class="input-group">
+                                <label>Distribuição de Dificuldade:</label>
+                                <select id="dificuldade">
+                                    <option value="unico">Nível único (adequado à turma)</option>
+                                    <option value="variado">Questões fáceis, médias e difíceis</option>
+                                    <option value="progressivo">Dificuldade progressiva</option>
+                                    <option value="diferenciado">Versões diferenciadas por perfil</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Critérios</h3>
+                            <div class="input-group">
+                                <label>Distribuição de Pontos/Critérios:</label>
+                                <textarea id="criteriosPontos" placeholder="Ex: Compreensão conceitual (40%), aplicação prática (30%), raciocínio (30%)..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Elementos Adicionais</h3>
+                            <div class="input-group">
+                                <label>Incluir:</label>
+                                <div class="tag-selector">
+                                    <div class="tag" onclick="toggleTag(this, 'gabarito')">Gabarito comentado</div>
+                                    <div class="tag" onclick="toggleTag(this, 'rubrica')">Rubrica de correção</div>
+                                    <div class="tag" onclick="toggleTag(this, 'tempo')">Tempo por questão</div>
+                                    <div class="tag" onclick="toggleTag(this, 'instrucoes')">Instruções detalhadas</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'feedback':
+                    html = `
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Objetivo</h3>
+                            <div class="input-group">
+                                <label>Objetivo do Feedback:</label>
+                                <select id="objetivoFeedback">
+                                    <option value="formativo">Formativo (orientar melhoria)</option>
+                                    <option value="encorajador">Encorajador (motivar continuidade)</option>
+                                    <option value="corretivo">Corretivo (apontar erros específicos)</option>
+                                    <option value="desenvolvimentista">Desenvolvimentista (próximos passos)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Tom</h3>
+                            <div class="input-group">
+                                <label>Tom Desejado:</label>
+                                <select id="tomFeedback">
+                                    <option value="encorajador">Encorajador e positivo</option>
+                                    <option value="direto">Direto mas respeitoso</option>
+                                    <option value="reflexivo">Reflexivo (estimula autocrítica)</option>
+                                    <option value="construtivo">Construtivo e específico</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="delimiter-section">
+                            <h3>Delimitação de Estrutura</h3>
+                            <div class="input-group">
+                                <label>Estrutura do Feedback:</label>
+                                <select id="estruturaFeedback">
+                                    <option value="padrao">Padrão (pontos fortes + melhorias + próximos passos)</option>
+                                    <option value="rubrica">Baseado em rubrica</option>
+                                    <option value="narrativo">Narrativo (parágrafo corrido)</option>
+                                    <option value="topicos">Tópicos específicos por critério</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function loadFormatoDelimitacao() {
+            const container = document.getElementById('formatoDelimitacao');
+            let html = `
+                <div class="delimiter-section">
+                    <h3>Delimitação de Formato de Saída</h3>
+                    <div class="input-group">
+                        <label>Como quer receber o resultado:</label>
+                        <textarea id="formatoSaida" placeholder="Ex: Documento estruturado por seções, lista numerada, tabela, roteiro passo-a-passo..."></textarea>
+                        <small>Seja específico sobre a organização desejada</small>
+                    </div>
+                </div>
+                
+                <div class="delimiter-section">
+                    <h3>Delimitação de Tom e Estilo</h3>
+                    <div class="input-group">
+                        <label>Tom/Linguagem:</label>
+                        <div class="tag-selector">
+                            <div class="tag" onclick="toggleTag(this, 'formal')">Formal/Acadêmico</div>
+                            <div class="tag" onclick="toggleTag(this, 'acessivel')">Acessível/Didático</div>
+                            <div class="tag" onclick="toggleTag(this, 'pratico')">Prático/Direto</div>
+                            <div class="tag" onclick="toggleTag(this, 'motivador')">Motivador/Inspirador</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="delimiter-section">
+                    <h3>Observações Finais (Opcional)</h3>
+                    <div class="input-group">
+                        <label>Informações Adicionais:</label>
+                        <textarea id="observacoesFinais" placeholder="Qualquer outra orientação ou restrição que não foi coberta acima..."></textarea>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        function toggleTag(element, value) {
+            element.classList.toggle('selected');
+            if (!delimitationData.selectedTags) {
+                delimitationData.selectedTags = [];
+            }
+            const index = delimitationData.selectedTags.indexOf(value);
+            if (index > -1) {
+                delimitationData.selectedTags.splice(index, 1);
+            } else {
+                delimitationData.selectedTags.push(value);
+            }
+        }
+        
+        function collectData() {
+            // Coleta dados de todos os campos preenchidos
+            const inputs = document.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                if (input.value && input.id) {
+                    delimitationData[input.id] = input.value;
+                }
+            });
+        }
+        
+        function generatePrompt() {
+            collectData();
+            
+            let prompt = '';
+            let summary = '';
+            
+            switch(selectedActivity) {
+                case 'planejamento':
+                    prompt = `Atue como professor experiente de ${delimitationData.disciplina || '[DISCIPLINA]'} no contexto de ${delimitationData.nivel || '[NÍVEL]'}.
+
+CONTEXTO DA AULA:
+- Tópico: ${delimitationData.topico || '[TÓPICO]'}
+- Duração: ${delimitationData.duracao || '50'} minutos
+- Recursos disponíveis: ${delimitationData.recursos || 'Recursos básicos de sala de aula'}
+${delimitationData.particularidades ? `- Particularidades da turma: ${delimitationData.particularidades}` : ''}
+
+OBJETIVO DE APRENDIZAGEM:
+${delimitationData.objetivos || '[Definir objetivos de aprendizagem]'}
+
+${delimitationData.selectedTags && delimitationData.selectedTags.length > 0 ? `METODOLOGIA PREFERENCIAL: ${delimitationData.selectedTags.join(', ')}` : ''}
+
+TAREFA:
+Crie um plano de aula detalhado e prático que:
+1. Siga estrutura clara: Introdução / Desenvolvimento / Fechamento
+2. Inclua atividade(s) que promova(m) engajamento ativo
+3. Considere diferenciação pedagógica quando relevante
+4. Sugira avaliação ${delimitationData.avaliacaoTipo || 'formativa'}
+5. Seja viável com os recursos mencionados
+
+REQUISITOS:
+- Explicitar tempo estimado de cada etapa
+- Listar materiais necessários (se aplicável)
+- Incluir perguntas norteadoras para discussão
+- Alinhar com competências da BNCC quando possível
+- Considerar contexto do ensino público federal (IFRJ)
+
+${delimitationData.formatoSaida ? `FORMATO:\n${delimitationData.formatoSaida}` : 'FORMATO:\n- Divisão temporal clara de cada momento\n- Descrição de atividades com instruções práticas'}
+
+${delimitationData.selectedTags && delimitationData.selectedTags.filter(t => ['formal', 'acessivel', 'pratico', 'motivador'].includes(t)).length > 0 ? `TOM: ${delimitationData.selectedTags.filter(t => ['formal', 'acessivel', 'pratico', 'motivador'].includes(t)).join(', ')}` : 'TOM: Prático, aplicável, equilibrado entre rigor e viabilidade'}
+
+${delimitationData.observacoesFinais ? `\nOBSERVAÇÕES ADICIONAIS:\n${delimitationData.observacoesFinais}` : ''}`;
+
+                    summary = `
+                        <div class="summary-item"><span class="summary-label">Atividade:</span> <span class="summary-value">Planejamento de Aula</span></div>
+                        <div class="summary-item"><span class="summary-label">Disciplina:</span> <span class="summary-value">${delimitationData.disciplina || '-'}</span></div>
+                        <div class="summary-item"><span class="summary-label">Nível:</span> <span class="summary-value">${delimitationData.nivel || '-'}</span></div>
+                        <div class="summary-item"><span class="summary-label">Tópico:</span> <span class="summary-value">${delimitationData.topico || '-'}</span></div>
+                        <div class="summary-item"><span class="summary-label">Duração:</span> <span class="summary-value">${delimitationData.duracao || '50'} minutos</span></div>
+                    `;
+                    break;
+                    
+                case 'adaptacao':
+                    prompt = `Atue como especialista em diferenciação pedagógica e adaptação de materiais educacionais.
+
+MATERIAL ORIGINAL A SER ADAPTADO:
+"""
+${delimitationData.materialOriginal || '[COLAR MATERIAL AQUI]'}
+"""
+
+INFORMAÇÕES SOBRE O MATERIAL:
+- Nível atual: ${delimitationData.nivelAtual || '[DEFINIR]'}
+- Público-alvo da adaptação: ${delimitationData.publicoAlvo || '[DEFINIR]'}
+- Tipo de adaptação: ${delimitationData.tipoAdaptacao || '[DEFINIR]'}
+
+ELEMENTOS A PRESERVAR:
+${delimitationData.preservar || 'Os objetivos de aprendizagem centrais e conceitos essenciais'}
+
+${delimitationData.selectedTags && delimitationData.selectedTags.length > 0 ? `AJUSTES LINGUÍSTICOS: ${delimitationData.selectedTags.join(', ')}` : ''}
+
+${delimitationData.scaffolding ? `SUPORTE ADICIONAL:\n${delimitationData.scaffolding}` : ''}
+
+${delimitationData.orientacoesAdicionais ? `ORIENTAÇÕES ESPECÍFICAS:\n${delimitationData.orientacoesAdicionais}` : ''}
+
+TAREFA:
+${delimitationData.tipoAdaptacao === 'diferentes-niveis' ? 'Crie 3 versões (básica, intermediária, avançada)' : 'Adapte o material conforme especificado'}, preservando os objetivos centrais de aprendizagem.
+
+${delimitationData.formatoSaida ? `FORMATO:\n${delimitationData.formatoSaida}` : 'FORMATO:\n- Material adaptado completo\n- Breve justificativa das principais mudanças'}
+
+${delimitationData.selectedTags && delimitationData.selectedTags.filter(t => ['formal', 'acessivel', 'pratico', 'motivador'].includes(t)).length > 0 ? `TOM: ${delimitationData.selectedTags.filter(t => ['formal', 'acessivel', 'pratico', 'motivador'].includes(t)).join(', ')}` : 'TOM: Pedagógico, claro, respeitoso com conteúdo original e público-alvo'}`;
+
+                    summary = `
+                        <div class="summary-item"><span class="summary-label">Atividade:</span> <span class="summary-value">Adaptação de Conteúdo</span></div>
+                        <div class="summary-item"><span class="summary-label">Tipo:</span> <span class="summary-value">${delimitationData.tipoAdaptacao || '-'}</span></div>
+                        <div class="summary-item"><span class="summary-label">Público-alvo:</span> <span class="summary-value">${delimitationData.publicoAlvo || '-'}</span></div>
+                    `;
+                    break;
+                    
+                case 'materiais':
+                    prompt = `Atue como professor criador de materiais didáticos de alta qualidade.
+
+CONTEXTO:
+- Tipo de material: ${delimitationData.tipoMaterial || '[DEFINIR]'}
+- Disciplina e nível: ${delimitationData.disciplinaNivel || '[DEFINIR]'}
+- Tema central: ${delimitationData.temaConteudo || '[DEFINIR]'}
+
+OBJETIVO DO MATERIAL:
+${delimitationData.objetivoMaterial || '[Definir objetivo]'}
+
+QUANTIDADE/EXTENSÃO:
+${delimitationData.quantidade || '[Definir extensão]'}
+
+${delimitationData.requisitos ? `REQUISITOS ESPECÍFICOS:\n${delimitationData.requisitos}` : ''}
+
+${delimitationData.selectedTags && delimitationData.selectedTags.length > 0 ? `RESTRIÇÕES: NÃO incluir ${delimitationData.selectedTags.join(', ')}` : ''}
+${delimitationData.outrasRestricoes ? `\nOutras restrições: ${delimitationData.outrasRestricoes}` : ''}
+
+TAREFA:
+Crie ${delimitationData.tipoMaterial || 'material'} completo e pronto para uso, considerando viabilidade no contexto do IFRJ.
+
+${delimitationData.formatoSaida ? `FORMATO:\n${delimitationData.formatoSaida}` : 'FORMATO: Material estruturado pronto para impressão ou uso digital'}
+
+${delimitationData.selectedTags && delimitationData.selectedTags.filter(t => ['formal', 'acessivel', 'pratico', 'motivador'].includes(t)).length > 0 ? `TOM: ${delimitationData.selectedTags.filter(t => ['formal', 'acessivel', 'pratico', 'motivador'].includes(t)).join(', ')}` : 'TOM: Didático, engajador, com rigor conceitual'}`;
+
+                    summary = `
+                        <div class="summary-item"><span class="summary-label">Atividade:</span> <span class="summary-value">Criação de Material</span></div>
+                        <div class="summary-item"><span class="summary-label">Tipo:</span> <span class="summary-value">${delimitationData.tipoMaterial || '-'}</span></div>
+                        <div class="summary-item"><span class="summary-label">Tema:</span> <span class="summary-value">${delimitationData.temaConteudo || '-'}</span></div>
+                    `;
+                    break;
+                    
+                case 'avaliacao':
+                    prompt = `Atue como especialista em avaliação educacional no contexto do ensino público.
+
+CONTEXTO DA AVALIAÇÃO:
+- Tipo: ${delimitationData.tipoAvaliacao || '[DEFINIR]'}
+- Disciplina e turma: ${delimitationData.disciplinaTurma || '[DEFINIR]'}
+- Tempo disponível: ${delimitationData.tempoAvaliacao || '[DEFINIR]'}
+
+CONTEÚDOS/COMPETÊNCIAS A AVALIAR:
+${delimitationData.conteudosAvaliar || '[Listar conteúdos]'}
+
+${delimitationData.formatoAvaliacao ? `ESTRUTURA DESEJADA:\n${delimitationData.formatoAvaliacao}` : ''}
+
+CRITÉRIOS DE AVALIAÇÃO:
+${delimitationData.criteriosPontos || '[Definir critérios]'}
+
+DIFICULDADE:
+${delimitationData.dificuldade || 'Nível adequado à turma'}
+
+${delimitationData.selectedTags && delimitationData.selectedTags.length > 0 ? `INCLUIR: ${delimitationData.selectedTags.join(', ')}` : ''}
+
+TAREFA:
+Elabore instrumento de avaliação completo que seja válido, confiável, viável e transparente.
+
+${delimitationData.formatoSaida ? `FORMATO:\n${delimitationData.formatoSaida}` : 'FORMATO: Documento estruturado pronto para aplicação'}
+
+TOM: Claro, justo, focado em aprendizagem`;
+
+                    summary = `
+                        <div class="summary-item"><span class="summary-label">Atividade:</span> <span class="summary-value">Elaboração de Avaliação</span></div>
+                        <div class="summary-item"><span class="summary-label">Tipo:</span> <span class="summary-value">${delimitationData.tipoAvaliacao || '-'}</span></div>
+                        <div class="summary-item"><span class="summary-label">Disciplina:</span> <span class="summary-value">${delimitationData.disciplinaTurma || '-'}</span></div>
+                    `;
+                    break;
+                    
+                case 'feedback':
+                    prompt = `Atue como professor experiente que fornece feedback formativo de qualidade.
+
+CONTEXTO:
+- Atividade: ${delimitationData.tipoAtividade || '[DEFINIR]'}
+- Disciplina: ${delimitationData.disciplinaContexto || '[DEFINIR]'}
+
+CRITÉRIOS UTILIZADOS:
+${delimitationData.criteriosAvaliacao || '[Listar critérios]'}
+
+DESEMPENHO OBSERVADO:
+${delimitationData.desempenhoAluno || '[Descrever desempenho]'}
+
+OBJETIVO DO FEEDBACK:
+${delimitationData.objetivoFeedback || 'Formativo'}
+
+TAREFA:
+Redija feedback individualizado seguindo estrutura ${delimitationData.estruturaFeedback || 'padrão'}, com tom ${delimitationData.tomFeedback || 'construtivo'}.
+
+Incluir:
+- 2-3 pontos fortes específicos
+- 2 áreas de melhoria com exemplos
+- 1-2 ações concretas para próxima atividade
+
+${delimitationData.formatoSaida ? `FORMATO:\n${delimitationData.formatoSaida}` : 'FORMATO: Texto direto ao aluno (2ª pessoa)'}
+
+TOM: ${delimitationData.tomFeedback || 'Construtivo'}, sempre respeitoso e voltado ao desenvolvimento`;
+
+                    summary = `
+                        <div class="summary-item"><span class="summary-label">Atividade:</span> <span class="summary-value">Feedback para Aluno</span></div>
+                        <div class="summary-item"><span class="summary-label">Tipo:</span> <span class="summary-value">${delimitationData.tipoAtividade || '-'}</span></div>
+                        <div class="summary-item"><span class="summary-label">Objetivo:</span> <span class="summary-value">${delimitationData.objetivoFeedback || '-'}</span></div>
+                    `;
+                    break;
+            }
+            
+            document.getElementById('finalPrompt').textContent = prompt;
+            document.getElementById('summaryContent').innerHTML = summary;
+            nextStep();
+        }
+        
+        function copyPrompt() {
+            const prompt = document.getElementById('finalPrompt').textContent;
+            navigator.clipboard.writeText(prompt).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const text = document.getElementById('copyText');
+                btn.classList.add('copied');
+                text.textContent = '✓ Copiado!';
+                
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    text.textContent = '📋 Copiar';
+                }, 2000);
+            });
+        }
+        
+        // Inicialização
+        updateProgress();
+    </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+    "name": "sunyata/plataforma-sunyata",
+    "description": "Plataforma de gestão de conteúdo e cursos Sunyata",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.0",
+        "league/oauth2-google": "^4.0",
+        "mpdf/mpdf": "^8.2",
+        "phpoffice/phpword": "^1.2",
+        "smalot/pdfparser": "^2.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sunyata\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sunyata\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "check": [
+            "@test"
+        ],
+        "serve": "php -S localhost:8000 -t public"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

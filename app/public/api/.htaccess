@@ -1,0 +1,4 @@
+<IfModule LiteSpeed>
+    RewriteEngine On
+    RewriteRule .* - [E=noabort:1]
+</IfModule>
