@@ -53,15 +53,16 @@ foreach ($canvas_list as $canvas) {
 
 // Labels e ícones para as categorias
 $categoryMeta = [
-    'analise'     => ['label' => 'Análise & Pesquisa',       'icon' => 'bi-search',       'color' => '#667eea'],
-    'documentos'  => ['label' => 'Documentos & Pareceres',   'icon' => 'bi-file-earmark-text', 'color' => '#764ba2'],
-    'gestao'      => ['label' => 'Gestão & Compliance',      'icon' => 'bi-shield-check', 'color' => '#28a745'],
-    'ferramentas' => ['label' => 'Ferramentas de Documento',  'icon' => 'bi-tools',        'color' => '#fd7e14'],
-    'geral'       => ['label' => 'Geral',                    'icon' => 'bi-grid',         'color' => '#6c757d'],
+    'analise'       => ['label' => 'Análise & Pesquisa',       'icon' => 'bi-search',           'color' => '#667eea'],
+    'documentos'    => ['label' => 'Documentos & Pareceres',   'icon' => 'bi-file-earmark-text','color' => '#764ba2'],
+    'gestao'        => ['label' => 'Gestão & Compliance',      'icon' => 'bi-shield-check',     'color' => '#28a745'],
+    'ferramentas'   => ['label' => 'Ferramentas de Documento', 'icon' => 'bi-tools',            'color' => '#fd7e14'],
+    'monitoramento' => ['label' => 'Licitações & Monitoramento','icon' => 'bi-bell',            'color' => '#0d6efd'],
+    'geral'         => ['label' => 'Geral',                    'icon' => 'bi-grid',             'color' => '#6c757d'],
 ];
 
 // Ordem fixa das categorias
-$categoryOrder = ['geral', 'analise', 'documentos', 'gestao', 'ferramentas'];
+$categoryOrder = ['geral', 'analise', 'documentos', 'gestao', 'ferramentas', 'monitoramento'];
 
 $verticalName = $verticalData['name'] ?? 'IATR';
 $pageTitle = $verticalName;

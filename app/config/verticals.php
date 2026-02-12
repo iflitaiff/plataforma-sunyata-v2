@@ -156,7 +156,10 @@ return [
         'descricao' => 'Vertical de testes para escritório de advocacia. Acesso limitado a 5 usuários.',
         'descricao_aprovacao' => ' <strong>Vagas limitadas.</strong>',
         'ferramentas' => [
-            'Canvas Jurídico v2'
+            'Canvas Jurídico v2',
+            'Resumo Executivo de Edital',
+            'Análise de Habilitação',
+            'Monitor PNCP'
         ],
         'disponivel' => true,
         'requer_info_extra' => false, // Acesso direto sem formulário extra
