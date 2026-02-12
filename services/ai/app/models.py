@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 # --- Generate ---
 
 class GenerateRequest(BaseModel):
-    model: str = "claude-haiku-4-5-20251001"
+    model: str = "claude-haiku-4-5"
     system: str | None = None
     prompt: str = Field(..., min_length=1)
     max_tokens: int = Field(default=4096, ge=1, le=128000)
@@ -40,7 +40,7 @@ class GenerateResponse(BaseModel):
 # --- Stream ---
 
 class StreamRequest(BaseModel):
-    model: str = "claude-haiku-4-5-20251001"
+    model: str = "claude-haiku-4-5"
     system: str | None = None
     prompt: str = Field(..., min_length=1)
     max_tokens: int = Field(default=4096, ge=1, le=128000)

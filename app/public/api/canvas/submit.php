@@ -828,7 +828,7 @@ try {
                 'system_prompt' => $systemPrompt,
                 'user_prompt' => $userPrompt,
                 'metadata' => [
-                    'model' => $result['model'] ?? 'claude-3-5-sonnet-20241022',
+                    'model' => $result['model'] ?? 'claude-haiku-4-5',
                     'input_tokens' => $result['tokens']['input'] ?? 0,
                     'output_tokens' => $result['tokens']['output'] ?? 0,
                     'execution_time' => $executionTime . 's',

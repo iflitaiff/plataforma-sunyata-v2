@@ -27,7 +27,7 @@ class ClaudeFacade
     private static function getPortalDefaults(): array
     {
         $hardcoded = [
-            'claude_model' => 'claude-haiku-4-5-20251001',
+            'claude_model' => 'claude-haiku-4-5',
             'temperature' => 1.0,
             'max_tokens' => 4096
         ];

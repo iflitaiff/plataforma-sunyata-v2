@@ -96,7 +96,7 @@ if (!is_array($currentApiParams)) {
 
 // Hardcoded defaults (fallback final se portal_api_params estiver vazio)
 $hardcodedDefaults = [
-    'claude_model' => 'claude-haiku-4-5-20251001',
+    'claude_model' => 'claude-haiku-4-5',
     'temperature' => 1.0,
     'max_tokens' => 4096
 ];

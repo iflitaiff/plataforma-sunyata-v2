@@ -20,7 +20,7 @@ class ClaudeService {
     private $db;
     private $apiKey;
     private $apiUrl = 'https://api.anthropic.com/v1/messages';
-    private $defaultModel = 'claude-haiku-4-5-20251001'; // Haiku 4.5 (mais econômico)
+    private $defaultModel = 'claude-haiku-4-5'; // Haiku 4.5 (mais econômico)
     private $defaultMaxTokens = 4096;
 
     public function __construct() {

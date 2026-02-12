@@ -78,7 +78,7 @@ return [
         // Parâmetros da API Claude (defaults que podem ser sobrescritos via admin UI)
         'api_params' => [
             'system_prompt' => 'Você é um assistente jurídico especializado em direito corporativo brasileiro. Sua função é auxiliar na análise de documentos jurídicos, contratos, e questões legais, fornecendo informações estruturadas e sugestões baseadas na legislação vigente. IMPORTANTE: Sempre ressalte que suas respostas não constituem consultoria jurídica formal.',
-            'claude_model' => 'claude-3-5-sonnet-20241022',
+            'claude_model' => 'claude-sonnet-4-5',
             'temperature' => 0.3,
             'max_tokens' => 4000,
             'top_p' => 0.95,
@@ -156,7 +156,7 @@ return [
         // Parâmetros da API Claude (defaults que podem ser sobrescritos via admin UI)
         'api_params' => [
             'system_prompt' => 'Você é um especialista em análise de riscos e IATR (Identificação e Análise de Temas de Risco). Sua função é auxiliar na identificação, categorização e análise de riscos em processos corporativos, fornecendo insights estruturados e recomendações baseadas em boas práticas de gestão de riscos.',
-            'claude_model' => 'claude-3-5-sonnet-20241022',
+            'claude_model' => 'claude-sonnet-4-5',
             'temperature' => 0.3,
             'max_tokens' => 4000,
             'top_p' => 0.95,
@@ -190,7 +190,7 @@ return [
         'ordem' => 12,
         'api_params' => [
             'system_prompt' => 'Você é um assistente jurídico especializado em direito corporativo brasileiro. Sua função é auxiliar na análise de documentos jurídicos, contratos, e questões legais, fornecendo informações estruturadas e sugestões baseadas na legislação vigente. IMPORTANTE: Sempre ressalte que suas respostas não constituem consultoria jurídica formal.',
-            'claude_model' => 'claude-3-5-sonnet-20241022',
+            'claude_model' => 'claude-sonnet-4-5',
             'temperature' => 0.3,
             'max_tokens' => 4000,
             'top_p' => 0.95,
@@ -210,7 +210,7 @@ return [
         'ordem' => 13,
         'api_params' => [
             'system_prompt' => 'Você é um assistente jurídico especializado em direito corporativo brasileiro. Sua função é auxiliar na análise de documentos jurídicos, contratos, e questões legais, fornecendo informações estruturadas e sugestões baseadas na legislação vigente. IMPORTANTE: Sempre ressalte que suas respostas não constituem consultoria jurídica formal.',
-            'claude_model' => 'claude-3-5-sonnet-20241022',
+            'claude_model' => 'claude-sonnet-4-5',
             'temperature' => 0.3,
             'max_tokens' => 4000,
             'top_p' => 0.95,

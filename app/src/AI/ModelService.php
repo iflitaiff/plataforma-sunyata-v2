@@ -42,8 +42,8 @@ class ModelService
      * Fallback caso cache esteja vazio E LiteLLM indisponível
      */
     private const FALLBACK_MODELS = [
-        ['id' => 'claude-sonnet-4-5-20250514', 'display_name' => 'Claude Sonnet 4.5 (Anthropic)', 'created_at' => ''],
-        ['id' => 'claude-haiku-4-5-20251001', 'display_name' => 'Claude Haiku 4.5 (Anthropic)', 'created_at' => ''],
+        ['id' => 'claude-sonnet-4-5', 'display_name' => 'Claude Sonnet 4.5 (Anthropic)', 'created_at' => ''],
+        ['id' => 'claude-haiku-4-5', 'display_name' => 'Claude Haiku 4.5 (Anthropic)', 'created_at' => ''],
         ['id' => 'gpt-4o-mini', 'display_name' => 'GPT-4o Mini (OpenAI)', 'created_at' => ''],
         ['id' => 'gemini-2.0-flash', 'display_name' => 'Gemini 2.0 Flash (Google)', 'created_at' => ''],
     ];
