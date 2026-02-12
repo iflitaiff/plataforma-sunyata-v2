@@ -194,22 +194,21 @@ def _extract_valor(source: dict) -> float | None:
 
 
 def _build_pncp_url(source: dict) -> str:
-    """Build URL to view the item on PNCP portal."""
-    # PNCP API returns item_url like /compras/95423000000100/2025/231
-    item_url = source.get("item_url", "")
-    if item_url:
-        return f"https://pncp.gov.br/app{item_url}"
+    """Build URL to view the item on PNCP portal.
 
-    # Try direct URL
-    for key in ("urlPncp", "url_pncp", "linkSistemaOrigem"):
-        if source.get(key):
-            return source[key]
-
-    # Build from identifiers
+    The PNCP frontend uses /app/editais/{cnpj}/{ano}/{seq} format.
+    The API item_url returns /compras/... which is an API path, not a frontend route.
+    """
+    # Build from identifiers (most reliable — matches PNCP frontend route)
     cnpj = source.get("orgao_cnpj", source.get("cnpj", ""))
     ano = source.get("ano", "")
     seq = source.get("numero_sequencial", "")
     if cnpj and ano and seq:
         return f"https://pncp.gov.br/app/editais/{cnpj}/{ano}/{seq}"
+
+    # Try direct URL fields
+    for key in ("urlPncp", "url_pncp", "linkSistemaOrigem"):
+        if source.get(key):
+            return source[key]
 
     return ""
