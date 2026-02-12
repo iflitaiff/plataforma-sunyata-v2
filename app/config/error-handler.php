@@ -10,20 +10,24 @@ use Sunyata\Core\MarkdownLogger;
 set_exception_handler(function($exception) {
     // Log do erro
     try {
-        MarkdownLogger::getInstance()->errorWithContext(
-            errorMessage: $exception->getMessage(),
-            file: $exception->getFile(),
-            line: $exception->getLine(),
-            stackTrace: $exception->getTraceAsString(),
-            context: [
-                'user_id' => $_SESSION['user_id'] ?? 0,
-                'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
-                'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
-            ]
-        );
-    } catch (Exception $e) {
+        if (class_exists(MarkdownLogger::class, true)) {
+            MarkdownLogger::getInstance()->errorWithContext(
+                errorMessage: $exception->getMessage(),
+                file: $exception->getFile(),
+                line: $exception->getLine(),
+                stackTrace: $exception->getTraceAsString(),
+                context: [
+                    'user_id' => $_SESSION['user_id'] ?? 0,
+                    'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+                    'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
+                    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+                ]
+            );
+        } else {
+            error_log('MarkdownLogger not available. Exception: ' . $exception->getMessage());
+        }
+    } catch (\Throwable $e) {
         // Se o logger falhar, registrar no error_log padrão
         error_log('MarkdownLogger failed: ' . $e->getMessage());
         error_log('Original exception: ' . $exception->getMessage());
@@ -87,20 +91,24 @@ register_shutdown_function(function() {
     // Verificar se foi erro fatal
     if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         try {
-            MarkdownLogger::getInstance()->errorWithContext(
-                errorMessage: $error['message'],
-                file: $error['file'],
-                line: $error['line'],
-                stackTrace: 'Fatal error - no stack trace available',
-                context: [
-                    'type' => 'FATAL',
-                    'error_type_code' => $error['type'],
-                    'user_id' => $_SESSION['user_id'] ?? 0,
-                    'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
-                    'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown'
-                ]
-            );
-        } catch (Exception $e) {
+            if (class_exists(MarkdownLogger::class, true)) {
+                MarkdownLogger::getInstance()->errorWithContext(
+                    errorMessage: $error['message'],
+                    file: $error['file'],
+                    line: $error['line'],
+                    stackTrace: 'Fatal error - no stack trace available',
+                    context: [
+                        'type' => 'FATAL',
+                        'error_type_code' => $error['type'],
+                        'user_id' => $_SESSION['user_id'] ?? 0,
+                        'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+                        'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown'
+                    ]
+                );
+            } else {
+                error_log('MarkdownLogger not available. Fatal error: ' . $error['message']);
+            }
+        } catch (\Throwable $e) {
             error_log('MarkdownLogger failed in shutdown handler: ' . $e->getMessage());
             error_log('Fatal error: ' . $error['message']);
         }
