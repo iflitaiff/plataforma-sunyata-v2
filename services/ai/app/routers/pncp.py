@@ -26,7 +26,7 @@ PNCP_TIMEOUT = 30  # seconds
 class PncpSearchRequest(BaseModel):
     q: str = Field(..., min_length=1, description="Search keywords")
     pagina: int = Field(default=1, ge=1)
-    tipos_documento: Optional[str] = None
+    tipos_documento: str = Field(default="edital", description="Required by PNCP API: edital, aviso, ata, contrato")
     status: Optional[str] = None
     modalidade: Optional[str] = None
     ordenacao: Optional[str] = "-data"
@@ -69,10 +69,11 @@ async def pncp_search(
 ):
     """Search PNCP for public procurement notices."""
     try:
-        params = {"q": req.q, "pagina": req.pagina}
-
-        if req.tipos_documento:
-            params["tipos_documento"] = req.tipos_documento
+        params = {
+            "q": req.q,
+            "pagina": req.pagina,
+            "tipos_documento": req.tipos_documento or "edital",
+        }
         if req.status:
             params["status"] = req.status
         if req.modalidade:
@@ -111,21 +112,21 @@ async def pncp_search(
             source = raw.get("_source", raw)
 
             item = PncpItem(
-                titulo=source.get("titulo", source.get("title", "")),
-                objeto=source.get("objeto", source.get("description", source.get("objetoCompra", ""))),
-                orgao=source.get("orgao", source.get("nomeOrgao", source.get("orgaoEntidade", {}).get("razaoSocial", ""))),
-                uf=source.get("uf", source.get("municipio", {}).get("uf", "") if isinstance(source.get("municipio"), dict) else ""),
-                modalidade=_extract_modalidade(source),
-                status=source.get("status", source.get("situacaoCompra", "")),
+                titulo=source.get("title", source.get("titulo", "")),
+                objeto=source.get("description", source.get("objeto", "")),
+                orgao=source.get("orgao_nome", source.get("unidade_nome", "")),
+                uf=source.get("uf", ""),
+                modalidade=source.get("modalidade_licitacao_nome", _extract_modalidade(source)),
+                status=source.get("situacao_nome", source.get("status", "")),
                 valor_estimado=_extract_valor(source),
-                data_publicacao=source.get("dataPublicacao", source.get("dataPublicacaoPncp", None)),
-                data_abertura=source.get("dataAbertura", source.get("dataAberturaPropostas", None)),
+                data_publicacao=source.get("data_publicacao_pncp", source.get("dataPublicacao", None)),
+                data_abertura=source.get("data_inicio_vigencia", source.get("dataAbertura", None)),
                 hora_abertura=source.get("horaAbertura", None),
                 url_pncp=_build_pncp_url(source),
-                url_edital=source.get("urlEdital", source.get("linkSistemaOrigem", None)),
-                numero_licitacao=source.get("numeroLicitacao", source.get("numeroCompra", "")),
+                url_edital=source.get("urlEdital", None),
+                numero_licitacao=source.get("numero_controle_pncp", source.get("numeroCompra", "")),
                 numero_processo=source.get("numeroProcesso", source.get("processo", "")),
-                uasg=source.get("uasg", source.get("codigoUnidadeCompradora", "")),
+                uasg=source.get("unidade_codigo", source.get("uasg", "")),
             )
             items.append(item)
 
@@ -194,15 +195,20 @@ def _extract_valor(source: dict) -> float | None:
 
 def _build_pncp_url(source: dict) -> str:
     """Build URL to view the item on PNCP portal."""
-    # Try direct URL first
+    # PNCP API returns item_url like /compras/95423000000100/2025/231
+    item_url = source.get("item_url", "")
+    if item_url:
+        return f"https://pncp.gov.br/app{item_url}"
+
+    # Try direct URL
     for key in ("urlPncp", "url_pncp", "linkSistemaOrigem"):
         if source.get(key):
             return source[key]
 
     # Build from identifiers
-    cnpj = source.get("cnpjOrgao", source.get("cnpj", ""))
-    ano = source.get("anoCompra", "")
-    seq = source.get("sequencialCompra", source.get("numeroCompra", ""))
+    cnpj = source.get("orgao_cnpj", source.get("cnpj", ""))
+    ano = source.get("ano", "")
+    seq = source.get("numero_sequencial", "")
     if cnpj and ano and seq:
         return f"https://pncp.gov.br/app/editais/{cnpj}/{ano}/{seq}"
 

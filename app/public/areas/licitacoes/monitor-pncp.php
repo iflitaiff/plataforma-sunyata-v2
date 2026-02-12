@@ -126,8 +126,7 @@ $pageContent = function () {
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Tipo de documento</label>
                         <select class="form-select" id="search-tipo" name="tipos_documento">
-                            <option value="">Todos</option>
-                            <option value="edital">Edital</option>
+                            <option value="edital" selected>Edital</option>
                             <option value="aviso">Aviso de Licitação</option>
                             <option value="ata">Ata de Registro de Preços</option>
                             <option value="contrato">Contrato</option>
@@ -343,7 +342,7 @@ function escapeHtml(text) {
 
 function clearSearch() {
     document.getElementById('search-query').value = '';
-    document.getElementById('search-tipo').value = '';
+    document.getElementById('search-tipo').value = 'edital';
     document.getElementById('search-status').value = 'divulgado';
     document.getElementById('search-modalidade').value = '';
     document.getElementById('search-ordem').value = '-data';
