@@ -300,3 +300,9 @@ async def pncp_monitor(
             "keywords_display": keywords_used,
             "ufs": req.ufs,
         }
+    except httpx.HTTPError as e:
+        logger.error(f"PNCP monitor HTTP error: {e}")
+        return {"success": False, "error": f"PNCP API connection error: {str(e)}"}
+    except Exception as e:
+        logger.error(f"PNCP monitor error: {e}")
+        return {"success": False, "error": str(e)}
