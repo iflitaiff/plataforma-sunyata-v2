@@ -725,6 +725,7 @@ $pageTitle = $canvas['name'];
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'X-CSRF-Token': '<?= csrf_token() ?>',
                             },
                             body: JSON.stringify({
                                 canvas_id: <?= $canvas['id'] ?>,

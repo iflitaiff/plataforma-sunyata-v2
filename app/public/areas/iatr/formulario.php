@@ -705,6 +705,7 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'X-CSRF-Token': '<?= csrf_token() ?>',
                             },
                             body: JSON.stringify({
                                 canvas_id: <?= $canvas['id'] ?>,

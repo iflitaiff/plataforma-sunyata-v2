@@ -225,7 +225,7 @@ include __DIR__ . '/../../src/views/components/page-header.php';
             try {
                 const resp = await fetch(SUBMIT_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
                     body: JSON.stringify(payload)
                 });
                 const data = await resp.json();

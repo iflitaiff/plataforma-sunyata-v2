@@ -47,6 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Validar CSRF token
+$csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+if (empty($csrfToken) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'CSRF token inválido']);
+    exit;
+}
+
 // Pegar dados JSON
 $input = json_decode(file_get_contents('php://input'), true);
 
