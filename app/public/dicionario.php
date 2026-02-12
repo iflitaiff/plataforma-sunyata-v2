@@ -40,7 +40,7 @@ if ($category) {
 }
 
 if ($search) {
-    $sql .= " AND (title LIKE :search OR description LIKE :search2 OR prompt_text LIKE :search3)";
+    $sql .= " AND (title ILIKE :search OR description ILIKE :search2 OR prompt_text ILIKE :search3)";
     $params['search'] = '%' . $search . '%';
     $params['search2'] = '%' . $search . '%';
     $params['search3'] = '%' . $search . '%';

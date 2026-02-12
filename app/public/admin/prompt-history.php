@@ -54,7 +54,7 @@ if ($filters['vertical']) {
 }
 
 if ($filters['tool_name']) {
-    $where[] = "ph.tool_name LIKE :tool_name";
+    $where[] = "ph.tool_name ILIKE :tool_name";
     $params['tool_name'] = '%' . $filters['tool_name'] . '%';
 }
 
@@ -74,7 +74,7 @@ if ($filters['date_to']) {
 }
 
 if ($filters['search']) {
-    $where[] = "(u.name LIKE :search OR u.email LIKE :search)";
+    $where[] = "(u.name ILIKE :search OR u.email ILIKE :search)";
     $params['search'] = '%' . $filters['search'] . '%';
 }
 

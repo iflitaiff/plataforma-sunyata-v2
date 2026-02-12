@@ -71,7 +71,7 @@ if ($filter_vertical) {
 }
 
 if ($search) {
-    $sql .= " AND (u.name LIKE :search_name OR u.email LIKE :search_email)";
+    $sql .= " AND (u.name ILIKE :search_name OR u.email ILIKE :search_email)";
     $params['search_name'] = "%$search%";
     $params['search_email'] = "%$search%";
 }

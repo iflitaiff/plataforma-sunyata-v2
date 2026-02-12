@@ -195,7 +195,7 @@ class DataRetention {
         $sql = "SELECT id FROM users
                 WHERE last_login < :cutoff_date
                 AND access_level = 'guest'
-                AND email NOT LIKE 'deleted_%'";
+                AND email NOT ILIKE 'deleted_%'";
 
         $users = $this->db->fetchAll($sql, ['cutoff_date' => $cutoffDate]);
 
