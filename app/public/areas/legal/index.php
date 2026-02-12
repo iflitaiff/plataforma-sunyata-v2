@@ -36,7 +36,7 @@ $verticalData = $db->fetchOne("
 ");
 
 $canvas_list = $db->fetchAll("
-    SELECT * FROM canvas
+    SELECT * FROM canvas_templates
     WHERE vertical = 'legal' AND is_active = TRUE
     ORDER BY category ASC, display_order ASC, name ASC
 ");

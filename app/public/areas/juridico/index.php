@@ -35,7 +35,7 @@ if (!in_array($user_vertical, $allowed_verticals) && !$is_demo && !$is_admin) {
 // Buscar Canvas do banco (tipo 'forms' apenas, Fase 1)
 $db = Database::getInstance();
 $canvas_list = $db->fetchAll("
-    SELECT * FROM canvas
+    SELECT * FROM canvas_templates
     WHERE vertical = 'juridico' AND type = 'forms' AND is_active = TRUE
     ORDER BY display_order ASC
 ");

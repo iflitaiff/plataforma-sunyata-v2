@@ -35,7 +35,7 @@ $verticalData = $db->fetchOne("
 ");
 
 $canvas_list = $db->fetchAll("
-    SELECT * FROM canvas
+    SELECT * FROM canvas_templates
     WHERE vertical = 'nicolay-advogados' AND is_active = TRUE
     ORDER BY category ASC, display_order ASC, name ASC
 ");

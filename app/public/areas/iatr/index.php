@@ -39,7 +39,7 @@ $verticalData = $db->fetchOne("
 
 // Buscar Canvas da vertical IATR do banco, agrupados por categoria
 $canvas_list = $db->fetchAll("
-    SELECT * FROM canvas
+    SELECT * FROM canvas_templates
     WHERE vertical = 'iatr' AND is_active = TRUE
     ORDER BY category ASC, display_order ASC, name ASC
 ");

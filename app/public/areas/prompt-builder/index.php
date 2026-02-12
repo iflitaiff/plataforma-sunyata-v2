@@ -39,7 +39,7 @@ $verticalData = $db->fetchOne("
 
 // Buscar Canvas/ferramentas da vertical prompt-builder do banco
 $canvas_list = $db->fetchAll("
-    SELECT * FROM canvas
+    SELECT * FROM canvas_templates
     WHERE vertical = 'prompt-builder' AND is_active = TRUE
     ORDER BY display_order ASC
 ");
