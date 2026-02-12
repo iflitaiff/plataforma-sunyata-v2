@@ -14,6 +14,7 @@
 | **Manus** | Arquiteto de Conteúdo | JSONs de templates, regras de negócio, promptInstructionMap |
 | **Gemini** | QA Infra/Código | Segurança, code review, checklists de servidor, documentação |
 | **Codex** | QA Dados/Templates | SurveyJS JSON, schemas, form_config, consistência |
+| **Copilot** | QA Frontend & Testes | UI/UX, HTMX, Tabler, testes Playwright, acessibilidade |
 
 ### Comunicação entre Agentes
 
@@ -98,5 +99,5 @@ ssh -p 65002 u202164171@82.25.72.226
 
 ---
 
-**Versão:** 1.0
-**Última atualização:** 2026-02-11
+**Versão:** 1.1
+**Última atualização:** 2026-02-12
