@@ -130,6 +130,7 @@ include __DIR__ . '/../../src/views/components/page-header.php';
             <div class="card-body p-0"
                  hx-get="<?= BASE_URL ?>/api/submissions/list.php?parent_id=<?= $submission['parent_id'] ?>"
                  hx-trigger="load"
+                 hx-target="this"
                  hx-swap="innerHTML">
                 <div class="text-center p-3 text-secondary">Carregando...</div>
             </div>

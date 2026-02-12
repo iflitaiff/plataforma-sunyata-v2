@@ -125,6 +125,7 @@ include __DIR__ . '/../../src/views/components/page-header.php';
             <div class="card-body p-0"
                  hx-get="<?= BASE_URL ?>/api/submissions/recent.php?canvas_id=<?= $canvasId ?>&limit=5"
                  hx-trigger="load"
+                 hx-target="this"
                  hx-swap="innerHTML">
                 <div class="text-center p-3 text-secondary">
                     <span class="spinner-border spinner-border-sm"></span> Carregando...

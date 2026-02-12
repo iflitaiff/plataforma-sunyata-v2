@@ -146,6 +146,7 @@ include __DIR__ . '/../src/views/components/page-header.php';
                         <div class="font-weight-medium"
                              hx-get="<?= BASE_URL ?>/api/submissions/list.php?count_only=1&period=month"
                              hx-trigger="load"
+                             hx-target="this"
                              hx-swap="innerHTML">--</div>
                         <div class="text-secondary">Submissoes este mes</div>
                     </div>
@@ -164,6 +165,7 @@ include __DIR__ . '/../src/views/components/page-header.php';
                         <div class="font-weight-medium"
                              hx-get="<?= BASE_URL ?>/api/documents/list.php?count_only=1"
                              hx-trigger="load"
+                             hx-target="this"
                              hx-swap="innerHTML">--</div>
                         <div class="text-secondary">Documentos salvos</div>
                     </div>
@@ -229,6 +231,7 @@ include __DIR__ . '/../src/views/components/page-header.php';
             <div class="card-body p-0"
                  hx-get="<?= BASE_URL ?>/api/submissions/list.php?limit=5&format=table"
                  hx-trigger="load"
+                 hx-target="this"
                  hx-swap="innerHTML">
                 <div class="text-center p-4 text-secondary">
                     <span class="spinner-border spinner-border-sm"></span> Carregando submissoes recentes...
@@ -248,7 +251,7 @@ include __DIR__ . '/../src/views/components/page-header.php';
                     <div class="list-group list-group-flush">
                         <?php foreach ($verticals_info as $slug => $info): ?>
                             <?php if ($info['disponivel']): ?>
-                            <a href="<?= BASE_URL ?>/areas/<?= $slug ?>/" class="list-group-item list-group-item-action">
+                            <a href="<?= BASE_URL ?>/areas/<?= $slug ?>/" class="list-group-item list-group-item-action" hx-boost="false">
                                 <span class="me-2"><?= $info['icone'] ?></span>
                                 <?= htmlspecialchars($info['nome']) ?>
                             </a>

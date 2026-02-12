@@ -131,6 +131,7 @@ include __DIR__ . '/../../src/views/components/page-header.php';
     <div class="card-body p-0" id="submissions-list"
          hx-get="<?= BASE_URL ?>/api/submissions/list.php?format=table&limit=20"
          hx-trigger="load"
+         hx-target="this"
          hx-swap="innerHTML"
          hx-indicator="#list-loading">
         <div id="list-loading" class="text-center p-4 text-secondary">

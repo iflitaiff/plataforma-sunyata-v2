@@ -88,6 +88,7 @@
                     <div class="modal-body p-0" id="docPickerContent"
                          hx-get="${BASE_URL}/api/documents/picker.php?field=${encodeURIComponent(question.name)}&accept=${encodeURIComponent(acceptedTypes)}"
                          hx-trigger="load"
+                         hx-target="this"
                          hx-swap="innerHTML">
                         <div class="text-center p-4 text-secondary">
                             <span class="spinner-border spinner-border-sm"></span> Carregando...

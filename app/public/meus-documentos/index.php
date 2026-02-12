@@ -83,6 +83,7 @@ include __DIR__ . '/../../src/views/components/page-header.php';
     <div class="card-body p-0" id="documents-list"
          hx-get="<?= BASE_URL ?>/api/documents/list.php?format=table"
          hx-trigger="load"
+         hx-target="this"
          hx-swap="innerHTML">
         <div class="text-center p-4 text-secondary">
             <span class="spinner-border spinner-border-sm"></span> Carregando documentos...
