@@ -130,6 +130,19 @@ define('VERTICALS', $verticalLabels);
 // Error Handler - Must be loaded after constants are defined
 require_once __DIR__ . '/error-handler.php';
 
+// Hardcoded admin emails (temporary — move to DB/settings when user management is ready)
+define('ADMIN_EMAILS', [
+    'flitaiff@gmail.com',
+    'filipe.litaiff@ifrj.edu.br',
+]);
+
+/**
+ * Check if an email belongs to a hardcoded admin.
+ */
+function is_admin_email(string $email): bool {
+    return in_array(strtolower(trim($email)), ADMIN_EMAILS, true);
+}
+
 // Helper functions
 function require_login() {
     // Verifica se o usuário está logado (compatível com auth.php)

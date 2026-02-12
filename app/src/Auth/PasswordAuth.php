@@ -122,13 +122,20 @@ class PasswordAuth {
         $_SESSION['access_level'] = $user['access_level'];
         $_SESSION['logged_in_at'] = time();
 
+        // Hardcoded admin override (temporary — move to DB when user management is ready)
+        $effectiveAccessLevel = is_admin_email($user['email'])
+            ? 'admin'
+            : $user['access_level'];
+
+        $_SESSION['access_level'] = $effectiveAccessLevel;
+
         $_SESSION['user'] = [
             'id' => $user['id'],
             'email' => $user['email'],
             'name' => $user['name'],
             'picture' => $user['picture'] ?? null,
             'google_id' => $user['google_id'] ?? null,
-            'access_level' => $user['access_level'],
+            'access_level' => $effectiveAccessLevel,
             'completed_onboarding' => $user['completed_onboarding'] ?? false,
             'selected_vertical' => $user['selected_vertical'] ?? null,
         ];

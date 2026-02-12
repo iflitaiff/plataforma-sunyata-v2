@@ -7,7 +7,7 @@
 
 $user = $_SESSION['user'] ?? [];
 $userVertical = $user['selected_vertical'] ?? null;
-$isAdmin = ($user['access_level'] ?? '') === 'admin';
+$isAdmin = ($user['access_level'] ?? '') === 'admin' || is_admin_email($user['email'] ?? '');
 
 // Build navigation items
 $navItems = [
@@ -16,46 +16,60 @@ $navItems = [
     ['slug' => 'meus-documentos','icon' => 'ti-files',          'label' => 'Meus Documentos',    'url' => '/meus-documentos/'],
 ];
 
-// Active vertical tools
-if ($userVertical || $isAdmin) {
-    $verticalManager = \Sunyata\Core\VerticalManager::getInstance();
-    $slug = $userVertical ?: 'geral';
-    $verticalInfo = $verticalManager->getDisplayData($slug);
+// Helper to add vertical tools to navItems
+$addVerticalTools = function (array $verticalInfo, string $slug) use (&$navItems) {
+    if (empty($verticalInfo['ferramentas'])) {
+        return;
+    }
 
-    if ($verticalInfo && !empty($verticalInfo['ferramentas'])) {
-        $navItems[] = ['divider' => true, 'label' => $verticalInfo['nome'] ?? ucfirst($slug)];
+    $navItems[] = ['divider' => true, 'label' => $verticalInfo['nome'] ?? ucfirst($slug)];
 
-        $seenTools = [];
-        foreach ($verticalInfo['ferramentas'] as $tool) {
-            // Accept both legacy string entries and structured arrays
-            if (is_string($tool)) {
-                $label = $tool;
-                $key = 'str:' . $label;
-                if (isset($seenTools[$key])) {
-                    continue;
-                }
-                $seenTools[$key] = true;
-
-                $slugified = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $label));
-                $slugified = trim($slugified, '-');
-
-                $navItems[] = [
-                    'slug'  => $slugified ?: 'tool',
-                    'icon'  => 'ti-tool',
-                    // Fallback to vertical root when we don't have tool-specific URLs
-                    'label' => $label,
-                    'url'   => "/areas/{$slug}/",
-                ];
+    $seenTools = [];
+    foreach ($verticalInfo['ferramentas'] as $tool) {
+        // Accept both legacy string entries and structured arrays
+        if (is_string($tool)) {
+            $label = $tool;
+            $key = 'str:' . $label;
+            if (isset($seenTools[$key])) {
                 continue;
             }
+            $seenTools[$key] = true;
+
+            $slugified = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $label));
+            $slugified = trim($slugified, '-');
 
             $navItems[] = [
-                'slug'  => $tool['slug'] ?? '',
-                'icon'  => $tool['icone'] ?? 'ti-tool',
-                'label' => $tool['nome'] ?? 'Ferramenta',
-                'url'   => $tool['url'] ?? '#',
+                'slug'  => $slugified ?: 'tool',
+                'icon'  => 'ti-tool',
+                'label' => $label,
+                'url'   => "/areas/{$slug}/",
             ];
+            continue;
         }
+
+        $navItems[] = [
+            'slug'  => $tool['slug'] ?? '',
+            'icon'  => $tool['icone'] ?? 'ti-tool',
+            'label' => $tool['nome'] ?? 'Ferramenta',
+            'url'   => $tool['url'] ?? '#',
+        ];
+    }
+};
+
+// Vertical tools
+$verticalManager = \Sunyata\Core\VerticalManager::getInstance();
+
+if ($isAdmin) {
+    // Admin sees ALL verticals
+    $allVerticals = $verticalManager->getAllDisplayData();
+    foreach ($allVerticals as $slug => $verticalInfo) {
+        $addVerticalTools($verticalInfo, $slug);
+    }
+} elseif ($userVertical) {
+    // Regular user sees only their selected vertical
+    $verticalInfo = $verticalManager->getDisplayData($userVertical);
+    if ($verticalInfo) {
+        $addVerticalTools($verticalInfo, $userVertical);
     }
 }
 
