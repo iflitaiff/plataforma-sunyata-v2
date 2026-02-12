@@ -110,12 +110,22 @@ return [
     'licitacoes' => [
         'nome' => 'Licitações',
         'icone' => '📋',
-        'descricao' => 'Ferramentas para elaboração de propostas e gestão de processos licitatórios.',
-        'ferramentas' => [],
-        'disponivel' => false,
+        'descricao' => 'Ferramentas para análise de editais, monitoramento de licitações e gestão de processos licitatórios.',
+        'ferramentas' => [
+            'Resumo Executivo de Edital',
+            'Análise de Habilitação',
+            'Monitor PNCP'
+        ],
+        'disponivel' => true,
         'requer_info_extra' => false,
         'requer_aprovacao' => false,
-        'ordem' => 7
+        'ordem' => 7,
+        'api_params' => [
+            'system_prompt' => 'Você é um analista especializado em editais de licitação no Brasil. Sua missão é realizar a leitura integral de editais e anexos fornecidos e elaborar relatórios técnicos estruturados com base exclusivamente nos documentos fornecidos. Use linguagem formal, clara, objetiva e imparcial. Não emita parecer jurídico nem opinião subjetiva.',
+            'claude_model' => 'claude-sonnet-4-5',
+            'temperature' => 0.2,
+            'max_tokens' => 16000,
+        ]
     ],
 
     'rh' => [
