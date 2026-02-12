@@ -70,31 +70,6 @@ $activeNav = 'iatr';
 $headExtra = <<<HTML
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 <style>
-    body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 2rem 0;
-    }
-    .container-custom {
-        max-width: 1200px;
-    }
-    .header {
-        background: white;
-        padding: 1.5rem 2rem;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
-        text-align: center;
-    }
-    .header h1 {
-        color: #1a365d;
-        margin-bottom: 0.25rem;
-        font-size: 1.8rem;
-    }
-    .header p {
-        color: #6c757d;
-        margin-bottom: 0;
-    }
     .category-section {
         margin-bottom: 1.5rem;
     }
@@ -104,29 +79,28 @@ $headExtra = <<<HTML
         gap: 0.5rem;
         margin-bottom: 0.75rem;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid rgba(255,255,255,0.3);
+        border-bottom: 2px solid #e6e8eb;
     }
     .category-header h4 {
-        color: white;
+        color: #1e293b;
         margin: 0;
         font-size: 1.1rem;
         font-weight: 600;
     }
     .category-header i {
-        color: white;
         font-size: 1.1rem;
     }
     .category-count {
-        color: rgba(255,255,255,0.7);
+        color: #94a3b8;
         font-size: 0.8rem;
         margin-left: auto;
     }
     .tool-card {
-        background: white;
-        border-radius: 10px;
+        background: #fff;
+        border-radius: 8px;
         padding: 1rem 1.25rem;
         margin-bottom: 0.75rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        border: 1px solid #e6e8eb;
         transition: all 0.2s ease;
         text-decoration: none;
         color: inherit;
@@ -137,7 +111,7 @@ $headExtra = <<<HTML
     }
     .tool-card:hover {
         transform: translateX(4px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         color: inherit;
     }
     .tool-card-icon {
@@ -153,7 +127,7 @@ $headExtra = <<<HTML
     .tool-card-title {
         font-size: 0.95rem;
         font-weight: 600;
-        color: #1a365d;
+        color: #1e293b;
         margin: 0;
         white-space: nowrap;
         overflow: hidden;
@@ -165,23 +139,21 @@ $headExtra = <<<HTML
         flex-shrink: 0;
     }
     .tool-card:hover .tool-card-arrow {
-        color: #667eea;
-    }
-    .nav-buttons {
-        text-align: center;
-        margin-top: 1.5rem;
+        color: var(--tblr-primary);
     }
 </style>
 HTML;
 
 $pageContent = function () use ($verticalName, $canvas_list, $categories, $categoryOrder, $categoryMeta) {
 ?>
-    <div class="container container-custom">
-        <!-- Header -->
-        <div class="header">
-            <h1><?= sanitize_output($verticalName) ?></h1>
-            <p>Bem-vindo(a), <strong><?= sanitize_output($_SESSION['user']['name']) ?></strong></p>
-            <p class="text-muted small mt-1"><?= count($canvas_list) ?> ferramentas disponíveis</p>
+        <!-- Page Header -->
+        <div class="page-header mb-4">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <h2 class="page-title"><?= sanitize_output($verticalName) ?></h2>
+                    <div class="text-secondary mt-1"><?= count($canvas_list) ?> ferramentas disponíveis</div>
+                </div>
+            </div>
         </div>
 
         <?php if (empty($canvas_list)): ?>
@@ -198,7 +170,7 @@ $pageContent = function () use ($verticalName, $canvas_list, $categories, $categ
                 ?>
                 <div class="category-section">
                     <div class="category-header">
-                        <i class="bi <?= $meta['icon'] ?>"></i>
+                        <i class="bi <?= $meta['icon'] ?>" style="color: <?= $meta['color'] ?>;"></i>
                         <h4><?= $meta['label'] ?></h4>
                         <span class="category-count"><?= count($items) ?></span>
                     </div>
@@ -233,37 +205,21 @@ $pageContent = function () use ($verticalName, $canvas_list, $categories, $categ
             <?php endforeach; ?>
         <?php endif; ?>
 
-        <!-- Navegação -->
-        <div class="nav-buttons">
-            <a href="<?= BASE_URL ?>/dashboard.php" class="btn btn-light me-2">
-                Dashboard
-            </a>
-            <a href="<?= BASE_URL ?>/profile.php" class="btn btn-light me-2">
-                Perfil
-            </a>
-            <a href="<?= BASE_URL ?>/logout.php" class="btn btn-outline-light">
-                Sair
-            </a>
-        </div>
-
-        <!-- Footer de Suporte -->
-        <div style="margin-top: 2rem; text-align: center;">
-            <div style="background: white; border-radius: 10px; padding: 1rem 1.5rem;">
-                <p style="color: #6c757d; margin-bottom: 0.5rem; font-size: 0.9rem;">
-                    Precisa de ajuda?
-                </p>
+        <!-- Suporte -->
+        <div class="card mt-4">
+            <div class="card-body text-center py-3">
+                <span class="text-secondary me-2">Precisa de ajuda?</span>
                 <a href="https://chat.whatsapp.com/HEyyAyoS4bb6ycTMs0kLWq?mode=wwc"
                    target="_blank"
                    class="btn btn-sm btn-success me-2">
                     WhatsApp
                 </a>
                 <a href="mailto:flitaiff@gmail.com"
-                   class="btn btn-sm btn-primary">
+                   class="btn btn-sm btn-outline-primary">
                     Email
                 </a>
             </div>
         </div>
-    </div>
 <?php
 };
 

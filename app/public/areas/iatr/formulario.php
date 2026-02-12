@@ -67,21 +67,6 @@ $headExtra = <<<'HEADEXTRA'
 <link href="https://unpkg.com/survey-core@2.4.1/survey-core.min.css" type="text/css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
 <style>
-        body {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container-custom {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        }
-
         .header {
             text-align: center;
             margin-bottom: 30px;
@@ -90,7 +75,7 @@ $headExtra = <<<'HEADEXTRA'
         }
 
         .header h1 {
-            color: #1a365d;
+            color: #1e293b;
             margin-bottom: 10px;
         }
 
