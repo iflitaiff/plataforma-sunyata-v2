@@ -12,6 +12,8 @@ import httpx
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from ..pncp_keywords import KEYWORD_MAPPING, build_search_query, build_pncp_api_params
+
 from ..dependencies import verify_internal_key
 
 logger = logging.getLogger(__name__)
@@ -212,3 +214,89 @@ def _build_pncp_url(source: dict) -> str:
             return source[key]
 
     return ""
+
+
+# --- Monitor endpoint (keyword-based multi-search) ---
+
+class PncpMonitorRequest(BaseModel):
+    keywords: list[str] = Field(..., min_length=1)
+    ufs: list[str] = Field(default=[])
+    status_contratacao: str = "recebendo_proposta"
+    valor_minimo: Optional[float] = None
+    tipos_documento: str = "edital"
+    dias_retroativos: int = 7
+    acao: str = "busca_imediata"
+
+
+@router.post("/pncp-monitor")
+async def pncp_monitor(
+    req: PncpMonitorRequest,
+    _key: str = Depends(verify_internal_key),
+):
+    """Search PNCP using keyword mapping with automatic singular/plural expansion."""
+    try:
+        form_data = {
+            "keywords": req.keywords,
+            "ufs": req.ufs,
+            "status_contratacao": req.status_contratacao,
+            "tipos_documento": req.tipos_documento,
+        }
+        params = build_pncp_api_params(form_data)
+        query_used = params.get("q", "")
+
+        logger.info(f"PNCP monitor: keywords={req.keywords}, ufs={req.ufs}, query={query_used[:100]}")
+
+        async with httpx.AsyncClient(timeout=PNCP_TIMEOUT) as client:
+            resp = await client.get(PNCP_SEARCH_URL, params=params)
+
+        if resp.status_code != 200:
+            logger.warning(f"PNCP API returned {resp.status_code}")
+            return {"success": False, "error": f"PNCP API status {resp.status_code}"}
+
+        data = resp.json()
+
+        # Reuse existing normalization logic
+        items = []
+        raw_items = data.get("items", data.get("data", data.get("hits", [])))
+        if isinstance(raw_items, dict) and "hits" in raw_items:
+            raw_items = raw_items["hits"]
+
+        for raw in raw_items:
+            source = raw.get("_source", raw)
+            item = PncpItem(
+                titulo=source.get("title", source.get("titulo", "")),
+                objeto=source.get("description", source.get("objeto", "")),
+                orgao=source.get("orgao_nome", source.get("unidade_nome", "")),
+                uf=source.get("uf", ""),
+                modalidade=source.get("modalidade_licitacao_nome", _extract_modalidade(source)),
+                status=source.get("situacao_nome", source.get("status", "")),
+                valor_estimado=_extract_valor(source),
+                data_publicacao=source.get("data_publicacao_pncp", source.get("dataPublicacao", None)),
+                data_abertura=source.get("data_inicio_vigencia", source.get("dataAbertura", None)),
+                hora_abertura=source.get("horaAbertura", None),
+                url_pncp=_build_pncp_url(source),
+                url_edital=source.get("urlEdital", None),
+                numero_licitacao=source.get("numero_controle_pncp", source.get("numeroCompra", "")),
+                numero_processo=source.get("numeroProcesso", source.get("processo", "")),
+                uasg=source.get("unidade_codigo", source.get("uasg", "")),
+            )
+            items.append(item)
+
+        total = data.get("total", data.get("count", data.get("totalRegistros", len(items))))
+        if isinstance(total, dict):
+            total = total.get("value", len(items))
+
+        # Build keyword display for response
+        keywords_used = []
+        for kw in req.keywords:
+            if kw in KEYWORD_MAPPING:
+                keywords_used.append(KEYWORD_MAPPING[kw]["display_name"])
+
+        return {
+            "success": True,
+            "items": [item.model_dump() for item in items],
+            "total": total,
+            "query_used": query_used,
+            "keywords_display": keywords_used,
+            "ufs": req.ufs,
+        }
