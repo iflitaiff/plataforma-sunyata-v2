@@ -724,7 +724,7 @@ try {
     // If mode=stream AND microservice is enabled, DO NOT expose internal key.
     // Fallback to sync response (CanvasStream.js handles no stream_url).
     $streamMode = ($_GET['mode'] ?? '') === 'stream';
-    $aiServiceMode = \Sunyata\Core\Settings::getInstance()->get('ai_service_mode', 'direct');
+    $aiServiceMode = \Sunyata\Core\Settings::getInstance()->get('ai_service_mode', 'microservice');
 
     if ($streamMode && $aiServiceMode === 'microservice') {
         debugLog("🔄 Stream mode requested; falling back to sync to avoid exposing internal key");

@@ -1,5 +1,5 @@
 """
-POST /api/ai/stream — SSE streaming generation.
+POST /api/ai/stream — SSE streaming generation via LiteLLM proxy.
 
 The browser connects via EventSource after PHP validates the request
 and returns a stream_url. SSE events:
@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 
 from ..dependencies import verify_internal_key
 from ..models import StreamRequest
-from ..services.claude import stream
+from ..services.llm import stream
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

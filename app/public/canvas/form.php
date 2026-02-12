@@ -62,7 +62,7 @@ if (is_string($formConfig)) {
 }
 
 // Check if streaming is available
-$aiServiceMode = Settings::getInstance()->get('ai_service_mode', 'direct');
+$aiServiceMode = Settings::getInstance()->get('ai_service_mode', 'microservice');
 $streamingEnabled = ($aiServiceMode === 'microservice');
 
 $pageTitle = $canvas['name'];

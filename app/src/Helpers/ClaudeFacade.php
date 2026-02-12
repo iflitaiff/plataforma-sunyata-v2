@@ -346,7 +346,7 @@ class ClaudeFacade
      */
     private static function usesMicroservice(): bool
     {
-        $mode = Settings::getInstance()->get('ai_service_mode', 'direct');
+        $mode = Settings::getInstance()->get('ai_service_mode', 'microservice');
         return $mode === 'microservice';
     }
 

@@ -1,9 +1,11 @@
 <?php
 /**
- * Claude Model Service - Lista dinâmica de modelos via API Anthropic
+ * Model Service - Lista dinâmica de modelos via LiteLLM proxy
  *
- * Busca, cacheia e valida modelos Claude disponíveis usando o endpoint
- * GET /v1/models da API Anthropic. Cache armazenado na tabela settings.
+ * Busca, cacheia e valida modelos disponíveis usando o endpoint
+ * GET /v1/models do LiteLLM (OpenAI-compatible). Suporta múltiplos
+ * provedores (Anthropic, OpenAI, Google) de forma transparente.
+ * Cache armazenado na tabela settings.
  *
  * @package Sunyata\AI
  * @since 2026-01-27
@@ -18,32 +20,39 @@ class ModelService
 {
     private static ?self $instance = null;
     private Settings $settings;
-    private string $apiKey;
-    private string $apiBaseUrl = 'https://api.anthropic.com/v1';
+    private string $litellmBaseUrl;
+    private string $litellmApiKey;
 
     private const CACHE_KEY = 'claude_models_cache';
     private const CACHE_TIMESTAMP_KEY = 'claude_models_cache_updated_at';
     private const CACHE_TTL_SECONDS = 86400; // 24 horas
 
     /**
-     * Fallback caso cache esteja vazio E API indisponível
+     * Map known model ID prefixes to provider names for display_name generation.
+     */
+    private const PROVIDER_MAP = [
+        'claude-' => 'Anthropic',
+        'gpt-'    => 'OpenAI',
+        'o1'      => 'OpenAI',
+        'o3'      => 'OpenAI',
+        'gemini-' => 'Google',
+    ];
+
+    /**
+     * Fallback caso cache esteja vazio E LiteLLM indisponível
      */
     private const FALLBACK_MODELS = [
-        ['id' => 'claude-sonnet-4-5-20250514', 'display_name' => 'Claude Sonnet 4.5', 'created_at' => ''],
-        ['id' => 'claude-haiku-4-5-20251001', 'display_name' => 'Claude Haiku 4.5', 'created_at' => ''],
-        ['id' => 'claude-3-5-sonnet-20241022', 'display_name' => 'Claude 3.5 Sonnet', 'created_at' => ''],
-        ['id' => 'claude-3-5-haiku-20241022', 'display_name' => 'Claude 3.5 Haiku', 'created_at' => ''],
-        ['id' => 'claude-3-opus-20240229', 'display_name' => 'Claude 3 Opus', 'created_at' => ''],
+        ['id' => 'claude-sonnet-4-5-20250514', 'display_name' => 'Claude Sonnet 4.5 (Anthropic)', 'created_at' => ''],
+        ['id' => 'claude-haiku-4-5-20251001', 'display_name' => 'Claude Haiku 4.5 (Anthropic)', 'created_at' => ''],
+        ['id' => 'gpt-4o-mini', 'display_name' => 'GPT-4o Mini (OpenAI)', 'created_at' => ''],
+        ['id' => 'gemini-2.0-flash', 'display_name' => 'Gemini 2.0 Flash (Google)', 'created_at' => ''],
     ];
 
     private function __construct()
     {
         $this->settings = Settings::getInstance();
-
-        if (!defined('CLAUDE_API_KEY')) {
-            throw new Exception('CLAUDE_API_KEY não definida em secrets.php');
-        }
-        $this->apiKey = CLAUDE_API_KEY;
+        $this->litellmBaseUrl = defined('LITELLM_BASE_URL') ? LITELLM_BASE_URL : 'http://192.168.100.12:4000';
+        $this->litellmApiKey = defined('LITELLM_API_KEY') ? LITELLM_API_KEY : '';
     }
 
     public static function getInstance(): self
@@ -107,7 +116,7 @@ class ModelService
     }
 
     /**
-     * Força refresh do cache buscando modelos da API Anthropic.
+     * Força refresh do cache buscando modelos do LiteLLM proxy.
      *
      * @return bool true se refresh bem-sucedido
      */
@@ -117,7 +126,7 @@ class ModelService
             $models = $this->fetchModelsFromApi();
 
             if (empty($models)) {
-                error_log('ModelService: API retornou lista vazia de modelos');
+                error_log('ModelService: LiteLLM retornou lista vazia de modelos');
                 return false;
             }
 
@@ -151,67 +160,109 @@ class ModelService
     }
 
     /**
-     * Busca todos os modelos da API Anthropic com paginação.
+     * Busca modelos do LiteLLM proxy (OpenAI-compatible /v1/models endpoint).
      *
      * @return array Lista de modelos [{id, display_name, created_at}, ...]
      * @throws Exception em caso de erro de rede ou API
      */
     private function fetchModelsFromApi(): array
     {
+        $url = rtrim($this->litellmBaseUrl, '/') . '/v1/models';
+
+        $headers = ['Content-Type: application/json'];
+        if ($this->litellmApiKey) {
+            $headers[] = 'Authorization: Bearer ' . $this->litellmApiKey;
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_CONNECTTIMEOUT => 5,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            throw new Exception("cURL error ao buscar modelos do LiteLLM: {$curlError}");
+        }
+
+        if ($httpCode !== 200) {
+            throw new Exception("LiteLLM /v1/models retornou HTTP {$httpCode}");
+        }
+
+        $data = json_decode($response, true);
+        if (!$data || !isset($data['data'])) {
+            throw new Exception('Resposta inválida do LiteLLM /v1/models');
+        }
+
         $allModels = [];
-        $afterId = null;
-
-        do {
-            $url = $this->apiBaseUrl . '/models?limit=1000';
-            if ($afterId !== null) {
-                $url .= '&after_id=' . urlencode($afterId);
+        foreach ($data['data'] as $model) {
+            $modelId = $model['id'] ?? '';
+            if (!$modelId) {
+                continue;
             }
 
-            $ch = curl_init($url);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'x-api-key: ' . $this->apiKey,
-                    'anthropic-version: 2023-06-01',
-                    'Content-Type: application/json',
-                ],
-                CURLOPT_TIMEOUT => 30,
-            ]);
+            $allModels[] = [
+                'id' => $modelId,
+                'display_name' => $this->buildDisplayName($modelId, $model),
+                'created_at' => isset($model['created']) ? date('c', $model['created']) : '',
+            ];
+        }
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            curl_close($ch);
-
-            if ($curlError) {
-                throw new Exception("cURL error ao buscar modelos: {$curlError}");
+        // Sort: Anthropic first, then OpenAI, then Google, alphabetical within groups
+        usort($allModels, function ($a, $b) {
+            $providerA = $this->detectProvider($a['id']);
+            $providerB = $this->detectProvider($b['id']);
+            if ($providerA !== $providerB) {
+                $order = ['Anthropic' => 0, 'OpenAI' => 1, 'Google' => 2, '' => 3];
+                return ($order[$providerA] ?? 3) <=> ($order[$providerB] ?? 3);
             }
-
-            if ($httpCode !== 200) {
-                $data = json_decode($response, true);
-                $errorMsg = $data['error']['message'] ?? 'Erro desconhecido';
-                throw new Exception("API Anthropic /v1/models retornou HTTP {$httpCode}: {$errorMsg}");
-            }
-
-            $data = json_decode($response, true);
-            if (!$data || !isset($data['data'])) {
-                throw new Exception('Resposta inválida da API /v1/models');
-            }
-
-            foreach ($data['data'] as $model) {
-                $allModels[] = [
-                    'id' => $model['id'],
-                    'display_name' => $model['display_name'] ?? '',
-                    'created_at' => $model['created_at'] ?? '',
-                ];
-            }
-
-            $hasMore = $data['has_more'] ?? false;
-            $afterId = $data['last_id'] ?? null;
-
-        } while ($hasMore && $afterId !== null);
+            return $a['id'] <=> $b['id'];
+        });
 
         return $allModels;
+    }
+
+    /**
+     * Build a human-readable display name from model ID.
+     */
+    private function buildDisplayName(string $modelId, array $modelData): string
+    {
+        // If LiteLLM provides a display_name or name, use it
+        if (!empty($modelData['display_name'])) {
+            return $modelData['display_name'];
+        }
+
+        $provider = $this->detectProvider($modelId);
+        $suffix = $provider ? " ({$provider})" : '';
+
+        // Clean up model ID for display: strip date suffixes, capitalize
+        $name = $modelId;
+        // Remove date suffix like -20250514
+        $name = preg_replace('/-\d{8}$/', '', $name);
+        // Capitalize parts
+        $name = str_replace(['-', '_'], ' ', $name);
+        $name = ucwords($name);
+
+        return $name . $suffix;
+    }
+
+    /**
+     * Detect provider name from model ID.
+     */
+    private function detectProvider(string $modelId): string
+    {
+        foreach (self::PROVIDER_MAP as $prefix => $provider) {
+            if (str_starts_with($modelId, $prefix)) {
+                return $provider;
+            }
+        }
+        return '';
     }
 
     /**

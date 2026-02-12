@@ -21,15 +21,30 @@
         <dl class="mb-0">
             <dt><code>claude_model</code> <span class="badge bg-secondary">string</span></dt>
             <dd>
-                Modelo Claude a usar.
-                <ul class="small mb-0" style="max-height: 200px; overflow-y: auto;">
-                    <?php foreach ($availableModels as $m): ?>
-                        <li>
-                            <code><?= htmlspecialchars($m['id']) ?></code>
-                            <?php if (!empty($m['display_name'])): ?>
-                                — <?= htmlspecialchars($m['display_name']) ?>
-                            <?php endif; ?>
-                        </li>
+                Modelo a usar (multi-provider via LiteLLM).
+                <?php
+                // Group models by provider for display
+                $groupedModels = [];
+                foreach ($availableModels as $m) {
+                    $provider = 'Outros';
+                    $id = $m['id'] ?? '';
+                    if (str_starts_with($id, 'claude-')) $provider = 'Anthropic';
+                    elseif (str_starts_with($id, 'gpt-') || str_starts_with($id, 'o1') || str_starts_with($id, 'o3')) $provider = 'OpenAI';
+                    elseif (str_starts_with($id, 'gemini-')) $provider = 'Google';
+                    $groupedModels[$provider][] = $m;
+                }
+                ?>
+                <ul class="small mb-0" style="max-height: 250px; overflow-y: auto;">
+                    <?php foreach ($groupedModels as $provider => $models): ?>
+                        <li class="fw-bold mt-1"><?= htmlspecialchars($provider) ?></li>
+                        <?php foreach ($models as $m): ?>
+                            <li class="ms-3">
+                                <code><?= htmlspecialchars($m['id']) ?></code>
+                                <?php if (!empty($m['display_name'])): ?>
+                                    — <?= htmlspecialchars($m['display_name']) ?>
+                                <?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
                     <?php endforeach; ?>
                     <?php if (empty($availableModels)): ?>
                         <li class="text-muted">Nenhum modelo cacheado. Clique em Atualizar.</li>
@@ -65,9 +80,8 @@
 
         <div class="alert alert-warning mt-3 mb-0 py-2" style="font-size: 0.85rem;">
             <i class="bi bi-exclamation-triangle"></i>
-            <strong>temperature</strong> e <strong>top_p</strong> são mutuamente exclusivos na API Claude.
+            <strong>temperature</strong> e <strong>top_p</strong> são mutuamente exclusivos na API Claude (e tratados assim para todos os provedores).
             Se ambos forem definidos, <code>temperature</code> tem prioridade.
-            Use <strong>um ou outro</strong>, não ambos.
         </div>
     </div>
 </div>

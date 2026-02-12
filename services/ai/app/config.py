@@ -9,8 +9,12 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Anthropic
+    # Anthropic (kept for fallback if LiteLLM is unavailable)
     anthropic_api_key: str = ""
+
+    # LiteLLM proxy (multi-provider gateway)
+    litellm_base_url: str = "http://192.168.100.12:4000"
+    litellm_api_key: str = ""
 
     # Database
     database_url: str = "postgresql://sunyata_app:password@localhost:5432/sunyata_platform"

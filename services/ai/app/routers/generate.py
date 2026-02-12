@@ -1,5 +1,5 @@
 """
-POST /api/ai/generate — Synchronous Claude API generation.
+POST /api/ai/generate — Synchronous LLM generation via LiteLLM proxy.
 """
 
 import logging
@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 
 from ..dependencies import verify_internal_key
 from ..models import GenerateRequest, GenerateResponse, TokenUsage
-from ..services.claude import generate
+from ..services.llm import generate
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

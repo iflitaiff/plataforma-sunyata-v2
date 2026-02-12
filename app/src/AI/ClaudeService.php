@@ -270,25 +270,34 @@ class ClaudeService {
      * @return float Custo em USD
      */
     private function calculateCost(string $model, int $inputTokens, int $outputTokens): float {
-        // Pricing per token (input/output) — atualizado 2026-02
-        // Formato: [input_per_token, output_per_token]
+        // Pricing per token [input, output] — updated 2026-02
         $pricing = [
-            'haiku'  => [0.000001, 0.000005],   // Haiku 4.5: $1/$5 per MTok
-            'sonnet' => [0.000003, 0.000015],    // Sonnet 3.5/4.5: $3/$15 per MTok
-            'opus'   => [0.000015, 0.000075],    // Opus 4/4.6: $15/$75 per MTok
+            // Anthropic
+            'haiku'          => [0.000001, 0.000005],    // Haiku 4.5: $1/$5 per MTok
+            'sonnet'         => [0.000003, 0.000015],    // Sonnet 3.5/4.5: $3/$15 per MTok
+            'opus'           => [0.000015, 0.000075],    // Opus 4/4.6: $15/$75 per MTok
+            // OpenAI
+            'gpt-4o-mini'    => [0.00000015, 0.0000006], // GPT-4o Mini
+            'gpt-4o'         => [0.0000025, 0.000010],   // GPT-4o
+            'gpt-4.1-mini'   => [0.0000004, 0.0000016],  // GPT-4.1 Mini
+            'gpt-4.1-nano'   => [0.0000001, 0.0000004],  // GPT-4.1 Nano
+            // Google
+            'gemini-2.0-flash' => [0.0000001, 0.0000004],
+            'gemini-1.5-flash' => [0.000000075, 0.0000003],
+            'gemini-1.5-pro'   => [0.00000125, 0.000005],
         ];
 
-        // Detectar família do modelo pelo nome
         $modelLower = strtolower($model);
-        if (str_contains($modelLower, 'haiku')) {
-            $rates = $pricing['haiku'];
-        } elseif (str_contains($modelLower, 'opus')) {
-            $rates = $pricing['opus'];
-        } else {
-            // Default: Sonnet (mais comum, fallback seguro)
-            $rates = $pricing['sonnet'];
+
+        // Try exact match first (OpenAI/Google model IDs)
+        foreach ($pricing as $key => $rates) {
+            if (str_contains($modelLower, $key)) {
+                return ($inputTokens * $rates[0]) + ($outputTokens * $rates[1]);
+            }
         }
 
+        // Default fallback: Sonnet pricing
+        $rates = $pricing['sonnet'];
         return ($inputTokens * $rates[0]) + ($outputTokens * $rates[1]);
     }
 
