@@ -12,6 +12,22 @@
 
 $bodyClass = 'layout-fluid';
 
+// HTMX partial request: return only page content (no navbar/sidebar shell).
+// Without this, the full page structure (navbar + sidebar + #page-content) would
+// be swapped INTO the existing #page-content, creating a broken nested layout.
+if (!empty($_SERVER['HTTP_HX_REQUEST'])) {
+    if (isset($_SESSION['success'])) {
+        echo '<div class="alert alert-success alert-dismissible" role="alert"><div class="d-flex"><div><i class="ti ti-check alert-icon"></i></div><div>' . htmlspecialchars($_SESSION['success']) . '</div></div><a class="btn-close" data-bs-dismiss="alert"></a></div>';
+        unset($_SESSION['success']);
+    }
+    if (isset($_SESSION['error'])) {
+        echo '<div class="alert alert-danger alert-dismissible" role="alert"><div class="d-flex"><div><i class="ti ti-alert-circle alert-icon"></i></div><div>' . htmlspecialchars($_SESSION['error']) . '</div></div><a class="btn-close" data-bs-dismiss="alert"></a></div>';
+        unset($_SESSION['error']);
+    }
+    if (isset($pageContent)) call_user_func($pageContent);
+    return;
+}
+
 $contentCallback = function () use (&$pageContent) {
     global $activeNav;
     $user = $_SESSION['user'] ?? [];

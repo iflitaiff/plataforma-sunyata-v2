@@ -166,7 +166,13 @@ function sanitize_output($string) {
 }
 
 function redirect($url) {
-    header('Location: ' . $url);
+    // HTMX-aware redirect: use HX-Redirect to force full page navigation
+    // instead of AJAX swap (which would inject HTML into #page-content)
+    if (!empty($_SERVER['HTTP_HX_REQUEST'])) {
+        header('HX-Redirect: ' . $url);
+    } else {
+        header('Location: ' . $url);
+    }
     exit;
 }
 
