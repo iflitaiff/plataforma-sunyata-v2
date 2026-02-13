@@ -51,7 +51,7 @@ class ModelService
     private function __construct()
     {
         $this->settings = Settings::getInstance();
-        $this->litellmBaseUrl = defined('LITELLM_BASE_URL') ? LITELLM_BASE_URL : 'http://192.168.100.12:4000';
+        $this->litellmBaseUrl = defined('LITELLM_BASE_URL') ? LITELLM_BASE_URL : 'http://192.168.100.13:4000';
         $this->litellmApiKey = defined('LITELLM_API_KEY') ? LITELLM_API_KEY : '';
     }
 

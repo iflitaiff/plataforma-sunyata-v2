@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
 
     # LiteLLM proxy (multi-provider gateway)
-    litellm_base_url: str = "http://192.168.100.12:4000"
+    litellm_base_url: str = "http://192.168.100.13:4000"
     litellm_api_key: str = ""
 
     # Database
