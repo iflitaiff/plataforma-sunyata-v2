@@ -242,6 +242,9 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                     <a href="<?= BASE_URL ?>/areas/licitacoes/index.php" class="btn btn-sm btn-outline-secondary">
                         ← Voltar para Licitações
                     </a>
+                    <button id="openDraftsBtn" class="btn btn-sm btn-outline-warning ms-2">Meus Rascunhos</button>
+                    <button id="saveDraftBtn" class="btn btn-sm btn-warning ms-2" style="display:none">Salvar Rascunho</button>
+                    <span id="draftStatus" class="text-muted small ms-2"></span>
                 </div>
                 <div>
                     <a href="<?= BASE_URL ?>/dashboard.php" class="btn btn-sm btn-outline-info">
@@ -358,6 +361,9 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
     <!-- SurveyJS Commercial License -->
     <script src="<?= BASE_URL ?>/assets/js/surveyjs-license.js"></script>
 
+    <!-- Drafts Manager -->
+    <script src="<?= BASE_URL ?>/assets/js/drafts.js"></script>
+
     <script>
         if (typeof Survey === 'undefined') {
             document.getElementById('surveyContainer').innerHTML = '<div class="alert alert-danger">Erro: Biblioteca SurveyJS não carregou.</div>';
@@ -366,10 +372,30 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                 const surveyJson = <?= json_encode($formConfig, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
                 const survey = new Survey.Model(surveyJson);
 
-                // Auto-save
+                // ========== SERVER-SIDE DRAFTS ==========
                 const canvasId = '<?= $canvas['slug'] ?>';
                 const userId = <?= $_SESSION['user_id'] ?>;
-                const DRAFT_KEY = `canvas_draft_${canvasId}_${userId}`;
+
+                const draftManager = new DraftManager({
+                    canvasTemplateId: <?= $canvas['id'] ?>,
+                    survey: survey,
+                    csrfToken: '<?= csrf_token() ?>',
+                    baseUrl: '<?= BASE_URL ?>',
+                    onStatusChange: (msg) => document.getElementById('draftStatus').textContent = msg
+                });
+                draftManager.migrateLocalStorage(`canvas_draft_${canvasId}_${userId}`);
+
+                document.getElementById('saveDraftBtn').addEventListener('click', () => draftManager.saveDraft());
+                document.getElementById('openDraftsBtn').addEventListener('click', () => draftManager.openDraftModal());
+
+                survey.onValueChanged.add(() => {
+                    document.getElementById('saveDraftBtn').style.display = 'inline-block';
+                    draftManager.scheduleAutoSave();
+                });
+
+                survey.onCurrentPageChanged.add(() => {
+                    draftManager.scheduleAutoSave();
+                });
 
                 function renderResponse(responseText) {
                     if (!responseText || typeof responseText !== 'string') {
@@ -395,30 +421,7 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                         ALLOWED_ATTR: ['href','target','class','id','style']
                     });
                 }
-
-                function saveDraft() {
-                    localStorage.setItem(DRAFT_KEY, JSON.stringify({ data: survey.data, pageNo: survey.currentPageNo, timestamp: Date.now() }));
-                }
-
-                survey.onValueChanged.add(() => saveDraft());
-                survey.onCurrentPageChanged.add(() => saveDraft());
-
-                (function restoreDraft() {
-                    try {
-                        const draftStr = localStorage.getItem(DRAFT_KEY);
-                        if (!draftStr) return;
-                        const draft = JSON.parse(draftStr);
-                        if (Date.now() - draft.timestamp > 7 * 24 * 60 * 60 * 1000) { localStorage.removeItem(DRAFT_KEY); return; }
-                        if (!draft.data || Object.keys(draft.data).length === 0) return;
-                        const draftDate = new Date(draft.timestamp).toLocaleString('pt-BR');
-                        if (confirm(`Encontramos um rascunho salvo em ${draftDate}.\n\nDeseja continuar de onde parou?`)) {
-                            survey.data = draft.data;
-                            if (draft.pageNo !== undefined) survey.currentPageNo = draft.pageNo;
-                        } else {
-                            localStorage.removeItem(DRAFT_KEY);
-                        }
-                    } catch (e) { localStorage.removeItem(DRAFT_KEY); }
-                })();
+                // ========== FIM DRAFTS ==========
 
                 // File upload handler
                 survey.onUploadFiles.add(async function(sender, options) {
@@ -448,7 +451,9 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                 // Submit handler
                 survey.onComplete.add(async function (sender) {
                     const formData = sender.data;
-                    localStorage.removeItem(DRAFT_KEY);
+                    if (draftManager.currentDraftId) {
+                        draftManager.deleteDraft(draftManager.currentDraftId);
+                    }
 
                     document.getElementById('surveyContainer').style.display = 'none';
                     document.getElementById('loadingContainer').style.display = 'block';

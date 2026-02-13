@@ -364,6 +364,9 @@ $pageTitle = $canvas['name'];
                     <a href="<?= BASE_URL ?>/areas/legal/index.php" class="btn btn-sm btn-outline-secondary">
                         ← Voltar
                     </a>
+                    <button id="openDraftsBtn" class="btn btn-sm btn-outline-warning ms-2">Meus Rascunhos</button>
+                    <button id="saveDraftBtn" class="btn btn-sm btn-warning ms-2" style="display:none">Salvar Rascunho</button>
+                    <span id="draftStatus" class="text-muted small ms-2"></span>
                 </div>
                 <div>
                     <a href="<?= BASE_URL ?>/dashboard.php" class="btn btn-sm btn-outline-info">
@@ -487,6 +490,9 @@ $pageTitle = $canvas['name'];
     <!-- SurveyJS Commercial License -->
     <script src="<?= BASE_URL ?>/assets/js/surveyjs-license.js"></script>
 
+    <!-- Drafts Manager -->
+    <script src="<?= BASE_URL ?>/assets/js/drafts.js"></script>
+
     <script>
         console.log('Script started');
 
@@ -506,120 +512,64 @@ $pageTitle = $canvas['name'];
                 const survey = new Survey.Model(surveyJson);
                 console.log('Survey model created');
 
-                // ========== AUTO-SAVE COM LOCALSTORAGE ==========
+                // ========== SERVER-SIDE DRAFTS ==========
                 const canvasId = '<?= $canvas['slug'] ?>';
                 const userId = <?= $_SESSION['user_id'] ?>;
-                const DRAFT_KEY = `canvas_draft_${canvasId}_${userId}`;
+
+                const draftManager = new DraftManager({
+                    canvasTemplateId: <?= $canvas['id'] ?>,
+                    survey: survey,
+                    csrfToken: '<?= csrf_token() ?>',
+                    baseUrl: '<?= BASE_URL ?>',
+                    onStatusChange: (msg) => document.getElementById('draftStatus').textContent = msg
+                });
+                draftManager.migrateLocalStorage(`canvas_draft_${canvasId}_${userId}`);
+
+                document.getElementById('saveDraftBtn').addEventListener('click', () => draftManager.saveDraft());
+                document.getElementById('openDraftsBtn').addEventListener('click', () => draftManager.openDraftModal());
+
+                survey.onValueChanged.add(() => {
+                    document.getElementById('saveDraftBtn').style.display = 'inline-block';
+                    draftManager.scheduleAutoSave();
+                });
+
+                survey.onCurrentPageChanged.add(() => {
+                    draftManager.scheduleAutoSave();
+                });
 
                 /**
                  * Renderiza resposta da IA - Híbrido: detecta automaticamente Markdown ou HTML
                  */
                 function renderResponse(responseText) {
                     if (!responseText || typeof responseText !== 'string') {
-                        console.warn('⚠️ renderResponse: resposta vazia ou inválida');
                         return '<p class="text-muted">Nenhuma resposta gerada</p>';
                     }
 
                     const trimmed = responseText.trim();
                     const isHTML = /^<[a-z][^>]*>/i.test(trimmed);
-
-                    console.log('🎨 renderResponse:', {
-                        format: isHTML ? 'HTML' : 'Markdown',
-                        length: responseText.length,
-                        preview: trimmed.substring(0, 100)
-                    });
-
                     let html;
 
                     if (isHTML) {
-                        console.log('✅ Formato HTML detectado');
                         const isFullDocument = /<!DOCTYPE|<html/i.test(trimmed);
-
                         if (isFullDocument) {
-                            console.warn('⚠️ HTML completo detectado - extraindo conteúdo do <body>');
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(responseText, 'text/html');
                             html = doc.body ? doc.body.innerHTML : responseText;
-                            console.log('✅ Conteúdo extraído do <body>');
                         } else {
-                            console.log('✅ Fragmento HTML - usando direto');
                             html = responseText;
                         }
                     } else {
-                        console.log('📝 Formato Markdown detectado - convertendo com marked.js');
                         html = marked.parse(responseText);
                     }
 
-                    // Sanitizar para segurança
-                    const cleanHTML = DOMPurify.sanitize(html, {
+                    return DOMPurify.sanitize(html, {
                         ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'u',
                                        'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead',
                                        'tbody', 'tr', 'td', 'th', 'hr', 'div', 'span'],
                         ALLOWED_ATTR: ['href', 'target', 'class', 'id', 'style']
                     });
-
-                    return cleanHTML;
                 }
-
-                // Função para salvar rascunho
-                function saveDraft() {
-                    const draft = {
-                        data: survey.data,
-                        pageNo: survey.currentPageNo,
-                        timestamp: Date.now()
-                    };
-                    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-                    console.log('✅ Rascunho salvo automaticamente');
-                }
-
-                // Auto-save a cada mudança de valor
-                survey.onValueChanged.add((sender, options) => {
-                    saveDraft();
-                });
-
-                // Auto-save ao mudar de página
-                survey.onCurrentPageChanged.add((sender, options) => {
-                    saveDraft();
-                });
-
-                // Restaurar rascunho ao carregar
-                (function restoreDraft() {
-                    try {
-                        const draftStr = localStorage.getItem(DRAFT_KEY);
-                        if (!draftStr) return;
-
-                        const draft = JSON.parse(draftStr);
-                        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 dias
-
-                        if (Date.now() - draft.timestamp > maxAge) {
-                            console.log('Rascunho expirado, removendo...');
-                            localStorage.removeItem(DRAFT_KEY);
-                            return;
-                        }
-
-                        if (!draft.data || Object.keys(draft.data).length === 0) {
-                            return;
-                        }
-
-                        const draftDate = new Date(draft.timestamp).toLocaleString('pt-BR');
-                        const msg = `Encontramos um rascunho salvo em ${draftDate}.\n\nDeseja continuar de onde parou?`;
-
-                        if (confirm(msg)) {
-                            survey.data = draft.data;
-                            if (draft.pageNo !== undefined) {
-                                survey.currentPageNo = draft.pageNo;
-                            }
-                            console.log('✅ Rascunho restaurado');
-                        } else {
-                            localStorage.removeItem(DRAFT_KEY);
-                            console.log('Rascunho descartado pelo usuário');
-                        }
-                    } catch (error) {
-                        console.error('Erro ao restaurar rascunho:', error);
-                        localStorage.removeItem(DRAFT_KEY);
-                    }
-                })();
-                // ========== FIM AUTO-SAVE ==========
+                // ========== FIM DRAFTS ==========
 
                 // ========== UPLOAD DE ARQUIVOS ==========
                 console.log('🔧 Registrando handler de upload de arquivos...');
@@ -695,9 +645,10 @@ $pageTitle = $canvas['name'];
                     const formData = sender.data;
                     console.log('Form submitted:', formData);
 
-                    // Limpar rascunho
-                    localStorage.removeItem(DRAFT_KEY);
-                    console.log('✅ Rascunho removido após conclusão');
+                    // Limpar rascunho do servidor
+                    if (draftManager.currentDraftId) {
+                        draftManager.deleteDraft(draftManager.currentDraftId);
+                    }
 
                     // Mostrar loading
                     document.getElementById('surveyContainer').style.display = 'none';
