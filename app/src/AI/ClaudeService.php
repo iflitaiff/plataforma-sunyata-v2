@@ -269,6 +269,9 @@ class ClaudeService {
                 throw new Exception('FASTAPI_INTERNAL_KEY not configured');
             }
 
+            // DEBUG: Log key being used
+            error_log("ClaudeService::generateViaFastAPI() - Using internal_key: " . substr($internalKey, 0, 10) . "...");
+
             // Fazer chamada HTTP para FastAPI
             $ch = curl_init($baseUrl . $endpoint);
 
