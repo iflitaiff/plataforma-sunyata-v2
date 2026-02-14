@@ -20,8 +20,8 @@ return [
         'base_url' => getenv('FASTAPI_BASE_URL') ?: 'http://127.0.0.1:8000',
 
         // Feature flag: habilita uso do FastAPI em vez de chamada direta
-        // Mudar para true após testes bem-sucedidos
-        'enabled' => getenv('FASTAPI_ENABLED') === 'true' ? true : false,
+        // TODO: Load from .env properly (requires phpdotenv or similar)
+        'enabled' => true, // Hardcoded for now since getenv() doesn't work without .env loader
 
         // Internal API key for PHP → FastAPI authentication
         // TODO: Move to proper .env loading mechanism
