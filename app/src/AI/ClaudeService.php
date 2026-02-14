@@ -264,9 +264,9 @@ class ClaudeService {
             }
 
             // Obter chave interna para autenticação FastAPI
-            $internalKey = getenv('FASTAPI_INTERNAL_KEY') ?: '';
+            $internalKey = $config['fastapi']['internal_key'] ?? getenv('FASTAPI_INTERNAL_KEY') ?: '';
             if (empty($internalKey)) {
-                throw new Exception('FASTAPI_INTERNAL_KEY not configured in environment');
+                throw new Exception('FASTAPI_INTERNAL_KEY not configured');
             }
 
             // Fazer chamada HTTP para FastAPI

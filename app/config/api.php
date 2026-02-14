@@ -23,6 +23,10 @@ return [
         // Mudar para true após testes bem-sucedidos
         'enabled' => getenv('FASTAPI_ENABLED') === 'true' ? true : false,
 
+        // Internal API key for PHP → FastAPI authentication
+        // TODO: Move to proper .env loading mechanism
+        'internal_key' => 'sunyata-internal-phase3-2026',
+
         // Timeout para requisições HTTP (segundos)
         'timeout' => 300, // 5 minutos (alinhado com ClaudeService timeout)
 
