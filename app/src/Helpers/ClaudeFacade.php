@@ -137,17 +137,33 @@ class ClaudeFacade
         // 3. Aplicar overrides (traduz chaves + exclusividade temperature/top_p)
         $options = self::applyOverrides($options, $overrideOptions);
 
-        // 4. Chamar ClaudeService com options preparadas
+        // 4. Routing: FastAPI vs Direct API (feature flag)
+        $apiConfig = require __DIR__ . '/../../config/api.php';
+        $useFastAPI = $apiConfig['fastapi']['enabled'] ?? false;
+
         $claudeService = new ClaudeService();
 
-        return $claudeService->generate(
-            prompt: $prompt,
-            userId: $userId,
-            vertical: $verticalSlug,
-            toolName: $toolName,
-            inputData: $inputData,
-            options: $options
-        );
+        if ($useFastAPI) {
+            // Chamar via FastAPI microservice
+            return $claudeService->generateViaFastAPI(
+                prompt: $prompt,
+                userId: $userId,
+                vertical: $verticalSlug,
+                toolName: $toolName,
+                inputData: $inputData,
+                options: $options
+            );
+        } else {
+            // Chamar direto na Anthropic API (padrão)
+            return $claudeService->generate(
+                prompt: $prompt,
+                userId: $userId,
+                vertical: $verticalSlug,
+                toolName: $toolName,
+                inputData: $inputData,
+                options: $options
+            );
+        }
     }
 
     /**

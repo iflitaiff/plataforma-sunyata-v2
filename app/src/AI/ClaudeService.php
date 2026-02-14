@@ -197,6 +197,211 @@ class ClaudeService {
     }
 
     /**
+     * Gera resposta via FastAPI microservice
+     *
+     * Chama FastAPI Python microservice que usa LiteLLM para chamar Claude API.
+     * Mesma interface que generate() para facilitar migração.
+     *
+     * @param string $prompt Prompt a ser enviado
+     * @param int $userId ID do usuário
+     * @param string $vertical Vertical (juridico, docencia, etc)
+     * @param string $toolName Nome da ferramenta (canvas_juridico, etc)
+     * @param array $inputData Dados do formulário preenchido
+     * @param array $options Opções customizadas (model, max_tokens, temperature, top_p, system)
+     * @return array ['success' => bool, 'response' => string, 'history_id' => int, ...]
+     */
+    public function generateViaFastAPI(
+        string $prompt,
+        int $userId,
+        string $vertical,
+        string $toolName,
+        array $inputData = [],
+        array $options = []
+    ): array {
+        $startTime = microtime(true);
+
+        // Criar registro de histórico (status: pending)
+        $historyId = $this->createHistoryRecord(
+            $userId,
+            $vertical,
+            $toolName,
+            $inputData,
+            $prompt
+        );
+
+        try {
+            // Carregar configuração FastAPI
+            $config = require __DIR__ . '/../../config/api.php';
+            $baseUrl = $config['fastapi']['base_url'];
+            $timeout = $config['fastapi']['timeout'];
+            $connectTimeout = $config['fastapi']['connect_timeout'];
+            $endpoint = $config['fastapi']['endpoints']['generate'];
+
+            // Preparar payload para FastAPI
+            $model = $options['model'] ?? $this->defaultModel;
+            $maxTokens = $options['max_tokens'] ?? $this->defaultMaxTokens;
+            $temperature = array_key_exists('temperature', $options) ? $options['temperature'] : null;
+            $topP = array_key_exists('top_p', $options) ? $options['top_p'] : null;
+            $systemPrompt = $options['system'] ?? null;
+
+            $payload = [
+                'model' => $model,
+                'prompt' => $prompt,
+                'max_tokens' => $maxTokens,
+                'user_id' => $userId,
+                'vertical' => $vertical,
+            ];
+
+            // Adicionar parâmetros opcionais apenas se fornecidos
+            if ($temperature !== null) {
+                $payload['temperature'] = $temperature;
+            }
+            if ($topP !== null) {
+                $payload['top_p'] = $topP;
+            }
+            if ($systemPrompt !== null) {
+                $payload['system'] = $systemPrompt;
+            }
+
+            // Fazer chamada HTTP para FastAPI
+            $ch = curl_init($baseUrl . $endpoint);
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                ],
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_TIMEOUT => $timeout,
+                CURLOPT_CONNECTTIMEOUT => $connectTimeout
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            $curlErrno = curl_errno($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                if ($curlErrno === CURLE_OPERATION_TIMEDOUT) {
+                    throw new Exception("TIMEOUT: FastAPI demorou mais que o esperado para responder. Tente novamente.");
+                }
+                throw new Exception("cURL error calling FastAPI: {$curlError}");
+            }
+
+            if (!$response) {
+                throw new Exception('Empty response from FastAPI');
+            }
+
+            $data = json_decode($response, true);
+
+            if (!$data) {
+                throw new Exception('Invalid JSON response from FastAPI');
+            }
+
+            // Verificar erros da FastAPI
+            if ($httpCode !== 200 || !($data['success'] ?? false)) {
+                $errorMsg = $data['error'] ?? 'Unknown FastAPI error';
+                throw new Exception("FastAPI error (HTTP {$httpCode}): {$errorMsg}");
+            }
+
+            // Calcular tempo de resposta
+            $responseTimeMs = (int)((microtime(true) - $startTime) * 1000);
+
+            // Extrair resposta
+            $claudeResponse = $data['response'] ?? '';
+            $tokensInput = $data['usage']['input_tokens'] ?? 0;
+            $tokensOutput = $data['usage']['output_tokens'] ?? 0;
+            $tokensTotal = $data['usage']['total_tokens'] ?? ($tokensInput + $tokensOutput);
+            $actualModel = $data['model'] ?? $model;
+            $costUsd = $data['cost_usd'] ?? 0.0;
+
+            // Atualizar histórico com sucesso
+            $this->updateHistoryRecord($historyId, [
+                'claude_response' => $claudeResponse,
+                'claude_model' => $actualModel,
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+                'top_p' => $topP,
+                'system_prompt_sent' => $systemPrompt,
+                'tokens_input' => $tokensInput,
+                'tokens_output' => $tokensOutput,
+                'tokens_total' => $tokensTotal,
+                'cost_usd' => $costUsd,
+                'response_time_ms' => $responseTimeMs,
+                'status' => 'success'
+            ]);
+
+            // Log Claude API call via FastAPI
+            MarkdownLogger::getInstance()->claudeApiCall(
+                userId: $userId,
+                canvas: $vertical,
+                inputTokens: $tokensInput,
+                outputTokens: $tokensOutput,
+                costUsd: $costUsd,
+                responseTime: $responseTimeMs / 1000,
+                status: 'success',
+                extraContext: ['via' => 'fastapi']
+            );
+
+            return [
+                'success' => true,
+                'response' => $claudeResponse,
+                'history_id' => $historyId,
+                'tokens' => [
+                    'input' => $tokensInput,
+                    'output' => $tokensOutput,
+                    'total' => $tokensTotal
+                ],
+                'cost_usd' => $costUsd,
+                'response_time_ms' => $responseTimeMs,
+                'model' => $actualModel
+            ];
+
+        } catch (Exception $e) {
+            // Registrar erro
+            $debugLog = __DIR__ . '/../../logs/canvas-debug.log';
+            $timestamp = date('Y-m-d H:i:s');
+            $logEntry = "[$timestamp] ClaudeService::generateViaFastAPI() EXCEPTION\n";
+            $logEntry .= "Message: " . $e->getMessage() . "\n";
+            $logEntry .= "File: " . $e->getFile() . " (Line " . $e->getLine() . ")\n";
+            $logEntry .= "---\n";
+            file_put_contents($debugLog, $logEntry, FILE_APPEND);
+
+            error_log('ClaudeService::generateViaFastAPI() failed: ' . $e->getMessage());
+
+            $responseTimeMs = (int)((microtime(true) - $startTime) * 1000);
+
+            // Atualizar histórico com erro
+            $this->updateHistoryRecord($historyId, [
+                'status' => 'error',
+                'error_message' => $e->getMessage(),
+                'response_time_ms' => $responseTimeMs
+            ]);
+
+            // Log FastAPI call failure
+            MarkdownLogger::getInstance()->claudeApiCall(
+                userId: $userId,
+                canvas: $vertical,
+                inputTokens: 0,
+                outputTokens: 0,
+                costUsd: 0.0,
+                responseTime: $responseTimeMs / 1000,
+                status: 'error',
+                extraContext: ['via' => 'fastapi', 'error' => $e->getMessage()]
+            );
+
+            return [
+                'success' => false,
+                'error' => 'Erro ao gerar conteúdo via FastAPI. Por favor, tente novamente.',
+                'error_detail' => $e->getMessage(),
+                'history_id' => $historyId
+            ];
+        }
+    }
+
+    /**
      * Gera resposta mock (Lorem ipsum jurídico) para testes sem gastar créditos API
      *
      * @param array $payload Payload que seria enviado para API (usado para calcular tokens simulados)
