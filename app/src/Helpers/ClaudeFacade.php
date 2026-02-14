@@ -263,6 +263,20 @@ class ClaudeFacade
         array $inputData = [],
         array $overrideOptions = []
     ): array {
+        // Route to microservice if enabled
+        if (self::usesMicroservice()) {
+            return self::generateViaService(
+                $verticalSlug,
+                $canvasTemplateId,
+                $prompt,
+                $userId,
+                $toolName,
+                $inputData,
+                $overrideOptions
+            );
+        }
+
+        // Direct Claude API fallback
         // 1. Portal defaults (Nível 0) + Vertical config (Nível 1+2)
         $portalDefaults = self::getPortalDefaults();
         $verticalConfig = VerticalConfig::get($verticalSlug);
