@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from pydantic import ValidationError
 
 from app.models import GenerateRequest
 
@@ -11,7 +12,7 @@ def test_temperature_range_valid():
 
 
 def test_temperature_range_invalid():
-    with pytest.raises(ValueError, match="between 0.0 and 1.0"):
+    with pytest.raises(ValidationError, match="less than or equal to 1"):
         GenerateRequest(model="test", prompt="test", temperature=1.5)
 
 
@@ -21,7 +22,7 @@ def test_top_p_range_valid():
 
 
 def test_top_p_range_invalid():
-    with pytest.raises(ValueError, match="between 0.0 and 1.0"):
+    with pytest.raises(ValidationError, match="greater than or equal to 0"):
         GenerateRequest(model="test", prompt="test", top_p=-0.1)
 
 
