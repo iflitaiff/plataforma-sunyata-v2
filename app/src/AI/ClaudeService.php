@@ -263,6 +263,12 @@ class ClaudeService {
                 $payload['system'] = $systemPrompt;
             }
 
+            // Obter chave interna para autenticação FastAPI
+            $internalKey = getenv('FASTAPI_INTERNAL_KEY') ?: '';
+            if (empty($internalKey)) {
+                throw new Exception('FASTAPI_INTERNAL_KEY not configured in environment');
+            }
+
             // Fazer chamada HTTP para FastAPI
             $ch = curl_init($baseUrl . $endpoint);
 
@@ -271,6 +277,7 @@ class ClaudeService {
                 CURLOPT_POST => true,
                 CURLOPT_HTTPHEADER => [
                     'Content-Type: application/json',
+                    'X-Internal-Key: ' . $internalKey,
                 ],
                 CURLOPT_POSTFIELDS => json_encode($payload),
                 CURLOPT_TIMEOUT => $timeout,
