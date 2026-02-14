@@ -13,6 +13,8 @@ import logging
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from ..dependencies import verify_internal_key
 from ..models import StreamRequest
@@ -20,9 +22,11 @@ from ..services.llm import stream
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/stream")
+@limiter.limit("100/minute")
 async def api_stream(
     req: StreamRequest,
     request: Request,
@@ -49,7 +53,10 @@ async def api_stream(
 
         except Exception as e:
             logger.exception("Stream error")
-            error_event = {"type": "error", "error": str(e)}
+            error_event = {
+                "type": "error",
+                "error": "Ocorreu um erro inesperado durante o streaming. Tente novamente.",
+            }
             yield f"data: {json.dumps(error_event)}\n\n"
 
     return StreamingResponse(

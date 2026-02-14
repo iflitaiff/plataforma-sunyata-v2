@@ -2,7 +2,11 @@
 Pydantic models for request/response validation.
 """
 
-from pydantic import BaseModel, Field
+import logging
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+logger = logging.getLogger(__name__)
 
 
 # --- Generate ---
@@ -19,6 +23,31 @@ class GenerateRequest(BaseModel):
     user_id: int | None = None
     vertical: str | None = None
     tool_name: str | None = None
+
+    @field_validator("temperature")
+    @classmethod
+    def validate_temperature(cls, v):
+        if v is not None and not (0.0 <= v <= 1.0):
+            raise ValueError("temperature must be between 0.0 and 1.0")
+        return v
+
+    @field_validator("top_p")
+    @classmethod
+    def validate_top_p(cls, v):
+        if v is not None and not (0.0 <= v <= 1.0):
+            raise ValueError("top_p must be between 0.0 and 1.0")
+        return v
+
+    @model_validator(mode="after")
+    def validate_sampling_params(self):
+        if self.temperature is not None and self.top_p is not None:
+            logger.warning(
+                "Both temperature (%s) and top_p (%s) provided. "
+                "Using temperature (top_p will be ignored per Claude 4.x rules).",
+                self.temperature,
+                self.top_p,
+            )
+        return self
 
 
 class TokenUsage(BaseModel):
@@ -53,12 +82,36 @@ class StreamRequest(BaseModel):
     tool_name: str | None = None
     session_id: str | None = None  # For SSE reconnection
 
+    @field_validator("temperature")
+    @classmethod
+    def validate_temperature(cls, v):
+        if v is not None and not (0.0 <= v <= 1.0):
+            raise ValueError("temperature must be between 0.0 and 1.0")
+        return v
+
+    @field_validator("top_p")
+    @classmethod
+    def validate_top_p(cls, v):
+        if v is not None and not (0.0 <= v <= 1.0):
+            raise ValueError("top_p must be between 0.0 and 1.0")
+        return v
+
+    @model_validator(mode="after")
+    def validate_sampling_params(self):
+        if self.temperature is not None and self.top_p is not None:
+            logger.warning(
+                "Both temperature (%s) and top_p (%s) provided. "
+                "Using temperature (top_p ignored).",
+                self.temperature,
+                self.top_p,
+            )
+        return self
+
 
 # --- Document Processing ---
 
 class DocumentProcessRequest(BaseModel):
-    file_path: str | None = None
-    file_content_base64: str | None = None
+    file_content_base64: str = Field(..., min_length=1)
     filename: str = "document"
     mime_type: str = "application/pdf"
 

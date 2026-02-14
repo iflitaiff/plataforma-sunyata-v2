@@ -8,6 +8,7 @@ enabling multi-provider support (Anthropic, OpenAI, Google) transparently.
 import time
 from collections.abc import AsyncGenerator
 
+import httpx
 import openai
 
 from ..config import settings
@@ -70,6 +71,7 @@ def _get_client() -> openai.AsyncOpenAI:
     return openai.AsyncOpenAI(
         base_url=settings.litellm_base_url.rstrip("/") + "/v1",
         api_key=settings.litellm_api_key,
+        timeout=httpx.Timeout(120.0),  # 120s timeout
     )
 
 

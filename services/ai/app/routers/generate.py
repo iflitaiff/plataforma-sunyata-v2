@@ -4,7 +4,9 @@ POST /api/ai/generate — Synchronous LLM generation via LiteLLM proxy.
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from ..dependencies import verify_internal_key
 from ..models import GenerateRequest, GenerateResponse, TokenUsage
@@ -12,10 +14,13 @@ from ..services.llm import generate
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/generate", response_model=GenerateResponse)
+@limiter.limit("100/minute")
 async def api_generate(
+    request: Request,
     req: GenerateRequest,
     _key: str = Depends(verify_internal_key),
 ):
@@ -43,5 +48,5 @@ async def api_generate(
         logger.exception("Generation failed")
         return GenerateResponse(
             success=False,
-            error=str(e),
+            error="Ocorreu um erro inesperado. Tente novamente.",
         )

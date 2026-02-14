@@ -69,7 +69,6 @@ EXTRACTORS = {
 
 def process_document(
     mime_type: str,
-    file_path: str | None = None,
     file_content_base64: str | None = None,
 ) -> dict:
     """Extract text from a document by file path or base64 content."""
@@ -84,20 +83,10 @@ def process_document(
         }
 
     try:
-        if file_content_base64:
-            data = base64.b64decode(file_content_base64)
-        elif file_path and os.path.isfile(file_path):
-            with open(file_path, "rb") as f:
-                data = f.read()
-        else:
-            return {
-                "success": False,
-                "text": "",
-                "pages": 0,
-                "word_count": 0,
-                "error": "No file_path or file_content_base64 provided",
-            }
+        if not file_content_base64:
+            raise ValueError("file_content_base64 is required")
 
+        data = base64.b64decode(file_content_base64)
         return extractor(data)
 
     except Exception as e:

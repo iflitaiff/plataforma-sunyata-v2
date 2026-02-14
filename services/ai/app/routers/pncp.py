@@ -9,8 +9,10 @@ import logging
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from ..pncp_keywords import KEYWORD_MAPPING, build_search_query, build_pncp_api_params
 
@@ -18,6 +20,7 @@ from ..dependencies import verify_internal_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 PNCP_SEARCH_URL = "https://pncp.gov.br/api/search/"
 PNCP_TIMEOUT = 30  # seconds
@@ -65,7 +68,9 @@ class PncpSearchResponse(BaseModel):
 # --- Endpoint ---
 
 @router.post("/pncp-search", response_model=PncpSearchResponse)
+@limiter.limit("100/minute")
 async def pncp_search(
+    request: Request,
     req: PncpSearchRequest,
     _key: str = Depends(verify_internal_key),
 ):
@@ -155,7 +160,7 @@ async def pncp_search(
         logger.exception(f"PNCP search error: {e}")
         return PncpSearchResponse(
             success=False,
-            error=str(e),
+            error="Ocorreu um erro ao buscar no PNCP. Tente novamente.",
         )
 
 
@@ -229,7 +234,9 @@ class PncpMonitorRequest(BaseModel):
 
 
 @router.post("/pncp-monitor")
+@limiter.limit("100/minute")
 async def pncp_monitor(
+    request: Request,
     req: PncpMonitorRequest,
     _key: str = Depends(verify_internal_key),
 ):
@@ -302,7 +309,7 @@ async def pncp_monitor(
         }
     except httpx.HTTPError as e:
         logger.error(f"PNCP monitor HTTP error: {e}")
-        return {"success": False, "error": f"PNCP API connection error: {str(e)}"}
+        return {"success": False, "error": "Erro de conexão com a API do PNCP."}
     except Exception as e:
         logger.error(f"PNCP monitor error: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "Ocorreu um erro inesperado no monitor do PNCP."}

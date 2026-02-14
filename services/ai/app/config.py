@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     # Streaming defaults
     stream_timeout: int = 300  # 5 minutes max for SSE connections
-    default_model: str = "claude-haiku-4-5"
+    default_model: str = "claude-sonnet-4-5-20250929"
     default_max_tokens: int = 4096
     default_temperature: float = 1.0
 
