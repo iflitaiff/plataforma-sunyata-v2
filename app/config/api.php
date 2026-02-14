@@ -31,9 +31,10 @@ return [
 
         // Endpoints disponíveis
         'endpoints' => [
-            'generate' => '/api/generate',
-            'stream' => '/api/stream',
-            'document' => '/api/document/process',
+            'generate' => '/api/ai/generate',
+            'stream' => '/api/ai/stream',
+            'document' => '/api/ai/document/process',
+            'health' => '/api/ai/health',
         ],
 
         // Retry strategy (opcional, futuro)
