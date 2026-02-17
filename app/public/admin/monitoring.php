@@ -277,22 +277,22 @@ $currentPage = 'admin-monitoring';
     new Chart(document.getElementById('requestsChart'), {
         type: 'line',
         data: {
-            labels: <?= json_encode(array_column($timeSeries, 'date')) ?>,
+            labels: <?= json_encode(array_column($timeSeries, 'date'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
             datasets: [{
                 label: 'Total',
-                data: <?= json_encode(array_column($timeSeries, 'requests')) ?>,
+                data: <?= json_encode(array_column($timeSeries, 'requests'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 borderColor: 'rgb(32, 107, 196)',
                 backgroundColor: 'rgba(32, 107, 196, 0.1)',
                 tension: 0.3
             }, {
                 label: 'Sucesso',
-                data: <?= json_encode(array_column($timeSeries, 'successful')) ?>,
+                data: <?= json_encode(array_column($timeSeries, 'successful'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 borderColor: 'rgb(94, 186, 125)',
                 backgroundColor: 'rgba(94, 186, 125, 0.1)',
                 tension: 0.3
             }, {
                 label: 'Erro',
-                data: <?= json_encode(array_column($timeSeries, 'failed')) ?>,
+                data: <?= json_encode(array_column($timeSeries, 'failed'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 borderColor: 'rgb(214, 57, 57)',
                 backgroundColor: 'rgba(214, 57, 57, 0.1)',
                 tension: 0.3
@@ -310,10 +310,10 @@ $currentPage = 'admin-monitoring';
     new Chart(document.getElementById('verticalChart'), {
         type: 'bar',
         data: {
-            labels: <?= json_encode(array_column($byVertical, 'vertical')) ?>,
+            labels: <?= json_encode(array_column($byVertical, 'vertical'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
             datasets: [{
                 label: 'Requisições',
-                data: <?= json_encode(array_column($byVertical, 'requests')) ?>,
+                data: <?= json_encode(array_column($byVertical, 'requests'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 backgroundColor: 'rgba(32, 107, 196, 0.8)'
             }]
         },
@@ -329,9 +329,9 @@ $currentPage = 'admin-monitoring';
     new Chart(document.getElementById('modelChart'), {
         type: 'doughnut',
         data: {
-            labels: <?= json_encode(array_column($byModel, 'model')) ?>,
+            labels: <?= json_encode(array_column($byModel, 'model'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
             datasets: [{
-                data: <?= json_encode(array_column($byModel, 'requests')) ?>,
+                data: <?= json_encode(array_column($byModel, 'requests'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 backgroundColor: [
                     'rgba(32, 107, 196, 0.8)',
                     'rgba(94, 186, 125, 0.8)',
@@ -353,10 +353,10 @@ $currentPage = 'admin-monitoring';
     new Chart(document.getElementById('costChart'), {
         type: 'bar',
         data: {
-            labels: <?= json_encode(array_column($costSeries, 'date')) ?>,
+            labels: <?= json_encode(array_column($costSeries, 'date'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
             datasets: [{
                 label: 'Custo (USD)',
-                data: <?= json_encode(array_column($costSeries, 'cost_usd')) ?>,
+                data: <?= json_encode(array_column($costSeries, 'cost_usd'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
                 backgroundColor: 'rgba(255, 193, 7, 0.8)'
             }]
         },
