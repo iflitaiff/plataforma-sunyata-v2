@@ -15,14 +15,17 @@
 namespace Sunyata\Helpers;
 
 use Sunyata\Core\Database;
+use Sunyata\Core\Cache;
 
 class MetricsHelper
 {
     private Database $db;
+    private bool $useCache;
 
-    public function __construct()
+    public function __construct(bool $useCache = true)
     {
         $this->db = Database::getInstance();
+        $this->useCache = $useCache;
     }
 
     /**
@@ -30,6 +33,14 @@ class MetricsHelper
      */
     public function getOverview(): array
     {
+        // Try cache first (5min TTL)
+        if ($this->useCache) {
+            $cached = Cache::get('metrics:overview');
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
         $data = $this->db->fetchOne("
             SELECT
                 COUNT(*) as all_time_requests,
@@ -45,7 +56,7 @@ class MetricsHelper
             FROM prompt_history
         ");
 
-        return [
+        $result = [
             'last_24h' => [
                 'requests' => (int)($data['last_24h_requests'] ?? 0),
                 'successful' => (int)($data['last_24h_successful'] ?? 0),
@@ -63,6 +74,13 @@ class MetricsHelper
                 'first_request' => $data['first_request'] ?? null,
             ],
         ];
+
+        // Cache for 5 minutes
+        if ($this->useCache) {
+            Cache::set('metrics:overview', $result, 300);
+        }
+
+        return $result;
     }
 
     /**
@@ -109,6 +127,17 @@ class MetricsHelper
      */
     public function getByVertical(): array
     {
+        if (!$this->useCache) {
+            return $this->fetchByVertical();
+        }
+
+        return Cache::remember('metrics:by_vertical', function() {
+            return $this->fetchByVertical();
+        }, 300); // 5min TTL
+    }
+
+    private function fetchByVertical(): array
+    {
         $data = $this->db->fetchAll("
             SELECT
                 vertical,
@@ -140,6 +169,17 @@ class MetricsHelper
      */
     public function getByModel(): array
     {
+        if (!$this->useCache) {
+            return $this->fetchByModel();
+        }
+
+        return Cache::remember('metrics:by_model', function() {
+            return $this->fetchByModel();
+        }, 300); // 5min TTL
+    }
+
+    private function fetchByModel(): array
+    {
         $data = $this->db->fetchAll("
             SELECT
                 COALESCE(claude_model, 'unknown') as model,
@@ -168,6 +208,17 @@ class MetricsHelper
      * Percentis de response time (P50, P95, P99)
      */
     public function getResponseTimePercentiles(): array
+    {
+        if (!$this->useCache) {
+            return $this->fetchPercentiles();
+        }
+
+        return Cache::remember('metrics:percentiles', function() {
+            return $this->fetchPercentiles();
+        }, 300); // 5min TTL
+    }
+
+    private function fetchPercentiles(): array
     {
         $result = $this->db->fetchOne("
             SELECT
