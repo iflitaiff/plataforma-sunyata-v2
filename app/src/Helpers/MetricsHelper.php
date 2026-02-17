@@ -77,6 +77,14 @@ class MetricsHelper
      */
     public function getRequestTimeSeries(int $days = 7): array
     {
+        // Input validation - prevent negative or unreasonable values
+        if ($days < 1) {
+            $days = 1;
+        }
+        if ($days > 365) {
+            $days = 365; // Cap at 1 year
+        }
+
         $data = $this->db->fetchAll("
             SELECT
                 DATE(created_at) as date,
@@ -86,10 +94,10 @@ class MetricsHelper
                 AVG(response_time_ms) as avg_response_ms,
                 SUM(tokens_total) as total_tokens
             FROM prompt_history
-            WHERE created_at > NOW() - INTERVAL '{$days} days'
+            WHERE created_at > NOW() - INTERVAL :interval
             GROUP BY DATE(created_at)
             ORDER BY date ASC
-        ");
+        ", ['interval' => $days . ' days']);
 
         return array_map(function ($row) {
             return [
@@ -196,6 +204,14 @@ class MetricsHelper
      */
     public function getRecentErrors(int $limit = 10): array
     {
+        // Input validation - prevent negative or unreasonable values
+        if ($limit < 1) {
+            $limit = 1;
+        }
+        if ($limit > 100) {
+            $limit = 100; // Cap at 100
+        }
+
         $data = $this->db->fetchAll("
             SELECT
                 vertical,
@@ -205,8 +221,8 @@ class MetricsHelper
             FROM prompt_history
             WHERE error_message IS NOT NULL
             ORDER BY created_at DESC
-            LIMIT {$limit}
-        ");
+            LIMIT :limit
+        ", ['limit' => $limit]);
 
         return array_map(function ($row) {
             return [
@@ -223,16 +239,24 @@ class MetricsHelper
      */
     public function getCostTimeSeries(int $days = 7): array
     {
+        // Input validation - prevent negative or unreasonable values
+        if ($days < 1) {
+            $days = 1;
+        }
+        if ($days > 365) {
+            $days = 365; // Cap at 1 year
+        }
+
         $data = $this->db->fetchAll("
             SELECT
                 DATE(created_at) as date,
                 SUM(cost_usd) as daily_cost,
                 SUM(tokens_total) as daily_tokens
             FROM prompt_history
-            WHERE created_at > NOW() - INTERVAL '{$days} days'
+            WHERE created_at > NOW() - INTERVAL :interval
             GROUP BY DATE(created_at)
             ORDER BY date ASC
-        ");
+        ", ['interval' => $days . ' days']);
 
         return array_map(function ($row) {
             return [
