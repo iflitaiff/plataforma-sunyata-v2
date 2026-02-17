@@ -307,7 +307,8 @@ class Cache
         }
 
         try {
-            return $redis->ping() === '+PONG';
+            // ping() returns true on success (not '+PONG' string)
+            return $redis->ping() === true || $redis->ping() === '+PONG';
         } catch (Exception $e) {
             return false;
         }
