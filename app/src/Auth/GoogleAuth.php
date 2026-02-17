@@ -179,17 +179,11 @@ class GoogleAuth {
         // Regenerate session ID for security
         session_regenerate_id(true);
 
-        // Hardcoded admin override (temporary — move to DB when user management is ready)
-        $effectiveAccessLevel = is_admin_email($user['email'])
-            ? 'admin'
-            : $user['access_level'];
-
-        // Set session variables
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['email'] = $user['email'];
         $_SESSION['name'] = $user['name'];
         $_SESSION['picture'] = $user['picture'];
-        $_SESSION['access_level'] = $effectiveAccessLevel;
+        $_SESSION['access_level'] = $user['access_level'];
         $_SESSION['logged_in_at'] = time();
 
         // Set user array for compatibility with require_login() and other checks
@@ -199,7 +193,7 @@ class GoogleAuth {
             'name' => $user['name'],
             'picture' => $user['picture'],
             'google_id' => $user['google_id'],
-            'access_level' => $effectiveAccessLevel,
+            'access_level' => $user['access_level'],
             'completed_onboarding' => $user['completed_onboarding'] ?? false,
             'selected_vertical' => $user['selected_vertical'] ?? null
         ];

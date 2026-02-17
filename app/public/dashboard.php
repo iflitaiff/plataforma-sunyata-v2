@@ -68,7 +68,7 @@ $activeNav = 'dashboard';
 
 $user_vertical = $_SESSION['user']['selected_vertical'] ?? null;
 $is_demo = $_SESSION['user']['is_demo'] ?? false;
-$is_admin = ($currentUser['access_level'] === 'admin') || is_admin_email($currentUser['email'] ?? '');
+$is_admin = ($currentUser['access_level'] === 'admin');
 $completed_onboarding = $_SESSION['user']['completed_onboarding'] ?? false;
 
 $verticalManager = VerticalManager::getInstance();

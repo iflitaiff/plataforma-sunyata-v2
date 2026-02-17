@@ -7,7 +7,7 @@
 
 $user = $_SESSION['user'] ?? [];
 $userVertical = $user['selected_vertical'] ?? null;
-$isAdmin = ($user['access_level'] ?? '') === 'admin' || is_admin_email($user['email'] ?? '');
+$isAdmin = ($user['access_level'] ?? '') === 'admin';
 
 // Build navigation items
 $navItems = [

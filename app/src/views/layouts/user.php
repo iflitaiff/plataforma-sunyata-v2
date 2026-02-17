@@ -31,7 +31,7 @@ if (!empty($_SERVER['HTTP_HX_REQUEST'])) {
 $contentCallback = function () use (&$pageContent) {
     global $activeNav;
     $user = $_SESSION['user'] ?? [];
-    $isAdmin = ($user['access_level'] ?? '') === 'admin' || is_admin_email($user['email'] ?? '');
+    $isAdmin = ($user['access_level'] ?? '') === 'admin';
 ?>
     <div class="page">
         <!-- Navbar -->
