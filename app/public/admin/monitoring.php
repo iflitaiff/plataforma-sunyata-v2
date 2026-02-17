@@ -3,25 +3,40 @@
  * Monitoring Dashboard - Métricas de uso do sistema AI
  */
 
-require_once __DIR__ . '/../../config/secrets.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../config/config.php';
 
-use Sunyata\Core\{Session, Auth};
 use Sunyata\Helpers\MetricsHelper;
 
-Session::start();
+session_name(SESSION_NAME);
+session_start();
 
-// Require admin authentication
-if (!Auth::isAuthenticated()) {
-    header('Location: /login');
-    exit;
-}
+// Require authentication
+require_login();
 
 // Check admin access level
-$currentUser = Auth::getCurrentUser();
-if (!isset($currentUser['access_level']) || $currentUser['access_level'] !== 'admin') {
+if (!has_access('admin')) {
     http_response_code(403);
-    die('Access denied: Admin only');
+    header('Content-Type: text/html; charset=utf-8');
+    die('
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Access Denied</title>
+        <link rel="stylesheet" href="/css/tabler.min.css">
+    </head>
+    <body>
+        <div class="container-tight py-5">
+            <div class="text-center mb-4">
+                <h1 class="text-danger">Access Denied</h1>
+                <p class="text-muted">This page requires admin privileges.</p>
+                <a href="/dashboard.php" class="btn btn-primary mt-3">Return to Dashboard</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    ');
 }
 
 // Fetch metrics
