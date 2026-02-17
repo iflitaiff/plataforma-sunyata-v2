@@ -30,44 +30,37 @@ class MetricsHelper
      */
     public function getOverview(): array
     {
-        // Last 24h
-        $last24h = $this->db->fetchOne("
+        $data = $this->db->fetchOne("
             SELECT
-                COUNT(*) as total_requests,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
-                COUNT(CASE WHEN status = 'error' OR error_message IS NOT NULL THEN 1 END) as failed,
-                AVG(response_time_ms) as avg_response_ms,
-                SUM(tokens_total) as total_tokens,
-                SUM(cost_usd) as total_cost
-            FROM prompt_history
-            WHERE created_at > NOW() - INTERVAL '24 hours'
-        ");
+                COUNT(*) as all_time_requests,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as all_time_successful,
+                MIN(created_at) as first_request,
 
-        // All time
-        $allTime = $this->db->fetchOne("
-            SELECT
-                COUNT(*) as total_requests,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful,
-                MIN(created_at) as first_request
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as last_24h_requests,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as last_24h_successful,
+                COUNT(CASE WHEN status = 'error' OR error_message IS NOT NULL THEN 1 END) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as last_24h_failed,
+                AVG(response_time_ms) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as last_24h_avg_response_ms,
+                SUM(tokens_total) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as last_24h_total_tokens,
+                SUM(cost_usd) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as last_24h_total_cost
             FROM prompt_history
         ");
 
         return [
             'last_24h' => [
-                'requests' => (int)($last24h['total_requests'] ?? 0),
-                'successful' => (int)($last24h['successful'] ?? 0),
-                'failed' => (int)($last24h['failed'] ?? 0),
-                'success_rate' => $last24h['total_requests'] > 0
-                    ? round(($last24h['successful'] / $last24h['total_requests']) * 100, 1)
+                'requests' => (int)($data['last_24h_requests'] ?? 0),
+                'successful' => (int)($data['last_24h_successful'] ?? 0),
+                'failed' => (int)($data['last_24h_failed'] ?? 0),
+                'success_rate' => ($data['last_24h_requests'] ?? 0) > 0
+                    ? round((($data['last_24h_successful'] ?? 0) / $data['last_24h_requests']) * 100, 1)
                     : 0,
-                'avg_response_ms' => round($last24h['avg_response_ms'] ?? 0),
-                'total_tokens' => (int)($last24h['total_tokens'] ?? 0),
-                'total_cost_usd' => round($last24h['total_cost'] ?? 0, 4),
+                'avg_response_ms' => round($data['last_24h_avg_response_ms'] ?? 0),
+                'total_tokens' => (int)($data['last_24h_total_tokens'] ?? 0),
+                'total_cost_usd' => round($data['last_24h_total_cost'] ?? 0, 4),
             ],
             'all_time' => [
-                'requests' => (int)($allTime['total_requests'] ?? 0),
-                'successful' => (int)($allTime['successful'] ?? 0),
-                'first_request' => $allTime['first_request'] ?? null,
+                'requests' => (int)($data['all_time_requests'] ?? 0),
+                'successful' => (int)($data['all_time_successful'] ?? 0),
+                'first_request' => $data['first_request'] ?? null,
             ],
         ];
     }
@@ -125,10 +118,10 @@ class MetricsHelper
                 SUM(cost_usd) as total_cost,
                 AVG(response_time_ms) as avg_response_ms
             FROM prompt_history
-            WHERE created_at > NOW() - INTERVAL '24 hours'
+            WHERE created_at > NOW() - INTERVAL :interval
             GROUP BY vertical
             ORDER BY requests DESC
-        ");
+        ", ['interval' => '24 hours']);
 
         return array_map(function ($row) {
             return [
@@ -155,10 +148,10 @@ class MetricsHelper
                 SUM(tokens_total) as total_tokens,
                 SUM(cost_usd) as total_cost
             FROM prompt_history
-            WHERE created_at > NOW() - INTERVAL '24 hours'
+            WHERE created_at > NOW() - INTERVAL :interval
             GROUP BY claude_model
             ORDER BY requests DESC
-        ");
+        ", ['interval' => '24 hours']);
 
         return array_map(function ($row) {
             return [
@@ -185,9 +178,9 @@ class MetricsHelper
                 MAX(response_time_ms) as max,
                 AVG(response_time_ms) as avg
             FROM prompt_history
-            WHERE created_at > NOW() - INTERVAL '24 hours'
+            WHERE created_at > NOW() - INTERVAL :interval
             AND response_time_ms IS NOT NULL
-        ");
+        ", ['interval' => '24 hours']);
 
         return [
             'p50' => round($result['p50'] ?? 0),
