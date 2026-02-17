@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/config.php';
 
+use Sunyata\Core\RateLimiter;
 use Sunyata\Helpers\MetricsHelper;
 
 session_name(SESSION_NAME);
@@ -37,6 +38,16 @@ if (!has_access('admin')) {
     </body>
     </html>
     ');
+}
+
+// Rate limiting - monitoring dashboard (30/min per user)
+$limiter = new RateLimiter();
+$userId = $_SESSION['user_id'] ?? 0;
+$rate = $limiter->check("monitoring:view:$userId", 30, 60);
+if (!$rate['allowed']) {
+    http_response_code(429);
+    header('Content-Type: text/plain; charset=utf-8');
+    die('Too many requests. Please refresh in a minute.');
 }
 
 // Fetch metrics
