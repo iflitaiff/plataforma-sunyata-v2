@@ -11,6 +11,7 @@ session_name(SESSION_NAME);
 session_start();
 
 use Sunyata\Core\Database;
+use Sunyata\Core\RateLimiter;
 use Sunyata\Helpers\ClaudeFacade;
 use Sunyata\Services\DocumentProcessorService;
 use Sunyata\Services\SubmissionService;
@@ -52,6 +53,24 @@ $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
 if (empty($csrfToken) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'CSRF token inválido']);
+    exit;
+}
+
+// Rate limiting - canvas submission (10/min per user)
+$limiter = new RateLimiter();
+$userId = $_SESSION['user_id'];
+$rate = $limiter->check("canvas:submit:$userId", 10, 60);
+if (!$rate['allowed']) {
+    http_response_code(429);
+    header('Content-Type: application/json');
+    if (!empty($rate['retry_after'])) {
+        header('Retry-After: ' . $rate['retry_after']);
+    }
+    echo json_encode([
+        'success' => false,
+        'error' => 'Muitas requisições. Aguarde antes de enviar novamente.',
+        'retry_after' => $rate['retry_after'] ?? 0,
+    ]);
     exit;
 }
 
