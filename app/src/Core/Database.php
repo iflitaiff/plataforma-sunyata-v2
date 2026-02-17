@@ -15,6 +15,62 @@ class Database {
     private $pdo;
     private $dsn;
 
+    /**
+     * Whitelist de tabelas permitidas (proteção contra SQL injection)
+     */
+    private const ALLOWED_TABLES = [
+        'users',
+        'canvas_templates',
+        'prompt_history',
+        'form_drafts',
+        'settings',
+        'verticals',
+        'conversations',
+        'conversation_messages',
+    ];
+
+    /**
+     * Whitelist de colunas por tabela (proteção contra SQL injection)
+     */
+    private const ALLOWED_COLUMNS = [
+        'users' => [
+            'id', 'google_id', 'email', 'name', 'picture', 'password_hash',
+            'access_level', 'selected_vertical', 'completed_onboarding',
+            'is_demo', 'created_at', 'updated_at', 'last_login'
+        ],
+        'canvas_templates' => [
+            'id', 'vertical_slug', 'slug', 'name', 'description', 'icon',
+            'form_config', 'system_prompt', 'output_format', 'requires_approval',
+            'approval_flow', 'api_params_override', 'created_at', 'updated_at', 'active'
+        ],
+        'prompt_history' => [
+            'id', 'user_id', 'vertical', 'tool_name', 'input_data', 'generated_prompt',
+            'claude_response', 'claude_model', 'temperature', 'max_tokens', 'top_p',
+            'system_prompt_sent', 'tokens_input', 'tokens_output', 'tokens_total',
+            'cost_usd', 'response_time_ms', 'status', 'error_message',
+            'ip_address', 'user_agent', 'created_at'
+        ],
+        'form_drafts' => [
+            'id', 'user_id', 'canvas_template_id', 'label', 'form_data',
+            'page_no', 'created_at', 'updated_at', 'expires_at'
+        ],
+        'settings' => [
+            'id', 'setting_key', 'setting_value', 'data_type', 'description',
+            'created_at', 'updated_at'
+        ],
+        'verticals' => [
+            'id', 'slug', 'name', 'icon', 'description', 'active',
+            'config', 'created_at', 'updated_at'
+        ],
+        'conversations' => [
+            'id', 'user_id', 'vertical', 'canvas_template_id', 'title',
+            'created_at', 'updated_at'
+        ],
+        'conversation_messages' => [
+            'id', 'conversation_id', 'role', 'content', 'created_at'
+        ],
+    ];
+
     private function __construct() {
         $this->connect();
     }
@@ -121,7 +177,48 @@ class Database {
         return $this->query($sql, $params)->fetchAll();
     }
 
+    /**
+     * Valida nome de tabela contra whitelist
+     *
+     * @param string $table Nome da tabela
+     * @throws \Exception Se tabela não está na whitelist
+     */
+    private function validateTable(string $table): void {
+        if (!in_array($table, self::ALLOWED_TABLES, true)) {
+            error_log("Security: Tentativa de acesso a tabela não permitida: {$table}");
+            throw new \Exception("Invalid table name: {$table}");
+        }
+    }
+
+    /**
+     * Valida nomes de colunas contra whitelist da tabela
+     *
+     * @param string $table Nome da tabela
+     * @param array $columns Array de nomes de colunas
+     * @throws \Exception Se alguma coluna não está na whitelist
+     */
+    private function validateColumns(string $table, array $columns): void {
+        if (!isset(self::ALLOWED_COLUMNS[$table])) {
+            error_log("Security: Tabela sem whitelist de colunas definida: {$table}");
+            throw new \Exception("No column whitelist defined for table: {$table}");
+        }
+
+        $allowedColumns = self::ALLOWED_COLUMNS[$table];
+
+        foreach ($columns as $column) {
+            if (!in_array($column, $allowedColumns, true)) {
+                error_log("Security: Tentativa de acesso a coluna não permitida: {$table}.{$column}");
+                throw new \Exception("Invalid column name for table {$table}: {$column}");
+            }
+        }
+    }
+
     public function insert($table, $data) {
+        // Validação de segurança contra SQL injection
+        $this->validateTable($table);
+        $this->validateColumns($table, array_keys($data));
+
+        // Agora é seguro usar os valores validados
         $keys = array_keys($data);
         $fields = implode(', ', $keys);
         $placeholders = implode(', ', array_map(fn($k) => ":$k", $keys));
@@ -134,6 +231,11 @@ class Database {
     }
 
     public function update($table, $data, $where, $whereParams = []) {
+        // Validação de segurança contra SQL injection
+        $this->validateTable($table);
+        $this->validateColumns($table, array_keys($data));
+
+        // Agora é seguro usar os valores validados
         $set = implode(', ', array_map(fn($k) => "$k = :$k", array_keys($data)));
         $sql = "UPDATE $table SET $set WHERE $where";
 
@@ -144,6 +246,10 @@ class Database {
     }
 
     public function delete($table, $where, $whereParams = []) {
+        // Validação de segurança contra SQL injection
+        $this->validateTable($table);
+
+        // Agora é seguro usar o nome da tabela validado
         $sql = "DELETE FROM $table WHERE $where";
         $stmt = $this->query($sql, $whereParams);
 
