@@ -27,6 +27,8 @@ class Database {
         'verticals',
         'conversations',
         'conversation_messages',
+        'audit_logs',
+        'sessions',
     ];
 
     /**
@@ -68,6 +70,14 @@ class Database {
         ],
         'conversation_messages' => [
             'id', 'conversation_id', 'role', 'content', 'created_at'
+        ],
+        'audit_logs' => [
+            'id', 'user_id', 'action', 'entity_type', 'entity_id',
+            'ip_address', 'user_agent', 'details', 'created_at'
+        ],
+        'sessions' => [
+            'id', 'user_id', 'ip_address', 'user_agent',
+            'last_activity', 'created_at'
         ],
     ];
 
