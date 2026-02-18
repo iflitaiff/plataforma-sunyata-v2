@@ -118,7 +118,7 @@ async def _save_to_history(
                 user_id,
                 vertical,
                 f"canvas_template_{template_id}",  # tool_name
-                form_data,  # input_data (JSONB)
+                json.dumps(form_data),  # input_data (JSONB - must be JSON string)
                 generated_prompt,  # generated_prompt (TEXT)
                 response,  # claude_response
                 model,  # claude_model
