@@ -44,7 +44,7 @@ async def _build_prompt(
                 """
                 SELECT system_prompt, form_config
                 FROM canvas_templates
-                WHERE id = $1 AND vertical_slug = $2
+                WHERE id = $1 AND vertical = $2
                 """,
                 template_id,
                 vertical,
