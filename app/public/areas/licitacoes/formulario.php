@@ -469,10 +469,20 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                             }
                         }, 60000);
 
-                        const response = await fetch('<?= BASE_URL ?>/api/canvas/submit.php' + debugParam, {
+                        const response = await fetch('<?= BASE_URL ?>/api/ai/canvas/submit' + debugParam, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
-                            body: JSON.stringify({ canvas_id: <?= $canvas['id'] ?>, form_data: formData, plain_data: sender.getPlainData() }),
+                            headers: { 
+                                'Content-Type': 'application/json', 
+                                'X-CSRF-Token': '<?= csrf_token() ?>',
+                                'X-Internal-Key': '<?= getenv("INTERNAL_API_KEY") ?: "dev-key-change-in-production" ?>'
+                            },
+                            body: JSON.stringify({ 
+                                vertical: 'licitacoes',
+                                template_id: <?= $canvas['id'] ?>,
+                                user_id: <?= $_SESSION['user']['id'] ?? 0 ?>,
+                                data: formData,
+                                stream: false
+                            }),
                             signal: controller.signal
                         });
 
@@ -490,11 +500,19 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                         document.getElementById('loadingContainer').style.display = 'none';
 
                         if (result.success) {
-                            if (result.debug_info) {
-                                document.getElementById('debugSystemPrompt').textContent = result.debug_info.system_prompt;
-                                document.getElementById('debugUserPrompt').textContent = result.debug_info.user_prompt;
-                                const m = result.debug_info.metadata;
-                                document.getElementById('debugMetadata').innerHTML = `<div><strong>Modelo:</strong> ${m.model} | <strong>Input:</strong> ${m.input_tokens} | <strong>Output:</strong> ${m.output_tokens} | <strong>Tempo:</strong> ${m.execution_time} | <strong>Custo:</strong> ${m.cost}</div>`;
+                            const debugMode = <?= $debug_mode ? 'true' : 'false' ?>;
+                            if (debugMode && result.model) {
+                                document.getElementById('debugSystemPrompt').textContent = '(System prompt não disponível no modo FastAPI)';
+                                document.getElementById('debugUserPrompt').textContent = '(User prompt não disponível no modo FastAPI)';
+                                document.getElementById('debugMetadata').innerHTML = `
+                                    <div class="debug-badge"><strong>Modelo:</strong> ${result.model || 'N/A'}</div>
+                                    <div class="debug-badge"><strong>Input:</strong> ${result.usage?.input_tokens || 0} tokens</div>
+                                    <div class="debug-badge"><strong>Output:</strong> ${result.usage?.output_tokens || 0} tokens</div>
+                                    <div class="debug-badge"><strong>Total:</strong> ${result.usage?.total_tokens || 0} tokens</div>
+                                    <div class="debug-badge"><strong>Tempo:</strong> ${result.response_time_ms || 0}ms</div>
+                                    <div class="debug-badge"><strong>Custo:</strong> $${(result.cost_usd || 0).toFixed(4)}</div>
+                                    <div class="debug-badge"><strong>History ID:</strong> ${result.history_id || 'N/A'}</div>
+                                `;
                                 document.getElementById('debugContainer').style.display = 'block';
                             }
                             document.getElementById('claudeResponse').innerHTML = renderResponse(result.response);
