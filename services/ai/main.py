@@ -19,7 +19,7 @@ load_dotenv()
 
 from app.config import settings
 from app.database import close_pool, get_pool
-from app.routers import documents, generate, pncp, stream
+from app.routers import canvas, documents, generate, pncp, stream
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -58,6 +58,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Mount routers
 app.include_router(generate.router, prefix="/api/ai", tags=["generate"])
 app.include_router(stream.router, prefix="/api/ai", tags=["stream"])
+app.include_router(canvas.router, prefix="/api/ai", tags=["canvas"])
 app.include_router(documents.router, prefix="/api/ai", tags=["documents"])
 app.include_router(pncp.router, prefix="/api/ai", tags=["pncp"])
 

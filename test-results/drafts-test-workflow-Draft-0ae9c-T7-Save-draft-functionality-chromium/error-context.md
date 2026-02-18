@@ -1,0 +1,233 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Plataforma Sunyata" [ref=e5] [cursor=pointer]:
+        - /url: http://158.69.25.114/dashboard.php
+        - generic [ref=e6]: Plataforma Sunyata
+      - generic [ref=e7]:
+        - link " Admin" [ref=e9] [cursor=pointer]:
+          - /url: http://158.69.25.114/admin/
+          - generic [ref=e10]: 
+          - text: Admin
+        - generic [ref=e11]:
+          - link "A Administrador Admin" [ref=e12] [cursor=pointer]:
+            - /url: "#"
+            - generic [ref=e13]: A
+            - generic [ref=e14]:
+              - generic [ref=e15]: Administrador
+              - generic [ref=e16]: Admin
+          - text:   
+  - generic [ref=e20]:
+    - generic [ref=e24]:
+      - link " Dashboard" [ref=e25] [cursor=pointer]:
+        - /url: http://158.69.25.114/dashboard.php
+        - generic [ref=e26]: 
+        - text: Dashboard
+      - link " Meu Trabalho" [ref=e27] [cursor=pointer]:
+        - /url: http://158.69.25.114/meu-trabalho/
+        - generic [ref=e28]: 
+        - text: Meu Trabalho
+      - link " Meus Documentos" [ref=e29] [cursor=pointer]:
+        - /url: http://158.69.25.114/meus-documentos/
+        - generic [ref=e30]: 
+        - text: Meus Documentos
+      - generic [ref=e31]: Docência
+      - link " Canvas Docente" [ref=e32] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/docencia/
+        - generic [ref=e33]: 
+        - text: Canvas Docente
+      - link " Canvas Pesquisa" [ref=e34] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/docencia/
+        - generic [ref=e35]: 
+        - text: Canvas Pesquisa
+      - link " Biblioteca de Prompts (Jogos)" [ref=e36] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/docencia/
+        - generic [ref=e37]: 
+        - text: Biblioteca de Prompts (Jogos)
+      - link " Guia de Prompts (Jogos)" [ref=e38] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/docencia/
+        - generic [ref=e39]: 
+        - text: Guia de Prompts (Jogos)
+      - link " Repositório de Prompts" [ref=e40] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/docencia/
+        - generic [ref=e41]: 
+        - text: Repositório de Prompts
+      - generic [ref=e42]: Pesquisa
+      - link " Canvas Docente" [ref=e43] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/pesquisa/
+        - generic [ref=e44]: 
+        - text: Canvas Docente
+      - link " Canvas Pesquisa" [ref=e45] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/pesquisa/
+        - generic [ref=e46]: 
+        - text: Canvas Pesquisa
+      - link " Repositório de Prompts" [ref=e47] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/pesquisa/
+        - generic [ref=e48]: 
+        - text: Repositório de Prompts
+      - generic [ref=e49]: IFRJ - Alunos
+      - link " Biblioteca de Prompts (Jogos)" [ref=e50] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/ifrj_alunos/
+        - generic [ref=e51]: 
+        - text: Biblioteca de Prompts (Jogos)
+      - link " Guia de Prompts (Jogos)" [ref=e52] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/ifrj_alunos/
+        - generic [ref=e53]: 
+        - text: Guia de Prompts (Jogos)
+      - link " Canvas Pesquisa" [ref=e54] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/ifrj_alunos/
+        - generic [ref=e55]: 
+        - text: Canvas Pesquisa
+      - link " Repositório de Prompts" [ref=e56] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/ifrj_alunos/
+        - generic [ref=e57]: 
+        - text: Repositório de Prompts
+      - generic [ref=e58]: Jurídico
+      - link " Canvas Jurídico" [ref=e59] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/juridico/
+        - generic [ref=e60]: 
+        - text: Canvas Jurídico
+      - link " Guia de Prompts (Jurídico)" [ref=e61] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/juridico/
+        - generic [ref=e62]: 
+        - text: Guia de Prompts (Jurídico)
+      - link " Padrões Avançados (Jurídico)" [ref=e63] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/juridico/
+        - generic [ref=e64]: 
+        - text: Padrões Avançados (Jurídico)
+      - link " Repositório de Prompts" [ref=e65] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/juridico/
+        - generic [ref=e66]: 
+        - text: Repositório de Prompts
+      - generic [ref=e67]: Licitações
+      - link " Resumo Executivo de Edital" [ref=e68] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/licitacoes/
+        - generic [ref=e69]: 
+        - text: Resumo Executivo de Edital
+      - link " Análise de Habilitação" [ref=e70] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/licitacoes/
+        - generic [ref=e71]: 
+        - text: Análise de Habilitação
+      - link " Monitor PNCP" [ref=e72] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/licitacoes/
+        - generic [ref=e73]: 
+        - text: Monitor PNCP
+      - generic [ref=e74]: IATR
+      - link " Canvas Jurídico v2" [ref=e75] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/iatr/
+        - generic [ref=e76]: 
+        - text: Canvas Jurídico v2
+      - link " Resumo Executivo de Edital" [ref=e77] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/iatr/
+        - generic [ref=e78]: 
+        - text: Resumo Executivo de Edital
+      - link " Análise de Habilitação" [ref=e79] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/iatr/
+        - generic [ref=e80]: 
+        - text: Análise de Habilitação
+      - link " Monitor PNCP" [ref=e81] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/iatr/
+        - generic [ref=e82]: 
+        - text: Monitor PNCP
+      - generic [ref=e83]: Administrativo
+      - link " gpbV6 - Framework de Delimitação" [ref=e84] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/prompt-builder/
+        - generic [ref=e85]: 
+        - text: gpbV6 - Framework de Delimitação
+      - link " Treinamento EP - Engenharia de Prompts" [ref=e86] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/prompt-builder/
+        - generic [ref=e87]: 
+        - text: Treinamento EP - Engenharia de Prompts
+      - generic [ref=e88]: Nicolay Advogados
+      - link " Canvas Jurídico" [ref=e89] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/nicolay-advogados/
+        - generic [ref=e90]: 
+        - text: Canvas Jurídico
+      - generic [ref=e91]: Legal
+      - link " Canvas Jurídico" [ref=e92] [cursor=pointer]:
+        - /url: http://158.69.25.114/areas/legal/
+        - generic [ref=e93]: 
+        - text: Canvas Jurídico
+    - generic [ref=e96]:
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - link "← Voltar para IATR" [ref=e100] [cursor=pointer]:
+            - /url: http://158.69.25.114/areas/iatr/index.php
+          - button "Meus Rascunhos" [ref=e101] [cursor=pointer]
+        - generic [ref=e102]:
+          - link "🏠 Dashboard" [ref=e103] [cursor=pointer]:
+            - /url: http://158.69.25.114/dashboard.php
+          - link "🚪 Sair" [ref=e104] [cursor=pointer]:
+            - /url: http://158.69.25.114/logout.php
+      - generic [ref=e105]: v1.0
+      - generic [ref=e113]:
+        - generic [ref=e115]:
+          - generic "⚖️ Canvas Jurídico Geral" [ref=e116]
+          - generic [ref=e117]: Canvas versátil para análise jurídica assistida por IA. Ideal para casos que não se encaixam em templates especializados. Os campos contêm exemplos didáticos que você pode substituir pelo seu caso real.
+        - generic [ref=e119]:
+          - generic [ref=e121]:
+            - progressbar "Progress bar"
+            - generic [ref=e122]: Answered 0/7 questions
+          - generic [ref=e123]:
+            - group "page1" [ref=e128]:
+              - generic [ref=e131]:
+                - generic [ref=e132]:
+                  - generic [ref=e133]: Tarefa/Objetivo Jurídico *
+                  - generic [ref=e134]: "💡 O que incluir: Especifique claramente a área do direito, tipo de análise desejada (parecer, petição, consultoria, etc.) e objetivo final. Quanto mais específico, melhor a análise."
+                - textbox "Tarefa/Objetivo Jurídico" [active] [ref=e135]:
+                  - /placeholder: Elaborar parecer sobre viabilidade de rescisão antecipada de contrato de locação comercial com negociação de multa rescisória reduzida
+                  - text: Draft Save Test - 1771414794854
+                - generic [ref=e136]: 31/10000
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - generic [ref=e141]: Contexto & Cliente *
+                  - generic [ref=e142]: "💡 Elementos essenciais: Perfil do cliente (PF/PJ, porte, ramo de atividade) Partes envolvidas e relação jurídica entre elas Situação fática atual e cronologia relevante Valores envolvidos e impacto econômico Interesse/objetivo do cliente"
+                - textbox "Contexto & Cliente" [ref=e143]:
+                  - /placeholder: "Cliente: pessoa jurídica do ramo alimentício (restaurante), MEI, 15 funcionários | Contrato: locação comercial vigente há 3 anos de imóvel de 200m² em shopping center | Situação: cliente deseja encerrar contrato 18 meses antes do término por mudança de estratégia empresarial (pivô para delivery) | Cláusula penal: 12 aluguéis (R$ 180mil total) | Locador: pessoa física, resistente à negociação inicial"
+              - textbox "Upload de Documentos" [ref=e146]:
+                - generic [ref=e147]:
+                  - generic [ref=e148]: Upload de Documentos
+                  - generic [ref=e149]: "💡 Documentos úteis: Contratos • Notificações • Correspondências • Jurisprudência • Pareceres anteriores • Documentos societários"
+                - generic [ref=e150]:
+                  - button "Select File" [ref=e151]
+                  - generic [ref=e152]:
+                    - generic [ref=e153]: Clique ou arraste arquivos aqui (PDF, DOC, DOCX - máx. 10MB cada)
+                    - generic "Select File" [ref=e158] [cursor=pointer]:
+                      - generic [ref=e160]: Select File
+              - generic [ref=e163]:
+                - generic [ref=e164]:
+                  - generic [ref=e165]: Materiais & Informações Disponíveis
+                  - generic [ref=e166]: "💡 Liste tudo que tiver: Documentos já mencionados no upload, precedentes conhecidos, pareceres anteriores, consultas já realizadas, informações complementares relevantes."
+                - textbox "Materiais & Informações Disponíveis" [ref=e167]:
+                  - /placeholder: "Disponível: contrato de locação original (assinado em 2022), 3 e-mails trocados com locador sobre rescisão, cláusula penal específica (cláusula 12.3 - multa de 12 aluguéis), comprovantes de pagamento dos últimos 36 meses (sem inadimplência), jurisprudência TJRJ sobre abrandamento de multa em casos de força maior econômica"
+              - generic [ref=e170]:
+                - generic [ref=e171]:
+                  - generic [ref=e172]: Restrições, Prazos & Marco Legal
+                  - generic [ref=e173]: "💡 Informe: Prazos processuais ou negociais, legislação aplicável, restrições orçamentárias, limitações estratégicas, relações que devem ser preservadas."
+                - textbox "Restrições, Prazos & Marco Legal" [ref=e174]:
+                  - /placeholder: "Prazo: 30 dias para negociação amigável antes de eventual litígio | Marco legal: Lei do Inquilinato (Lei 8.245/91), Código Civil (arts. 411-416 sobre cláusula penal) | Restrições: cliente prefere evitar judicialização se possível, orçamento limitado para honorários advocatícios (max R$ 15mil), relação comercial com shopping deve ser preservada para futuras oportunidades"
+              - generic [ref=e177]:
+                - generic [ref=e178]:
+                  - generic [ref=e179]: Formato da Entrega Desejado
+                  - generic [ref=e180]: "💡 Formatos comuns: Parecer técnico • Memorando • Petição • Minuta de contrato • Análise de riscos • Checklist • Estratégia processual"
+                - textbox "Formato da Entrega Desejado" [ref=e181]:
+                  - /placeholder: "Parecer jurídico estruturado contendo: (1) Análise da viabilidade jurídica da rescisão antecipada, (2) Matriz de riscos e cenários (melhor/pior caso), (3) Estratégia de negociação recomendada com argumentos jurídicos para redução da multa, (4) Minuta de notificação extrajudicial ao locador, (5) Alternativas em caso de fracasso da negociação"
+              - generic [ref=e184]:
+                - generic [ref=e185]:
+                  - generic [ref=e186]: Critérios de Qualidade & Sucesso
+                  - generic [ref=e187]: "💡 Como avaliar qualidade: Nível de fundamentação técnica, linguagem adequada ao público, completude da análise, viabilidade prática das recomendações, alinhamento com objetivos estratégicos."
+                - textbox "Critérios de Qualidade & Sucesso" [ref=e188]:
+                  - /placeholder: Fundamentação legal sólida e atualizada | Linguagem acessível ao cliente (não advogado) | Análise de jurisprudência recente do TJRJ sobre tema específico | Identificação clara de riscos financeiros e probabilidade de sucesso | Argumentação prática para negociação (não apenas teórica) | Soluções criativas dentro dos limites legais
+            - button "Gerar Análise Jurídica" [ref=e193] [cursor=pointer]
+      - generic [ref=e196]:
+        - heading "💬 Precisa de ajuda?" [level=4] [ref=e197]
+        - paragraph [ref=e198]: "Para reportar erros, esclarecer dúvidas e sugestões:"
+        - generic [ref=e199]:
+          - link "📱 WhatsApp" [ref=e200] [cursor=pointer]:
+            - /url: https://chat.whatsapp.com/HEyyAyoS4bb6ycTMs0kLWq?mode=wwc
+          - link "📧 Email" [ref=e201] [cursor=pointer]:
+            - /url: mailto:contato@sunyataconsulting.com
+```
