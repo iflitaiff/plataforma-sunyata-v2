@@ -20,55 +20,62 @@ const CREDENTIALS_USER = {
  * Login as admin
  */
 async function loginAsAdmin(page) {
-  await page.goto(`${BASE_URL}/auth/login`);
+  // Navigate directly to login page (not via /auth/login landing page)
+  await page.goto(`${BASE_URL}/login.php`);
   await page.waitForLoadState('networkidle');
-  
-  // Click "Entrar com Email"
-  const emailBtn = page.locator('a:has-text("Entrar com Email")').first();
-  if (await emailBtn.isVisible()) {
-    await emailBtn.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  }
-  
-  // Fill credentials
-  await page.fill('input[name="email"], input[id*="email"], input[type="email"]', CREDENTIALS_ADMIN.email);
-  await page.fill('input[name="password"], input[id*="password"], input[type="password"]', CREDENTIALS_ADMIN.password);
-  
-  // Submit
-  const submitBtn = page.locator('button[type="submit"]:has-text("Entrar"), button:has-text("Entrar")').first();
+  await page.waitForTimeout(1000);
+
+  // Fill credentials (login tab should be active by default)
+  const emailInput = page.locator('input[type="email"], input[name="email"], input#login-email').first();
+  await emailInput.fill(CREDENTIALS_ADMIN.email);
+
+  const passwordInput = page.locator('input[type="password"], input[name="password"], input#login-password').first();
+  await passwordInput.fill(CREDENTIALS_ADMIN.password);
+
+  // Submit form
+  const submitBtn = page.locator('button[type="submit"]:has-text("Entrar")').first();
   await submitBtn.click();
-  
-  // Wait for navigation
-  await page.waitForURL('**/dashboard', { timeout: 10000 }).catch(() => {
-    // May redirect elsewhere, that's OK
-  });
+
+  // Wait for navigation and authentication to complete
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2000);
+
+  // Verify login succeeded (should not be on login page anymore)
+  const currentUrl = page.url();
+  if (currentUrl.includes('login.php') || currentUrl.includes('m=login_required')) {
+    throw new Error(`Login failed - still on login page: ${currentUrl}`);
+  }
 }
 
 /**
  * Login as regular user
  */
 async function loginAsUser(page) {
-  await page.goto(`${BASE_URL}/auth/login`);
+  // Navigate directly to login page
+  await page.goto(`${BASE_URL}/login.php`);
   await page.waitForLoadState('networkidle');
-  
-  const emailBtn = page.locator('a:has-text("Entrar com Email")').first();
-  if (await emailBtn.isVisible()) {
-    await emailBtn.click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-  }
-  
-  await page.fill('input[name="email"], input[id*="email"], input[type="email"]', CREDENTIALS_USER.email);
-  await page.fill('input[name="password"], input[id*="password"], input[type="password"]', CREDENTIALS_USER.password);
-  
-  const submitBtn = page.locator('button[type="submit"]:has-text("Entrar"), button:has-text("Entrar")').first();
+  await page.waitForTimeout(1000);
+
+  // Fill credentials
+  const emailInput = page.locator('input[type="email"], input[name="email"], input#login-email').first();
+  await emailInput.fill(CREDENTIALS_USER.email);
+
+  const passwordInput = page.locator('input[type="password"], input[name="password"], input#login-password').first();
+  await passwordInput.fill(CREDENTIALS_USER.password);
+
+  // Submit form
+  const submitBtn = page.locator('button[type="submit"]:has-text("Entrar")').first();
   await submitBtn.click();
-  
+
+  // Wait for navigation
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(2000);
+
+  // Verify login succeeded
+  const currentUrl = page.url();
+  if (currentUrl.includes('login.php') || currentUrl.includes('m=login_required')) {
+    throw new Error(`Login failed - still on login page: ${currentUrl}`);
+  }
 }
 
 /**
