@@ -30,10 +30,10 @@ async def _build_prompt(
     vertical: str,
     template_id: int,
     form_data: dict,
-) -> tuple[str, str, dict]:
+) -> tuple[str, str, dict, str]:
     """Build system and user prompts from template + form data.
 
-    Returns: (system_prompt, user_prompt, api_params_override)
+    Returns: (system_prompt, user_prompt, api_params_override, template_slug)
     """
     pool = await get_pool()
 
@@ -42,7 +42,7 @@ async def _build_prompt(
             # Get template configuration
             template = await conn.fetchrow(
                 """
-                SELECT system_prompt, form_config, api_params_override
+                SELECT slug, system_prompt, form_config, api_params_override
                 FROM canvas_templates
                 WHERE id = $1 AND vertical = $2
                 """,
@@ -82,7 +82,10 @@ async def _build_prompt(
             if not api_params_override:
                 api_params_override = {}
 
-            return system_prompt, user_prompt, api_params_override
+            # Get template slug for tool_name
+            template_slug = template["slug"]
+
+            return system_prompt, user_prompt, api_params_override, template_slug
 
     except Exception as e:
         logger.exception("Error building prompt from template")
@@ -92,7 +95,7 @@ async def _build_prompt(
 async def _save_to_history(
     user_id: int,
     vertical: str,
-    template_id: int,
+    template_slug: str,
     form_data: dict,
     system_prompt: str,
     generated_prompt: str,
@@ -128,7 +131,7 @@ async def _save_to_history(
                 """,
                 user_id,
                 vertical,
-                f"canvas_template_{template_id}",  # tool_name
+                template_slug,  # tool_name (canvas slug, e.g., "iatr-due-diligence-manus-test")
                 json.dumps(form_data),  # input_data (JSONB - must be JSON string)
                 generated_prompt,  # generated_prompt (TEXT)
                 response,  # claude_response
@@ -170,7 +173,7 @@ async def canvas_submit(
 
     try:
         # Build prompts from template + form data
-        system_prompt, user_prompt, api_params_override = await _build_prompt(
+        system_prompt, user_prompt, api_params_override, template_slug = await _build_prompt(
             req.vertical,
             req.template_id,
             req.data,
@@ -227,7 +230,7 @@ async def canvas_submit(
         history_id = await _save_to_history(
             user_id=req.user_id,
             vertical=req.vertical,
-            template_id=req.template_id,
+            template_slug=template_slug,
             form_data=req.data,  # Original form data as JSONB
             system_prompt=system_prompt,  # System prompt used
             generated_prompt=user_prompt,  # Generated user prompt
