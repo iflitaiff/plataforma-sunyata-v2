@@ -30,10 +30,10 @@ async def _build_prompt(
     vertical: str,
     template_id: int,
     form_data: dict,
-) -> tuple[str, str]:
+) -> tuple[str, str, dict]:
     """Build system and user prompts from template + form data.
 
-    Returns: (system_prompt, user_prompt)
+    Returns: (system_prompt, user_prompt, api_params_override)
     """
     pool = await get_pool()
 
@@ -42,7 +42,7 @@ async def _build_prompt(
             # Get template configuration
             template = await conn.fetchrow(
                 """
-                SELECT system_prompt, form_config
+                SELECT system_prompt, form_config, api_params_override
                 FROM canvas_templates
                 WHERE id = $1 AND vertical = $2
                 """,
@@ -75,7 +75,14 @@ async def _build_prompt(
 
             user_prompt = "\n".join(prompt_parts)
 
-            return system_prompt, user_prompt
+            # Get API params override (if configured)
+            api_params_override = template["api_params_override"]
+            if isinstance(api_params_override, str):
+                api_params_override = json.loads(api_params_override)
+            if not api_params_override:
+                api_params_override = {}
+
+            return system_prompt, user_prompt, api_params_override
 
     except Exception as e:
         logger.exception("Error building prompt from template")
@@ -95,6 +102,9 @@ async def _save_to_history(
     output_tokens: int,
     cost_usd: float,
     response_time_ms: int,
+    max_tokens: int = None,
+    temperature: float = None,
+    top_p: float = None,
 ) -> int:
     """Save submission to prompt_history table.
 
@@ -110,9 +120,10 @@ async def _save_to_history(
                     user_id, vertical, tool_name, input_data, generated_prompt,
                     claude_response, claude_model, tokens_input, tokens_output,
                     tokens_total, cost_usd, response_time_ms, system_prompt_sent,
+                    max_tokens, temperature, top_p,
                     status, created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                 RETURNING id
                 """,
                 user_id,
@@ -128,6 +139,9 @@ async def _save_to_history(
                 cost_usd,
                 response_time_ms,
                 system_prompt,  # system_prompt_sent
+                max_tokens,  # max_tokens used
+                temperature,  # temperature used
+                top_p,  # top_p used
                 "success",  # status
                 datetime.now(timezone.utc),
             )
@@ -156,14 +170,18 @@ async def canvas_submit(
 
     try:
         # Build prompts from template + form data
-        system_prompt, user_prompt = await _build_prompt(
+        system_prompt, user_prompt, api_params_override = await _build_prompt(
             req.vertical,
             req.template_id,
             req.data,
         )
 
-        # Determine model (use override or template default or service default)
-        model = req.model or "claude-sonnet-4-5"  # TODO: Get from template config
+        # Apply API params override from canvas template (if configured)
+        # Priority: request params > template override > defaults
+        model = req.model or api_params_override.get("claude_model") or api_params_override.get("model") or "claude-sonnet-4-5"
+        max_tokens = req.max_tokens if req.max_tokens != 4096 else api_params_override.get("max_tokens", 4096)
+        temperature = req.temperature if req.temperature is not None else api_params_override.get("temperature")
+        top_p = req.top_p if req.top_p is not None else api_params_override.get("top_p")
 
         # === STREAMING MODE ===
         if req.stream:
@@ -195,17 +213,17 @@ async def canvas_submit(
             req.user_id,
         )
 
-        # Generate response via LLM
+        # Generate response via LLM (with overrides applied)
         result = await generate(
             model=model,
             system=system_prompt,
             prompt=user_prompt,
-            max_tokens=req.max_tokens,
-            temperature=req.temperature,
-            top_p=req.top_p,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
         )
 
-        # Save to prompt_history
+        # Save to prompt_history (with API params used)
         history_id = await _save_to_history(
             user_id=req.user_id,
             vertical=req.vertical,
@@ -219,6 +237,9 @@ async def canvas_submit(
             output_tokens=result["usage"]["output_tokens"],
             cost_usd=result["cost_usd"],
             response_time_ms=result["response_time_ms"],
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
         )
 
         # Return response
