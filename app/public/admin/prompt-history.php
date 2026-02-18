@@ -193,10 +193,12 @@ include __DIR__ . '/../../src/views/admin-header.php';
     max-height: 500px;
     overflow-y: auto;
     font-size: 0.85rem;
-    background-color: #ffffff;
+    background-color: #f8f9fa;
+    color: #212529;
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
     padding: 1rem;
+    font-family: 'Courier New', Courier, monospace;
 }
 
 .section-header {
@@ -243,6 +245,26 @@ include __DIR__ . '/../../src/views/admin-header.php';
     font-size: 0.75rem;
     color: #6c757d;
     margin-bottom: 0.25rem;
+}
+
+/* Scrollbar styling para melhor UX */
+.prompt-section-pre::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.prompt-section-pre::-webkit-scrollbar-track {
+    background: #e9ecef;
+    border-radius: 4px;
+}
+
+.prompt-section-pre::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 4px;
+}
+
+.prompt-section-pre::-webkit-scrollbar-thumb:hover {
+    background: #6c757d;
 }
 </style>
 
