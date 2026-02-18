@@ -29,6 +29,8 @@ class Database {
         'conversation_messages',
         'audit_logs',
         'sessions',
+        'user_files',
+        'file_references',
     ];
 
     /**
