@@ -30,6 +30,15 @@ class RateLimiter
      */
     public function check(string $key, int $limit = 5, int $window = 900): array
     {
+        // Disable rate limiting in development mode
+        if (getenv('APP_ENV') === 'development') {
+            return [
+                'allowed' => true,
+                'remaining' => 999,
+                'retry_after' => 0,
+            ];
+        }
+
         $redisKey = "ratelimit:{$key}";
         $current = (int)$this->redis->get($redisKey);
 
