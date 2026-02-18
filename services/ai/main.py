@@ -20,6 +20,7 @@ load_dotenv()
 from app.config import settings
 from app.database import close_pool, get_pool
 from app.routers import canvas, documents, generate, pncp, stream
+from app.services import redis_cache
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
         logger.warning("Database pool failed (non-fatal, some features unavailable)")
     yield
     await close_pool()
+    await redis_cache.close_redis()
     logger.info("Sunyata AI Service stopped")
 
 

@@ -20,6 +20,7 @@ from ..database import get_pool
 from ..dependencies import verify_internal_key
 from ..models import CanvasSubmitRequest, CanvasSubmitResponse, TokenUsage
 from ..services.llm import generate, stream
+from ..services import redis_cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -191,21 +192,37 @@ async def canvas_submit(
             # Generate a stream session ID
             stream_id = str(uuid.uuid4())
 
-            # Store context in Redis/cache (TODO: implement caching)
-            # For now, return a stream_url that embeds the parameters
+            # Store context in Redis for stream endpoint to retrieve
+            await redis_cache.set_stream_context(
+                session_id=stream_id,
+                context={
+                    "user_id": req.user_id,
+                    "vertical": req.vertical,
+                    "template_slug": template_slug,
+                    "form_data": req.data,
+                    "system_prompt": system_prompt,
+                    "user_prompt": user_prompt,
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p,
+                },
+                ttl=600,  # 10 minutes
+            )
 
             logger.info(
-                "Canvas stream submission: vertical=%s, template=%d, user=%d",
+                "Canvas stream submission: vertical=%s, template=%d, user=%d, session=%s",
                 req.vertical,
                 req.template_id,
                 req.user_id,
+                stream_id,
             )
 
             # Return stream_url for client to connect
             return CanvasSubmitResponse(
                 success=True,
                 stream_url=f"/api/ai/canvas/stream?session_id={stream_id}",
-                error="Streaming not yet implemented - use stream=false for now",
+                is_final=False,
             )
 
         # === SYNC MODE ===
@@ -275,14 +292,80 @@ async def canvas_submit(
 async def canvas_stream(session_id: str, _key: str = Depends(verify_internal_key)):
     """SSE stream endpoint for canvas submissions.
 
-    TODO: Implement streaming mode
-    - Retrieve context from Redis/cache using session_id
-    - Stream LLM response via SSE
-    - Save to prompt_history when done
+    Client connects to this endpoint after receiving stream_url from /canvas/submit.
+    Streams LLM response as SSE events, then saves to prompt_history.
     """
 
     async def event_generator():
-        yield 'data: {"type":"error","error":"Streaming not yet implemented"}\n\n'
+        # Retrieve context from Redis
+        context = await redis_cache.get_stream_context(session_id)
+
+        if not context:
+            yield 'data: {"type":"error","error":"Session not found or expired"}\n\n'
+            return
+
+        try:
+            # Extract context
+            user_id = context["user_id"]
+            vertical = context["vertical"]
+            template_slug = context["template_slug"]
+            form_data = context["form_data"]
+            system_prompt = context["system_prompt"]
+            user_prompt = context["user_prompt"]
+            model = context["model"]
+            max_tokens = context["max_tokens"]
+            temperature = context.get("temperature")
+            top_p = context.get("top_p")
+
+            # Stream LLM response
+            full_result = None
+            async for chunk in stream(
+                model=model,
+                system=system_prompt,
+                prompt=user_prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+            ):
+                # Yield token chunks
+                if chunk["type"] == "token":
+                    yield f'data: {json.dumps(chunk)}\n\n'
+
+                # Final chunk with usage/cost
+                elif chunk["type"] == "done":
+                    full_result = chunk["result"]
+                    yield f'data: {json.dumps(chunk)}\n\n'
+
+            # Save to prompt_history
+            if full_result:
+                history_id = await _save_to_history(
+                    user_id=user_id,
+                    vertical=vertical,
+                    template_slug=template_slug,
+                    form_data=form_data,
+                    system_prompt=system_prompt,
+                    generated_prompt=user_prompt,
+                    response=full_result["response"],
+                    model=full_result["model"],
+                    input_tokens=full_result["usage"]["input_tokens"],
+                    output_tokens=full_result["usage"]["output_tokens"],
+                    cost_usd=full_result["cost_usd"],
+                    response_time_ms=full_result["response_time_ms"],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+
+                # Send final metadata with history_id
+                yield f'data: {json.dumps({"type": "complete", "history_id": history_id})}\n\n'
+
+            # Cleanup Redis context
+            await redis_cache.delete_stream_context(session_id)
+
+        except Exception as e:
+            logger.exception("Error during streaming")
+            yield f'data: {json.dumps({"type": "error", "error": str(e)})}\n\n'
+            await redis_cache.delete_stream_context(session_id)
 
     return StreamingResponse(
         event_generator(),
