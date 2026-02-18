@@ -652,17 +652,20 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                             }
                         }, 60000);
 
-                        // Enviar para backend
-                        const response = await fetch('<?= BASE_URL ?>/api/canvas/submit.php' + debugParam, {
+                        // Enviar para backend (FastAPI Canvas Router)
+                        const response = await fetch('<?= BASE_URL ?>/api/ai/canvas/submit' + debugParam, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'X-CSRF-Token': '<?= csrf_token() ?>',
+                                'X-Internal-Key': '<?= getenv("INTERNAL_API_KEY") ?: "dev-key-change-in-production" ?>'
                             },
                             body: JSON.stringify({
-                                canvas_id: <?= $canvas['id'] ?>,
-                                form_data: formData,
-                                plain_data: sender.getPlainData()
+                                vertical: 'iatr',
+                                template_id: <?= $canvas['id'] ?>,
+                                user_id: <?= $_SESSION['user']['id'] ?? 0 ?>,
+                                data: formData,
+                                stream: false  // Sync mode for now
                             }),
                             signal: controller.signal
                         });
@@ -697,19 +700,20 @@ $pageContent = function () use ($canvas, $canvasVersion, $template_slug, $debug_
                         document.getElementById('loadingContainer').style.display = 'none';
 
                         if (result.success) {
-                            // Debug info
-                            if (result.debug_info) {
-                                const debugInfo = result.debug_info;
-                                document.getElementById('debugSystemPrompt').textContent = debugInfo.system_prompt;
-                                document.getElementById('debugUserPrompt').textContent = debugInfo.user_prompt;
+                            // Debug info (FastAPI format)
+                            const debugMode = <?= $debug_mode ? 'true' : 'false' ?>;
+                            if (debugMode && result.model) {
+                                document.getElementById('debugSystemPrompt').textContent = '(System prompt não disponível no modo FastAPI)';
+                                document.getElementById('debugUserPrompt').textContent = '(User prompt não disponível no modo FastAPI)';
 
-                                const metadata = debugInfo.metadata;
                                 document.getElementById('debugMetadata').innerHTML = `
-                                    <div class="debug-badge"><strong>Modelo:</strong> ${metadata.model}</div>
-                                    <div class="debug-badge"><strong>Input:</strong> ${metadata.input_tokens} tokens</div>
-                                    <div class="debug-badge"><strong>Output:</strong> ${metadata.output_tokens} tokens</div>
-                                    <div class="debug-badge"><strong>Tempo:</strong> ${metadata.execution_time}</div>
-                                    <div class="debug-badge"><strong>Custo:</strong> ${metadata.cost}</div>
+                                    <div class="debug-badge"><strong>Modelo:</strong> ${result.model || 'N/A'}</div>
+                                    <div class="debug-badge"><strong>Input:</strong> ${result.usage?.input_tokens || 0} tokens</div>
+                                    <div class="debug-badge"><strong>Output:</strong> ${result.usage?.output_tokens || 0} tokens</div>
+                                    <div class="debug-badge"><strong>Total:</strong> ${result.usage?.total_tokens || 0} tokens</div>
+                                    <div class="debug-badge"><strong>Tempo:</strong> ${result.response_time_ms || 0}ms</div>
+                                    <div class="debug-badge"><strong>Custo:</strong> $${(result.cost_usd || 0).toFixed(4)}</div>
+                                    <div class="debug-badge"><strong>History ID:</strong> ${result.history_id || 'N/A'}</div>
                                 `;
 
                                 document.getElementById('debugContainer').style.display = 'block';
