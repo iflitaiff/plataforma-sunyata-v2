@@ -32,23 +32,24 @@ define('PUBLIC_PATH', BASE_PATH . '/public');
 define('SRC_PATH', BASE_PATH . '/src');
 define('CONFIG_PATH', BASE_PATH . '/config');
 
-// Load environment variables from .env.local (if exists)
+// Load environment variables from .env and .env.local (if exist)
+// .env first, then .env.local can override
 // MUST run before BASE_URL so env overrides take effect
-$envFile = BASE_PATH . '/.env.local';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        // Skip comments
-        if (strpos(trim($line), '#') === 0) {
-            continue;
-        }
-        // Parse KEY=VALUE
-        if (strpos($line, '=') !== false) {
-            list($key, $value) = explode('=', $line, 2);
-            $key = trim($key);
-            $value = trim($value);
-            // Set environment variable if not already set
-            if (!getenv($key)) {
+foreach (['.env', '.env.local'] as $envFileName) {
+    $envFile = BASE_PATH . '/' . $envFileName;
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            // Skip comments
+            if (strpos(trim($line), '#') === 0) {
+                continue;
+            }
+            // Parse KEY=VALUE
+            if (strpos($line, '=') !== false) {
+                list($key, $value) = explode('=', $line, 2);
+                $key = trim($key);
+                $value = trim($value);
+                // .env.local can override .env values
                 putenv("$key=$value");
             }
         }
