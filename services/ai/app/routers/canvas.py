@@ -86,7 +86,9 @@ async def _save_to_history(
     user_id: int,
     vertical: str,
     template_id: int,
-    prompt: str,
+    form_data: dict,
+    system_prompt: str,
+    generated_prompt: str,
     response: str,
     model: str,
     input_tokens: int,
@@ -105,24 +107,28 @@ async def _save_to_history(
             result = await conn.fetchrow(
                 """
                 INSERT INTO prompt_history (
-                    user_id, vertical, tool_name, prompt, response,
-                    model, input_tokens, output_tokens, total_tokens,
-                    cost_usd, response_time_ms, created_at
+                    user_id, vertical, tool_name, input_data, generated_prompt,
+                    claude_response, claude_model, tokens_input, tokens_output,
+                    tokens_total, cost_usd, response_time_ms, system_prompt_sent,
+                    status, created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 RETURNING id
                 """,
                 user_id,
                 vertical,
                 f"canvas_template_{template_id}",  # tool_name
-                prompt,
-                response,
-                model,
-                input_tokens,
-                output_tokens,
-                input_tokens + output_tokens,
+                form_data,  # input_data (JSONB)
+                generated_prompt,  # generated_prompt (TEXT)
+                response,  # claude_response
+                model,  # claude_model
+                input_tokens,  # tokens_input
+                output_tokens,  # tokens_output
+                input_tokens + output_tokens,  # tokens_total
                 cost_usd,
                 response_time_ms,
+                system_prompt,  # system_prompt_sent
+                "success",  # status
                 datetime.now(timezone.utc),
             )
 
@@ -204,7 +210,9 @@ async def canvas_submit(
             user_id=req.user_id,
             vertical=req.vertical,
             template_id=req.template_id,
-            prompt=user_prompt,
+            form_data=req.data,  # Original form data as JSONB
+            system_prompt=system_prompt,  # System prompt used
+            generated_prompt=user_prompt,  # Generated user prompt
             response=result["response"],
             model=result["model"],
             input_tokens=result["usage"]["input_tokens"],
