@@ -230,20 +230,21 @@ class VerticalService
      */
     public function delete(int $id): bool
     {
-        // Verificar se há canvas associados
+        // Verificar se há canvas associados (V2: usar junction table)
         $canvasCount = $this->db->fetchOne("
             SELECT COUNT(*) as count
-            FROM canvas_templates
-            WHERE vertical = (SELECT slug FROM verticals WHERE id = :id)
+            FROM canvas_vertical_assignments cva
+            JOIN verticals v ON v.slug = cva.vertical_slug
+            WHERE v.id = :id
         ", ['id' => $id]);
 
         if ($canvasCount['count'] > 0) {
             throw new Exception("Não é possível deletar vertical com {$canvasCount['count']} canvas associados");
         }
 
-        // Soft delete (marca como indisponível)
+        // Soft delete (marca como inativa - V2: is_active ao invés de disponivel)
         $success = $this->db->update('verticals', [
-            'disponivel' => false,
+            'is_active' => false,
             'updated_at' => date('Y-m-d H:i:s'),
         ], 'id = :id', ['id' => $id]);
 
@@ -262,11 +263,12 @@ class VerticalService
      */
     public function hardDelete(int $id): bool
     {
-        // Verificar se há canvas associados
+        // Verificar se há canvas associados (V2: usar junction table)
         $canvasCount = $this->db->fetchOne("
             SELECT COUNT(*) as count
-            FROM canvas_templates
-            WHERE vertical = (SELECT slug FROM verticals WHERE id = :id)
+            FROM canvas_vertical_assignments cva
+            JOIN verticals v ON v.slug = cva.vertical_slug
+            WHERE v.id = :id
         ", ['id' => $id]);
 
         if ($canvasCount['count'] > 0) {
