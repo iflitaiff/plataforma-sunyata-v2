@@ -177,7 +177,7 @@ class VerticalService
             'slug' => $slug,
             'name' => $name,  // V2: 'name' column
             'config' => json_encode($config, JSON_UNESCAPED_UNICODE),  // V2: JSONB
-            'is_active' => $data['is_active'] ?? $data['disponivel'] ?? true,  // V2: 'is_active'
+            'is_active' => (int)($data['is_active'] ?? $data['disponivel'] ?? true),  // PostgreSQL boolean como 0/1
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
@@ -230,7 +230,7 @@ class VerticalService
 
         // is_active (V2: aceitar 'is_active' ou 'disponivel')
         if (isset($data['is_active']) || isset($data['disponivel'])) {
-            $updateData['is_active'] = $data['is_active'] ?? $data['disponivel'];
+            $updateData['is_active'] = (int)($data['is_active'] ?? $data['disponivel']);  // PostgreSQL boolean como 0/1
         }
 
         // Config JSONB (V2: merge com config existente)
@@ -319,8 +319,9 @@ class VerticalService
         }
 
         // Soft delete (marca como inativa - V2: is_active ao invés de disponivel)
+        // PostgreSQL boolean: usar 0/1 para evitar problema de binding
         $success = $this->db->update('verticals', [
-            'is_active' => false,
+            'is_active' => 0,  // PostgreSQL aceita 0/1 para boolean
             'updated_at' => date('Y-m-d H:i:s'),
         ], 'id = :id', ['id' => $id]);
 
