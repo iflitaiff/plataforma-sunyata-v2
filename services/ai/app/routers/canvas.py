@@ -40,12 +40,13 @@ async def _build_prompt(
 
     try:
         async with pool.acquire() as conn:
-            # Get template configuration
+            # Get template configuration (Phase 3.5: use junction table)
             template = await conn.fetchrow(
                 """
-                SELECT slug, system_prompt, form_config, api_params_override
-                FROM canvas_templates
-                WHERE id = $1 AND vertical = $2
+                SELECT ct.slug, ct.system_prompt, ct.form_config, ct.api_params_override
+                FROM canvas_templates ct
+                INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+                WHERE ct.id = $1 AND cva.vertical_slug = $2 AND ct.is_active = TRUE
                 """,
                 template_id,
                 vertical,
