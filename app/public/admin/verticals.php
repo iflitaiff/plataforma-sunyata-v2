@@ -43,20 +43,22 @@ try {
 // Buscar todas as verticais (DB + config merged)
 $verticais = $verticalService->getAll(true); // Force refresh
 
-// Buscar verticais apenas do DB (para distinguir origem)
+// Buscar verticais do DB usando VerticalService (V2 compatible)
+// SCHEMA-V1-OK: VerticalService auto-maps V2→V1 format (nome, icone, disponivel)
+$verticalService = VerticalService::getInstance();
 $verticaisDB = [];
 try {
-    $dbRows = $db->fetchAll("
-        SELECT id, slug, nome, icone, descricao, ordem, disponivel,
-               requer_aprovacao, max_users, api_params, created_at, updated_at
-        FROM verticals
-        ORDER BY ordem ASC, nome ASC
-    ");
-    foreach ($dbRows as $row) {
-        $verticaisDB[$row['slug']] = $row;
+    // VerticalService::getAll() returns V1-compatible format (auto-maps V2→V1)
+    $allVerticals = $verticalService->getAll();
+    foreach ($allVerticals as $slug => $vertical) {
+        // Adicionar ID se não existe (verticals do DB têm ID, do arquivo não)
+        if (isset($vertical['created_at'])) {
+            $verticaisDB[$slug] = $vertical;
+        }
     }
 } catch (Exception $e) {
-    // Tabela não existe ainda
+    // Tabela não existe ainda ou erro
+    error_log("Error loading verticals from DB: " . $e->getMessage());
 }
 
 // Contar canvas por vertical
