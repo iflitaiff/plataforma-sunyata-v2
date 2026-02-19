@@ -202,45 +202,220 @@ Migração completa da plataforma do Hostinger (ambiente compartilhado) para ser
 
 ---
 
-### 🔜 **Próximos Passos (Quinta 19/02)**
+### 🔜 **Próximos Passos (Atualizado 2026-02-18 21:00)**
 
-#### Manhã (Claude)
+#### **Hoje (Quarta 18/02, 21:00-00:00) - Claude**
 
-1. **Review Copilot PRs** (1h)
-   - Branch `feature/copilot-forms-fastapi` (3 forms)
-   - Branch `feature/copilot-e2e-tests` (3 tests)
+1. **Admin Improvements Parte 1** (3-4h)
+   - CRUD de Verticais (`admin/verticals.php`)
+   - Modal "Criar Canvas do Zero"
+   - Remover CHECK constraints (migration)
+   - **Entrega:** Admin pode criar verticais/canvas via GUI
+
+#### **Quinta 19/02 (Manhã) - Claude**
+
+2. **Review Copilot PRs** (2h)
+   - ✅ Branch `feature/copilot-forms-fastapi` (3 forms - **JÁ PRONTO!**)
+   - 🔄 Branch `feature/copilot-e2e-tests` (3 tests - em progresso)
    - Code review + merge conflicts
+   - Testes manuais dos forms adaptados
 
-2. **Testes Manuais** (1h)
-   - Streaming mode end-to-end
-   - Forms adaptados (legal, licitacoes, nicolay-advogados)
-   - API params override validation
+#### **Quinta 19/02 (Tarde) - Claude**
 
-#### Tarde (Claude + Copilot)
+3. **Admin Improvements Parte 2** (6h)
+   - Tabela junction `canvas_vertical_assignments`
+   - Migração de dados (canvas.vertical → junction)
+   - Atualizar queries + UI (checkboxes múltiplas)
+   - Testes E2E admin
+   - **Entrega:** Canvas compartilhados entre verticais
 
-3. **Frontend SSE Integration** (2-3h)
+#### **Sexta 20/02 (Manhã) - Claude + Copilot**
+
+4. **Frontend SSE Integration** (3h) - **MOVIDO DE QUINTA**
    - Adaptar 4 formulários para usar `canvas-sse-client.js`
    - Progress bar durante streaming
    - Fallback para sync se SSE não disponível
    - Tratamento de erros
 
-4. **Merge e Deploy** (1h)
+#### **Sexta 20/02 (Tarde) - Claude**
+
+5. **Merge e Deploy Fase 3 + 3.5** (2h)
    - Squash merge branches Copilot → staging
-   - Deploy completo Fase 3 em VM100
-   - Tag release `v0.3.0-phase3`
+   - Merge `feature/admin-improvements` → staging
+   - Deploy completo em VM100
+   - Tag release `v0.3.5-admin-improvements`
    - Restart PHP-FPM (opcache)
 
-#### Sexta (Decisão GO/NO-GO Fase 4)
-
-5. **Validação Final** (manhã)
-   - Testes com usuários reais (QA)
-   - Performance benchmark (tempo de resposta, tokens/s)
-   - Stress test (10 requisições simultâneas)
-   - Documentação completa
-
-6. **Roadmap Fase 4** (tarde)
+6. **Decisão GO/NO-GO Fase 4** (1h)
+   - Validação final (QA, performance benchmark)
    - Se GO: Iniciar Fase 4 (Features Avançadas)
-   - Se NO-GO: Refinamentos Fase 3 (identificar gaps)
+   - Se NO-GO: Refinamentos Fase 3/3.5
+
+---
+
+## 🟡 **Fase 3.5: Admin Improvements** (2026-02-19 a 2026-02-20, em andamento)
+
+**Status:** 0% Iniciado
+**Branch:** `feature/admin-improvements`
+**Prioridade:** ALTA (blocker para escalabilidade)
+
+### Objetivo
+
+Melhorar administração de Canvas e Verticais, permitindo criação via GUI sem necessidade de código/migrations. Resolver limitação arquitetural de Canvas 1:1 com Vertical.
+
+### Escopo (Opção B - Média)
+
+**Requisitos:**
+1. ✅ Criar verticais via admin UI (CRUD completo)
+2. ✅ Criar canvas via GUI (modal com dados básicos)
+3. ✅ **Canvas many-to-many** com verticais (compartilhamento)
+
+### Arquitetura Atual vs. Nova
+
+**Limitações Atuais:**
+- ❌ Verticais hardcoded em `config/verticals.php` (14 fixas)
+- ❌ Canvas → Vertical relação 1:1 (duplicação necessária)
+- ❌ CHECK constraints em 6 tabelas bloqueiam extensibilidade
+- ❌ Criar vertical requer: editar PHP + migration + deploy
+
+**Solução:**
+- ✅ Tabela `verticals` como fonte de verdade (DB-driven)
+- ✅ Tabela junction `canvas_vertical_assignments` (many-to-many)
+- ✅ Remover CHECK constraints (validação em runtime)
+- ✅ Admin pode criar verticais/canvas SEM código
+
+### Implementação Planejada
+
+#### **Hoje (Quarta 18/02, 21:00-00:00) - Parte 1**
+
+**1. CRUD de Verticais** (1.5h)
+- `admin/verticals.php` - Listagem + ações (criar, editar, deletar)
+- `api/verticals/create.php`, `update.php`, `delete.php`
+- `src/Services/VerticalService.php` - Lógica híbrida (DB + config fallback)
+- Campos: slug, nome, ícone, descrição, ordem, disponivel, api_params
+
+**2. Modal "Criar Canvas do Zero"** (1h)
+- Botão em `canvas-templates.php` ao lado de "Importar JSON"
+- Modal com formulário: nome, slug, vertical(s), system prompt
+- Form Config inicial vazio (editado depois via canvas-editor.php)
+- AJAX submit → redirect para canvas-edit.php
+
+**3. Remover CHECK Constraints** (0.5h)
+- Migration `010_remove_vertical_constraints.sql`
+- Drop constraints em 6 tabelas (users, canvas_templates, contracts, etc)
+- Validação move para runtime (PHP)
+
+**Status após Hoje:** Admin pode criar verticais e canvas básicos
+
+#### **Quinta 19/02 (tarde, após review Copilot) - Parte 2**
+
+**4. Tabela Junction** (2h)
+- Migration `011_canvas_vertical_assignments.sql`:
+  ```sql
+  CREATE TABLE canvas_vertical_assignments (
+      id SERIAL PRIMARY KEY,
+      canvas_id INTEGER NOT NULL REFERENCES canvas_templates(id) ON DELETE CASCADE,
+      vertical_slug TEXT NOT NULL,
+      display_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(canvas_id, vertical_slug)
+  );
+  ```
+- Índices: canvas_id, vertical_slug
+
+**5. Migração de Dados** (1h)
+- Migration `012_migrate_canvas_verticals.sql`:
+  - Copiar dados de `canvas_templates.vertical` → junction table
+  - Drop coluna `vertical` de `canvas_templates`
+- Rollback plan documentado
+
+**6. Atualizar Queries + UI** (2h)
+- `canvas-edit.php` - Checkboxes múltiplas verticais
+- `CanvasService::getByVertical()` - JOIN com assignments
+- `areas/*/index.php` - Listar canvas via junction
+- Admin UI: drag-to-reorder verticais por canvas
+
+**7. Testes E2E** (1h)
+- Criar vertical via admin
+- Criar canvas e assignar a 3 verticais
+- Verificar aparece em todas as 3 áreas
+- Remover vertical de canvas (soft delete)
+
+**Status após Quinta:** Canvas compartilhados, zero duplicação
+
+### Arquivos Criados/Modificados
+
+**Criados (Parte 1):**
+- `admin/verticals.php` (300 linhas)
+- `api/verticals/create.php`, `update.php`, `delete.php` (200 linhas)
+- `src/Services/VerticalService.php` (150 linhas)
+- `migrations/010_remove_vertical_constraints.sql` (50 linhas)
+
+**Criados (Parte 2):**
+- `migrations/011_canvas_vertical_assignments.sql` (30 linhas)
+- `migrations/012_migrate_canvas_verticals.sql` (40 linhas)
+
+**Modificados:**
+- `admin/canvas-templates.php` (modal criar canvas, +80 linhas)
+- `admin/canvas-edit.php` (checkboxes verticais, +120 linhas)
+- `src/Services/CanvasService.php` (queries com JOIN, +60 linhas)
+- `areas/*/index.php` (4 arquivos, listar via junction, +40 linhas)
+
+### Riscos e Mitigações
+
+**Alto Risco:**
+1. **Quebrar queries existentes** (10+ arquivos referenciam canvas.vertical)
+   - **Mitigação:** Criar view `canvas_templates_legacy` com coluna virtual
+   - **Rollback:** Restaurar coluna vertical via backup
+
+**Médio Risco:**
+2. **Duplicação acidental durante migração**
+   - **Mitigação:** Transaction ACID, rollback automático em erro
+   - **Validação:** COUNT(*) antes/depois da migração
+
+**Baixo Risco:**
+3. **Performance de JOIN adicional**
+   - **Mitigação:** Índices em canvas_id e vertical_slug
+   - **Benchmark:** Queries <50ms (aceitável)
+
+### Critérios de Sucesso
+
+- ✅ Admin cria vertical "teste-123" sem tocar código
+- ✅ Admin cria canvas "Canvas Teste" via modal GUI
+- ✅ Admin assign canvas a 3 verticais simultaneamente
+- ✅ Canvas aparece em todas as 3 áreas correspondentes
+- ✅ Zero duplicação (1 canvas, N verticais)
+- ✅ Todas queries existentes funcionam (backward compatibility)
+- ✅ Migration reversível (rollback testado)
+
+### Integração com Planejamento Existente
+
+**Quinta 19/02:**
+- **Manhã (09:00-12:00):** Review Copilot PRs (forms + testes E2E) - **SEM MUDANÇA**
+- **Tarde (14:00-17:00):** Frontend SSE Integration - **MOVIDO PARA SEXTA**
+- **Tarde (14:00-20:00):** **Admin Improvements Parte 2** (junction table + queries) - **NOVO**
+
+**Sexta 20/02:**
+- **Manhã (09:00-12:00):** Frontend SSE Integration (movido de Quinta)
+- **Tarde (14:00-17:00):** Merge + Deploy Fase 3 + 3.5
+- **Tarde (17:00-18:00):** GO/NO-GO Decision Fase 4
+
+### Dependências
+
+- ✅ Copilot Task 1 COMPLETO (forms adaptados)
+- 🔄 Copilot Task 2 em andamento (testes E2E)
+- ⏳ Review Copilot (Quinta manhã)
+
+### Métricas
+
+**Estimativa:** 9-12h total
+- Parte 1 (Hoje): 3-4h
+- Parte 2 (Quinta): 6-8h
+
+**Impacto:**
+- Reduz tempo de criar vertical: 2h (código+migration) → 5min (GUI)
+- Elimina duplicação: 3 canvas idênticos → 1 canvas compartilhado
+- Escalabilidade: Admin adiciona verticais sem DevOps
 
 ---
 
@@ -248,6 +423,7 @@ Migração completa da plataforma do Hostinger (ambiente compartilhado) para ser
 
 **Status:** Não iniciado
 **Branch:** (a criar)
+**Dependências:** Fase 3 + 3.5 completas
 
 ### Features Planejadas
 
@@ -298,15 +474,21 @@ Migração completa da plataforma do Hostinger (ambiente compartilhado) para ser
 
 ### Fase 3 (Canvas + FastAPI)
 - ✅ 100% - Backend (sync + streaming)
-- 🟡 25% - Frontend (1/4 forms, SSE template pronto)
-- ❌ 0% - Testes E2E (delegado Copilot)
+- ✅ 100% - Frontend (4/4 forms adaptados! Copilot completo 1h antes)
+- 🔄 50% - Testes E2E (Copilot trabalhando, prazo Quinta tarde)
 
-**Progresso Geral Fase 3:** 95% (blocker: 3 forms + testes)
+**Progresso Geral Fase 3:** 98% (aguardando testes E2E finais)
+
+### Fase 3.5 (Admin Improvements) - **NOVO**
+- ❌ 0% - CRUD Verticais (Parte 1, Hoje)
+- ❌ 0% - Canvas Many-to-Many (Parte 2, Quinta)
+
+**Progresso Geral Fase 3.5:** 0% (início Hoje 21:00)
 
 ### Fase 4 (Features Avançadas)
-- ❌ 0% - Aguardando GO decision
+- ❌ 0% - Aguardando GO decision (Sexta tarde)
 
-**Progresso Total Projeto:** ~75% (3/4 fases, Fase 4 planejada)
+**Progresso Total Projeto:** ~78% (3.5/5 fases, Fase 4 planejada)
 
 ---
 
