@@ -200,7 +200,22 @@ Form templates and AI canvas configurations. **Core table for all canvas-based t
 - `idx_canvas_vertical_slug` on `vertical_slug` (query canvas by vertical)
 - `idx_canvas_vertical_canvas_id` on `canvas_id` (query verticals for canvas)
 
-**Usage:**
+**Service Layer - SEMPRE use CanvasService:**
+```php
+// ✅ CORRETO - Usa service layer (Phase 3.5+)
+$canvasService = \Sunyata\Services\CanvasService::getInstance();
+
+// Obter canvas de uma vertical
+$canvasList = $canvasService->getByVertical('iatr', $activeOnly = true);
+
+// Atribuir múltiplas verticals a um canvas
+$canvasService->assignVerticals($canvasId, ['iatr', 'legal', 'licitacoes']);
+
+// Obter verticals de um canvas
+$verticals = $canvasService->getAssignedVerticals($canvasId);
+```
+
+**SQL Direto (se realmente necessário):**
 ```sql
 -- Get all canvas for a vertical
 SELECT ct.*
@@ -212,7 +227,8 @@ ORDER BY cva.display_order, ct.name;
 -- Get all verticals for a canvas
 SELECT vertical_slug
 FROM canvas_vertical_assignments
-WHERE canvas_id = 10;
+WHERE canvas_id = 10
+ORDER BY display_order;
 ```
 
 ---
@@ -255,11 +271,50 @@ Business verticals/domains (e.g., juridico, licitacoes, nicolay-advogados).
 - PK: `id`
 - UNIQUE: `slug`
 
+**Config JSONB Structure:**
+The `config` column stores vertical-level configuration as JSONB. Expected fields:
+```json
+{
+  "icon": "🏛️",                    // Display icon (emoji or HTML)
+  "description": "Legal services", // Vertical description
+  "order": 10,                     // Display order (lower = higher priority)
+  "requires_approval": false,      // User access requires admin approval
+  "max_users": null,               // Max users allowed (null = unlimited)
+  "api_params": {                  // Level 1 API params (Claude API)
+    "claude_model": "claude-sonnet-4.5-20250929",
+    "temperature": 0.7,
+    "max_tokens": 4096
+  },
+  "system_prompt": "You are..."   // Level 1 system prompt (optional)
+}
+```
+
 **IMPORTANT NOTES:**
 - Verticals can also be defined in `config/verticals.php` (file-based, read-only)
 - Database entries override file-based config
 - `config.system_prompt`: Level 1 in system prompt hierarchy
 - `config.api_params`: Level 1 in API params hierarchy (portal defaults override this)
+
+**V1→V2 Schema Migration Notes:**
+For developers maintaining legacy code or migrating from V1 (MySQL):
+- V1: Individual columns (`nome`, `icone`, `descricao`, `ordem`, `disponivel`, `requer_aprovacao`)
+- V2: JSONB `config` + simplified columns (`name`, `is_active`)
+- **VerticalService::getAll()** provides backward-compatible mapping (V2 → V1 format)
+- See commit `0f76143` for reference implementation
+
+**Service Layer - SEMPRE use VerticalService:**
+```php
+// ✅ CORRETO - Usa service layer com mapeamento automático
+$verticalService = \Sunyata\Services\VerticalService::getInstance();
+$verticals = $verticalService->getAll();
+// Retorna formato compatível com código legado: 'nome', 'icone', etc.
+
+// ❌ INCORRETO - Query direta quebra em V2
+$db->fetchAll("SELECT nome, icone FROM verticals");  // Colunas não existem!
+
+// ✅ CORRETO - Query direta usando V2 schema
+$db->fetchAll("SELECT name, config->>'icon' as icone FROM verticals");
+```
 
 ---
 
