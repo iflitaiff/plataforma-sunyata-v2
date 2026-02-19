@@ -36,9 +36,10 @@ $db = Database::getInstance();
 
 // Buscar template
 $canvas = $db->fetchOne("
-    SELECT id, slug, name, form_config, system_prompt, user_prompt_template, max_questions, current_version
-    FROM canvas_templates
-    WHERE slug = :slug AND vertical = 'nicolay-advogados' AND is_active = TRUE
+    SELECT ct.id, ct.slug, ct.name, ct.form_config, ct.system_prompt, ct.user_prompt_template, ct.max_questions, ct.current_version
+    FROM canvas_templates ct
+    INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+    WHERE ct.slug = :slug AND cva.vertical_slug = 'nicolay-advogados' AND ct.is_active = TRUE
 ", ['slug' => $template_slug]);
 
 if (!$canvas) {
