@@ -80,11 +80,18 @@ include __DIR__ . '/../../src/views/admin-header.php';
 
 <!-- Botões de Ação -->
 <div class="mb-4">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCanvasModal">
+        <i class="bi bi-plus-circle"></i> Criar Canvas do Zero
+    </button>
     <a href="canvas-import.php" class="btn btn-success">
         <i class="bi bi-upload"></i> Importar JSON do Creator
     </a>
-    <span class="text-muted small ms-2">
-        ✨ Importe JSONs exportados do Survey Creator para criar novos Canvas automaticamente
+    <a href="verticals.php" class="btn btn-outline-secondary">
+        <i class="bi bi-collection"></i> Gerenciar Verticais
+    </a>
+    <span class="text-muted small ms-2 d-block mt-2">
+        <strong>Criar do Zero:</strong> Canvas básico para editar depois |
+        <strong>Importar JSON:</strong> Canvas completo do Survey Creator
     </span>
 </div>
 
@@ -352,6 +359,97 @@ include __DIR__ . '/../../src/views/admin-header.php';
                     <span class="spinner-border spinner-border-sm ms-1 d-none"></span>
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Criar Canvas do Zero -->
+<div class="modal fade" id="createCanvasModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="canvas-create-process.php" id="createCanvasForm">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle"></i> Criar Canvas do Zero
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Canvas Básico:</strong> Formulário será criado vazio.
+                        Use o <strong>Editor Visual</strong> depois para adicionar campos.
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="canvas-nome" class="form-label">
+                                Nome do Canvas <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="canvas-nome" name="nome" required
+                                   placeholder="ex: Análise de Contratos">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="canvas-slug" class="form-label">
+                                Slug <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="canvas-slug" name="slug" required
+                                   pattern="[a-z0-9-]+" placeholder="ex: analise-contratos">
+                            <small class="text-muted">Apenas letras minúsculas, números e hífens</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="canvas-vertical" class="form-label">
+                            Vertical <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="canvas-vertical" name="vertical" required>
+                            <option value="">Selecione...</option>
+                            <?php
+                            $verticals = require __DIR__ . '/../../config/verticals.php';
+                            foreach ($verticals as $v_key => $v_data):
+                            ?>
+                                <option value="<?= $v_key ?>">
+                                    <?= $v_data['icone'] ?> <?= $v_data['nome'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="canvas-system-prompt" class="form-label">
+                            System Prompt (Opcional)
+                        </label>
+                        <textarea class="form-control font-monospace" id="canvas-system-prompt"
+                                  name="system_prompt" rows="6"
+                                  placeholder="Opcional - deixe vazio para usar prompts da vertical"
+                                  style="font-size: 0.9rem;"></textarea>
+                        <small class="text-muted">
+                            <i class="bi bi-lightbulb"></i> Vazio = usa hierarquia de prompts (Portal → Vertical → ajSystemPrompt)
+                        </small>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="canvas-is-active" name="is_active" checked>
+                        <label class="form-check-label" for="canvas-is-active">
+                            Ativar Canvas imediatamente
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Criar Canvas
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
