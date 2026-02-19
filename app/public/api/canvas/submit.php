@@ -119,20 +119,37 @@ try {
         exit;
     }
 
-    // Verificar se usuário tem acesso à vertical do canvas (segurança)
-    $userVertical = $_SESSION['user']['selected_vertical'] ?? null;
+    // PHASE 3.5: Obter vertical do contexto do usuário (many-to-many canvas-vertical)
+    $verticalSlug = $_SESSION['user']['selected_vertical'] ?? null;
     $isAdmin = ($_SESSION['user']['access_level'] ?? 'guest') === 'admin';
     $isDemo = $_SESSION['user']['is_demo'] ?? false;
 
+    // Verificar se usuário tem acesso ao canvas na vertical selecionada (segurança)
     if (!$isAdmin && !$isDemo) {
-        if (!$userVertical || $userVertical !== $canvas['vertical']) {
-            debugLog("ERROR: Unauthorized canvas access", [
+        if (!$verticalSlug) {
+            debugLog("ERROR: User has no vertical selected");
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Selecione uma vertical para continuar']);
+            exit;
+        }
+
+        // Verificar se canvas está disponível na vertical do usuário
+        $assignment = $db->fetchOne("
+            SELECT id FROM canvas_vertical_assignments
+            WHERE canvas_id = :canvas_id AND vertical_slug = :vertical_slug
+        ", [
+            'canvas_id' => $canvasId,
+            'vertical_slug' => $verticalSlug
+        ]);
+
+        if (!$assignment) {
+            debugLog("ERROR: Canvas not available in user's vertical", [
                 'user_id' => $_SESSION['user_id'] ?? null,
-                'user_vertical' => $userVertical,
-                'canvas_vertical' => $canvas['vertical']
+                'user_vertical' => $verticalSlug,
+                'canvas_id' => $canvasId
             ]);
             http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Acesso não autorizado para este canvas']);
+            echo json_encode(['success' => false, 'error' => 'Canvas não disponível nesta vertical']);
             exit;
         }
     }
@@ -707,7 +724,7 @@ try {
     // - Nível 3: form_config.ajSystemPrompt
 
     debugLog("🎯 Usando ClaudeFacade::generateForCanvas (hierarquia 4 níveis)", [
-        'vertical' => $canvas['vertical'],
+        'vertical' => $verticalSlug,
         'canvas_id' => $canvasId,
         'canvas_slug' => $canvas['slug']
     ]);
@@ -730,7 +747,7 @@ try {
         $submissionId = $submissionService->createSubmission(
             (int)$_SESSION['user_id'],
             (int)$canvasId,
-            $canvas['vertical'],
+            $verticalSlug,
             $formData
         );
         debugLog("📋 Submission created (pending): ID {$submissionId}");
@@ -748,7 +765,7 @@ try {
     if ($streamMode && $aiServiceMode === 'microservice') {
         debugLog("🔄 Stream mode requested; falling back to sync to avoid exposing internal key");
         $result = ClaudeFacade::generateViaService(
-            verticalSlug: $canvas['vertical'],
+            verticalSlug: $verticalSlug,
             canvasTemplateId: $canvasId,
             prompt: $userPrompt,
             userId: $_SESSION['user_id'],
@@ -768,7 +785,7 @@ try {
     // Use microservice if enabled, otherwise direct ClaudeService
     if ($aiServiceMode === 'microservice') {
         $result = ClaudeFacade::generateViaService(
-            verticalSlug: $canvas['vertical'],
+            verticalSlug: $verticalSlug,
             canvasTemplateId: $canvasId,
             prompt: $userPrompt,
             userId: $_SESSION['user_id'],
@@ -778,7 +795,7 @@ try {
         );
     } else {
         $result = ClaudeFacade::generateForCanvas(
-            verticalSlug: $canvas['vertical'], // ← Usar vertical do CANVAS, não da sessão!
+            verticalSlug: $verticalSlug, // ← Usar vertical do CANVAS, não da sessão!
             canvasTemplateId: $canvasId,
             prompt: $userPrompt,
             userId: $_SESSION['user_id'],
