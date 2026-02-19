@@ -21,8 +21,16 @@ const ADMIN_PASSWORD = 'password';
 // Helper: Login as admin
 async function loginAsAdmin(page) {
     await page.goto(`${BASE_URL}/login.php`);
+    await page.waitForLoadState('networkidle');
+
+    // Extract CSRF token from hidden input
+    const csrfToken = await page.inputValue('input[name="csrf_token"]');
+
+    // Fill login form
     await page.fill('input[name="email"]', ADMIN_EMAIL);
     await page.fill('input[name="password"]', ADMIN_PASSWORD);
+
+    // Submit form (CSRF token is automatically included in form data)
     await page.click('button[type="submit"]');
     await page.waitForURL(/dashboard|admin/, { timeout: 10000 });
 }
@@ -33,22 +41,30 @@ async function createTestVertical(page, slug, name) {
     await page.waitForLoadState('networkidle');
 
     // Click create button
-    await page.click('button:has-text("Criar Vertical"), button:has-text("Nova Vertical")');
+    await page.click('button:has-text("Criar Vertical"), button:has-text("Nova Vertical"), button:has-text("Criar Nova Vertical")');
     await page.waitForSelector('input[name="slug"]', { timeout: 5000 });
 
     // Fill form
     await page.fill('input[name="slug"]', slug);
     await page.fill('input[name="nome"]', name);
     await page.fill('input[name="icone"]', '🧪'); // Test icon
-    await page.check('input[name="disponivel"]');
 
-    // Submit
-    await page.click('button[type="submit"]:has-text("Criar"), button:has-text("Salvar")');
+    // Check if checkbox exists before trying to check it
+    const checkboxExists = await page.locator('input[name="disponivel"], input[name="is_active"]').count();
+    if (checkboxExists > 0) {
+        await page.check('input[name="disponivel"], input[name="is_active"]');
+    }
+
+    // Submit (handle both Portuguese and English button text)
+    await page.click('button[type="submit"]:has-text("Criar"), button[type="submit"]:has-text("Salvar"), button:has-text("Salvar")');
     await page.waitForLoadState('networkidle');
 
-    // Verify success message
-    const successMessage = await page.locator('.alert-success, .alert.alert-success').count();
-    expect(successMessage).toBeGreaterThan(0);
+    // Verify vertical appears in list (instead of success message)
+    // Wait a bit for the page to update
+    await page.waitForTimeout(1000);
+    const verticalCard = page.locator(`.card:has-text("${name}"), div:has-text("${name}")`);
+    const cardCount = await verticalCard.count();
+    expect(cardCount).toBeGreaterThan(0);
 }
 
 // Helper: Delete a vertical

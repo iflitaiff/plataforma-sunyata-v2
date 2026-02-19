@@ -107,7 +107,7 @@ try {
 
     // Buscar canvas template (incluindo form_config para validação)
     $canvas = $db->fetchOne("
-        SELECT id, slug, name, vertical, system_prompt, user_prompt_template, max_questions, form_config, api_params_override
+        SELECT id, slug, name, system_prompt, user_prompt_template, max_questions, form_config, api_params_override
         FROM canvas_templates
         WHERE id = :id AND is_active = TRUE
     ", ['id' => $canvasId]);

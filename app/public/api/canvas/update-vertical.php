@@ -89,7 +89,7 @@ try {
 
     // Buscar canvas atual
     $canvas = $db->fetchOne("
-        SELECT id, slug, name, vertical
+        SELECT id, slug, name
         FROM canvas_templates
         WHERE id = :id
     ", ['id' => $canvas_id]);

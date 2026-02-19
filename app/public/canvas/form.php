@@ -37,14 +37,14 @@ $db = Database::getInstance();
 // Load canvas template
 if ($canvasId) {
     $canvas = $db->fetchOne("
-        SELECT id, slug, name, vertical, description, icon, color, form_config,
+        SELECT id, slug, name, description, icon, color, form_config,
                system_prompt, user_prompt_template, max_questions, api_params_override
         FROM canvas_templates
         WHERE id = :id AND is_active = TRUE AND status = 'published'
     ", ['id' => (int)$canvasId]);
 } else {
     $canvas = $db->fetchOne("
-        SELECT id, slug, name, vertical, description, icon, color, form_config,
+        SELECT id, slug, name, description, icon, color, form_config,
                system_prompt, user_prompt_template, max_questions, api_params_override
         FROM canvas_templates
         WHERE slug = :slug AND is_active = TRUE AND status = 'published'
