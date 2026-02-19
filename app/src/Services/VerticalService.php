@@ -49,31 +49,46 @@ class VerticalService
         $configPath = __DIR__ . '/../../config/verticals.php';
         $configVerticals = file_exists($configPath) ? require $configPath : [];
 
-        // 2. Carregar do banco de dados
+        // 2. Carregar do banco de dados (V2 PostgreSQL schema)
         try {
             $dbVerticals = $this->db->fetchAll("
                 SELECT
-                    slug, nome, icone, descricao, ordem,
-                    disponivel, requer_aprovacao, max_users,
-                    api_params, created_at, updated_at
+                    slug,
+                    name,
+                    config,
+                    is_active,
+                    created_at,
+                    updated_at
                 FROM verticals
-                WHERE disponivel = true
-                ORDER BY ordem ASC, nome ASC
+                WHERE is_active = true
+                ORDER BY name ASC
             ");
 
             // Converter para formato associativo (slug => data)
+            // Mapear colunas V2 (PostgreSQL) para formato esperado V1 (retrocompat)
             $dbVerticalsIndexed = [];
             foreach ($dbVerticals as $vertical) {
                 $slug = $vertical['slug'];
 
-                // Decodificar api_params se for JSON string
-                if (!empty($vertical['api_params'])) {
-                    $vertical['api_params'] = is_string($vertical['api_params'])
-                        ? json_decode($vertical['api_params'], true)
-                        : $vertical['api_params'];
-                }
+                // Decodificar config JSONB
+                $config = !empty($vertical['config'])
+                    ? (is_string($vertical['config']) ? json_decode($vertical['config'], true) : $vertical['config'])
+                    : [];
 
-                $dbVerticalsIndexed[$slug] = $vertical;
+                // Mapear para formato V1 esperado
+                $dbVerticalsIndexed[$slug] = [
+                    'slug' => $vertical['slug'],
+                    'nome' => $vertical['name'],  // V2: 'name' → V1: 'nome'
+                    'icone' => $config['icon'] ?? '',
+                    'descricao' => $config['description'] ?? '',
+                    'ordem' => $config['order'] ?? 0,
+                    'disponivel' => $vertical['is_active'],  // V2: 'is_active' → V1: 'disponivel'
+                    'requer_aprovacao' => $config['requires_approval'] ?? false,
+                    'max_users' => $config['max_users'] ?? null,
+                    'api_params' => $config['api_params'] ?? [],
+                    'created_at' => $vertical['created_at'],
+                    'updated_at' => $vertical['updated_at'],
+                ];
             }
         } catch (Exception $e) {
             // Se tabela não existe ou erro, usar apenas config
