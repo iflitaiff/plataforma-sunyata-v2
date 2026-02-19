@@ -25,8 +25,9 @@ if (!$canvas_id || !is_numeric($canvas_id)) {
 $db = Database::getInstance();
 
 $template = $db->fetchOne("
-    SELECT slug FROM canvas_templates
-    WHERE id = :id AND vertical = 'nicolay-advogados' AND is_active = TRUE
+    SELECT ct.slug FROM canvas_templates ct
+    INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+    WHERE ct.id = :id AND cva.vertical_slug = 'nicolay-advogados' AND ct.is_active = TRUE
 ", ['id' => $canvas_id]);
 
 if (!$template) {

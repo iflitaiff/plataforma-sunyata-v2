@@ -65,8 +65,8 @@ foreach ($verticais as $slug => $vertical) {
     try {
         $result = $db->fetchOne("
             SELECT COUNT(*) as count
-            FROM canvas_templates
-            WHERE vertical = :slug
+            FROM canvas_vertical_assignments
+            WHERE vertical_slug = :slug
         ", ['slug' => $slug]);
         $canvasStats[$slug] = $result['count'] ?? 0;
     } catch (Exception $e) {

@@ -26,8 +26,9 @@ $db = Database::getInstance();
 
 // In v2, the canvas IS a canvas_template row
 $template = $db->fetchOne("
-    SELECT slug FROM canvas_templates
-    WHERE id = :id AND vertical = 'iatr' AND is_active = TRUE
+    SELECT ct.slug FROM canvas_templates ct
+    INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+    WHERE ct.id = :id AND cva.vertical_slug = 'iatr' AND ct.is_active = TRUE
 ", ['id' => $canvas_id]);
 
 if (!$template) {

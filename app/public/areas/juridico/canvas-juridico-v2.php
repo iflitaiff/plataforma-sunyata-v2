@@ -83,13 +83,14 @@ if (!$show_menu) {
 $all_templates = [];
 if ($show_menu) {
     $all_templates = $db->fetchAll("
-        SELECT id, slug, name
-        FROM canvas_templates
-        WHERE vertical = 'juridico' AND is_active = TRUE AND slug != 'juridico-geral'
+        SELECT ct.id, ct.slug, ct.name
+        FROM canvas_templates ct
+        INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+        WHERE cva.vertical_slug = 'juridico' AND ct.is_active = TRUE AND ct.slug != 'juridico-geral'
         ORDER BY
-            CASE slug
+            CASE ct.slug
                 WHEN 'juridico-livre' THEN 99
-                ELSE id
+                ELSE ct.id
             END
     ");
 }
