@@ -123,45 +123,64 @@ class VerticalService
     /**
      * Criar nova vertical no banco de dados
      *
-     * @param array $data Dados da vertical (slug, nome, icone, etc)
+     * V2: Aceita dados em formato V1 (retrocompat) e converte para V2 schema
+     *
+     * @param array $data Dados da vertical (slug, nome/name, icone/icon, etc)
      * @return int ID da vertical criada
      * @throws Exception
      */
     public function create(array $data): int
     {
+        // Aceitar 'nome' ou 'name' (retrocompat)
+        $name = $data['name'] ?? $data['nome'] ?? null;
+        $slug = $data['slug'] ?? null;
+
         // Validar campos obrigatórios
-        $required = ['slug', 'nome', 'icone'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                throw new Exception("Campo obrigatório ausente: $field");
-            }
+        if (empty($slug)) {
+            throw new Exception("Campo obrigatório ausente: slug");
+        }
+        if (empty($name)) {
+            throw new Exception("Campo obrigatório ausente: name/nome");
         }
 
         // Validar slug único
-        if ($this->slugExists($data['slug'])) {
-            throw new Exception("Slug '{$data['slug']}' já existe");
+        if ($this->slugExists($slug)) {
+            throw new Exception("Slug '{$slug}' já existe");
         }
 
-        // Preparar dados
+        // Construir config JSONB (V2 schema)
+        $config = [];
+
+        // Aceitar icone/icon (retrocompat)
+        if (!empty($data['icone']) || !empty($data['icon'])) {
+            $config['icon'] = $data['icon'] ?? $data['icone'];
+        }
+
+        // Outros campos vão para config
+        if (!empty($data['descricao']) || !empty($data['description'])) {
+            $config['description'] = $data['description'] ?? $data['descricao'];
+        }
+
+        $config['order'] = $data['order'] ?? $data['ordem'] ?? 999;
+        $config['requires_approval'] = $data['requires_approval'] ?? $data['requer_aprovacao'] ?? false;
+        $config['max_users'] = $data['max_users'] ?? null;
+
+        // API params
+        if (!empty($data['api_params'])) {
+            $config['api_params'] = is_array($data['api_params'])
+                ? $data['api_params']
+                : json_decode($data['api_params'], true);
+        }
+
+        // Preparar dados para V2 schema
         $insertData = [
-            'slug' => $data['slug'],
-            'nome' => $data['nome'],
-            'icone' => $data['icone'],
-            'descricao' => $data['descricao'] ?? '',
-            'ordem' => $data['ordem'] ?? 999,
-            'disponivel' => $data['disponivel'] ?? true,
-            'requer_aprovacao' => $data['requer_aprovacao'] ?? false,
-            'max_users' => $data['max_users'] ?? null,
+            'slug' => $slug,
+            'name' => $name,  // V2: 'name' column
+            'config' => json_encode($config, JSON_UNESCAPED_UNICODE),  // V2: JSONB
+            'is_active' => $data['is_active'] ?? $data['disponivel'] ?? true,  // V2: 'is_active'
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
-
-        // Encode api_params se fornecido
-        if (!empty($data['api_params'])) {
-            $insertData['api_params'] = is_array($data['api_params'])
-                ? json_encode($data['api_params'], JSON_UNESCAPED_UNICODE)
-                : $data['api_params'];
-        }
 
         $id = $this->db->insert('verticals', $insertData);
 
@@ -173,6 +192,8 @@ class VerticalService
 
     /**
      * Atualizar vertical existente
+     *
+     * V2: Aceita dados em formato V1 (retrocompat) e converte para V2 schema
      *
      * @param int $id ID da vertical
      * @param array $data Dados a atualizar
@@ -194,21 +215,76 @@ class VerticalService
             }
         }
 
-        // Preparar dados para update
+        // Preparar dados para V2 schema
         $updateData = [];
-        $allowedFields = ['slug', 'nome', 'icone', 'descricao', 'ordem', 'disponivel', 'requer_aprovacao', 'max_users'];
 
-        foreach ($allowedFields as $field) {
-            if (array_key_exists($field, $data)) {
-                $updateData[$field] = $data[$field];
-            }
+        // Slug (V2: direct column)
+        if (isset($data['slug'])) {
+            $updateData['slug'] = $data['slug'];
         }
 
-        // Encode api_params se fornecido
-        if (array_key_exists('api_params', $data)) {
-            $updateData['api_params'] = is_array($data['api_params'])
-                ? json_encode($data['api_params'], JSON_UNESCAPED_UNICODE)
-                : $data['api_params'];
+        // Name (V2: aceitar 'name' ou 'nome' para retrocompat)
+        if (isset($data['name']) || isset($data['nome'])) {
+            $updateData['name'] = $data['name'] ?? $data['nome'];
+        }
+
+        // is_active (V2: aceitar 'is_active' ou 'disponivel')
+        if (isset($data['is_active']) || isset($data['disponivel'])) {
+            $updateData['is_active'] = $data['is_active'] ?? $data['disponivel'];
+        }
+
+        // Config JSONB (V2: merge com config existente)
+        $needsConfigUpdate = false;
+        $config = !empty($existing['config'])
+            ? (is_string($existing['config']) ? json_decode($existing['config'], true) : $existing['config'])
+            : [];
+
+        // Icon/Icone
+        if (isset($data['icon']) || isset($data['icone'])) {
+            $config['icon'] = $data['icon'] ?? $data['icone'];
+            $needsConfigUpdate = true;
+        }
+
+        // Description/Descricao
+        if (isset($data['description']) || isset($data['descricao'])) {
+            $config['description'] = $data['description'] ?? $data['descricao'];
+            $needsConfigUpdate = true;
+        }
+
+        // Order/Ordem
+        if (isset($data['order']) || isset($data['ordem'])) {
+            $config['order'] = $data['order'] ?? $data['ordem'];
+            $needsConfigUpdate = true;
+        }
+
+        // Requires approval
+        if (isset($data['requires_approval']) || isset($data['requer_aprovacao'])) {
+            $config['requires_approval'] = $data['requires_approval'] ?? $data['requer_aprovacao'];
+            $needsConfigUpdate = true;
+        }
+
+        // Max users
+        if (isset($data['max_users'])) {
+            $config['max_users'] = $data['max_users'];
+            $needsConfigUpdate = true;
+        }
+
+        // API params
+        if (isset($data['api_params'])) {
+            $config['api_params'] = is_array($data['api_params'])
+                ? $data['api_params']
+                : json_decode($data['api_params'], true);
+            $needsConfigUpdate = true;
+        }
+
+        // Se config mudou, atualizar
+        if ($needsConfigUpdate) {
+            $updateData['config'] = json_encode($config, JSON_UNESCAPED_UNICODE);
+        }
+
+        // Se não há nada para atualizar, retornar true
+        if (empty($updateData)) {
+            return true;
         }
 
         $updateData['updated_at'] = date('Y-m-d H:i:s');
