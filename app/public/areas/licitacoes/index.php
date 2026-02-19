@@ -11,6 +11,7 @@ session_name(SESSION_NAME);
 session_start();
 
 use Sunyata\Core\Database;
+use Sunyata\Services\CanvasService;
 
 require_login();
 
@@ -37,11 +38,9 @@ $verticalData = $db->fetchOne("
 ");
 
 // Buscar Canvas da vertical do banco, agrupados por categoria
-$canvas_list = $db->fetchAll("
-    SELECT * FROM canvas_templates
-    WHERE vertical = 'licitacoes' AND is_active = TRUE
-    ORDER BY category ASC, display_order ASC, name ASC
-");
+// Buscar Canvas usando CanvasService (many-to-many)
+$canvasService = CanvasService::getInstance();
+$canvas_list = $canvasService->getByVertical('licitacoes', true);
 
 // Agrupar por categoria
 $categories = [];

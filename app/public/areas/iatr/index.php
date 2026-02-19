@@ -11,6 +11,7 @@ session_name(SESSION_NAME);
 session_start();
 
 use Sunyata\Core\Database;
+use Sunyata\Services\CanvasService;
 
 require_login();
 
@@ -37,12 +38,9 @@ $verticalData = $db->fetchOne("
     WHERE slug = 'iatr' AND is_active = TRUE
 ");
 
-// Buscar Canvas da vertical IATR do banco, agrupados por categoria
-$canvas_list = $db->fetchAll("
-    SELECT * FROM canvas_templates
-    WHERE vertical = 'iatr' AND is_active = TRUE
-    ORDER BY category ASC, display_order ASC, name ASC
-");
+// Buscar Canvas da vertical IATR usando CanvasService (many-to-many)
+$canvasService = CanvasService::getInstance();
+$canvas_list = $canvasService->getByVertical('iatr', true); // true = activeOnly
 
 // Agrupar por categoria
 $categories = [];

@@ -13,6 +13,8 @@ session_start();
 use Sunyata\Core\Database;
 use Sunyata\Helpers\VerticalConfig;
 use Sunyata\AI\ModelService;
+use Sunyata\Services\CanvasService;
+use Sunyata\Services\VerticalService;
 
 require_login();
 
@@ -103,7 +105,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'updated_at' => date('Y-m-d H:i:s')
             ], 'id = :id', ['id' => $canvasId]);
 
-            if ($updated) {
+            // Update vertical assignments (many-to-many)
+            $selectedVerticals = $_POST['verticals'] ?? [];
+            $canvasService = CanvasService::getInstance();
+            $verticalsUpdated = $canvasService->assignVerticals($canvasId, $selectedVerticals, true);
+
+            if ($updated || $verticalsUpdated) {
                 $message = 'Canvas atualizado com sucesso!';
                 $message_type = 'success';
 
@@ -125,8 +132,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Formatar JSON para exibição (pretty print)
 $formConfigFormatted = json_encode(json_decode($canvas['form_config']), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+// Load vertical assignments and available verticals
+$canvasService = CanvasService::getInstance();
+$verticalService = VerticalService::getInstance();
+
+$assignedVerticals = $canvasService->getAssignedVerticals($canvasId);
+$assignedSlugs = array_column($assignedVerticals, 'vertical_slug');
+$allVerticals = $verticalService->getAll(); // Get all available verticals
+
+// For backward compatibility with old code that references $canvas['vertical']
+// Use first assigned vertical as primary (or empty if none)
+$primaryVertical = $assignedSlugs[0] ?? '';
+
 // Preparar dados para seção de API Params Override
-$verticalDefaults = VerticalConfig::get($canvas['vertical']);
+$verticalDefaults = $primaryVertical ? VerticalConfig::get($primaryVertical) : [];
 $canvasApiOverrides = [];
 if (!empty($canvas['api_params_override'])) {
     $canvasApiOverrides = json_decode($canvas['api_params_override'], true) ?? [];
@@ -192,7 +211,15 @@ include __DIR__ . '/../../src/views/admin-header.php';
         <div class="row">
             <div class="col-md-6">
                 <p><strong>Slug:</strong> <code><?= sanitize_output($canvas['slug']) ?></code></p>
-                <p><strong>Vertical:</strong> <span class="badge bg-primary"><?= ucfirst($canvas['vertical']) ?></span></p>
+                <p><strong>Verticais:</strong>
+                    <?php if (!empty($assignedSlugs)): ?>
+                        <?php foreach ($assignedSlugs as $slug): ?>
+                            <span class="badge bg-primary"><?= ucfirst(sanitize_output($slug)) ?></span>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <span class="badge bg-warning text-dark">Nenhuma vertical atribuída</span>
+                    <?php endif; ?>
+                </p>
                 <p><strong>Status:</strong>
                     <?php if ($canvas['is_active']): ?>
                         <span class="badge bg-success">ATIVO</span>
@@ -228,10 +255,76 @@ include __DIR__ . '/../../src/views/admin-header.php';
         </div>
     </div>
 
+    <!-- Vertical Assignments (Many-to-Many) -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">2. Atribuição de Verticais</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">
+                <i class="bi bi-info-circle"></i> Selecione em quais verticais este canvas aparecerá.
+                Um canvas pode aparecer em <strong>múltiplas verticais</strong> simultaneamente.
+            </p>
+
+            <div class="row">
+                <?php if (empty($allVerticals)): ?>
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Nenhuma vertical disponível.
+                            <a href="<?= BASE_URL ?>/admin/verticals.php" class="alert-link">Criar vertical</a>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($allVerticals as $vertical): ?>
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="verticals[]"
+                                       value="<?= sanitize_output($vertical['slug']) ?>"
+                                       id="vertical_<?= sanitize_output($vertical['slug']) ?>"
+                                       <?= in_array($vertical['slug'], $assignedSlugs) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="vertical_<?= sanitize_output($vertical['slug']) ?>">
+                                    <?php if (!empty($vertical['icone'])): ?>
+                                        <?= $vertical['icone'] ?>
+                                    <?php endif; ?>
+                                    <strong><?= sanitize_output($vertical['nome']) ?></strong>
+                                    <br>
+                                    <small class="text-muted"><?= sanitize_output($vertical['slug']) ?></small>
+                                    <?php if (!$vertical['disponivel']): ?>
+                                        <span class="badge bg-warning text-dark">Indisponível</span>
+                                    <?php endif; ?>
+                                </label>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
+            <?php if (!empty($assignedSlugs)): ?>
+                <div class="alert alert-info mt-3">
+                    <strong><i class="bi bi-check-circle"></i> Atualmente atribuído a:</strong>
+                    <?php foreach ($assignedSlugs as $slug): ?>
+                        <span class="badge bg-primary"><?= sanitize_output($slug) ?></span>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i> <strong>Canvas sem verticais atribuídas!</strong>
+                    Selecione pelo menos uma vertical para que o canvas apareça no portal.
+                </div>
+            <?php endif; ?>
+
+            <div class="form-text mt-2">
+                <i class="bi bi-lightbulb"></i> <strong>Dica:</strong> Canvas compartilhados entre verticais
+                evitam duplicação e facilitam manutenção. Configure parâmetros específicos por vertical
+                usando "API Params Override" abaixo.
+            </div>
+        </div>
+    </div>
+
     <!-- Form Configuration (Monaco Editor) -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="mb-0">2. Form Configuration (SurveyJS JSON)</h5>
+            <h5 class="mb-0">3. Form Configuration (SurveyJS JSON)</h5>
         </div>
         <div class="card-body">
             <p class="text-muted">
@@ -262,7 +355,7 @@ include __DIR__ . '/../../src/views/admin-header.php';
     <!-- System Prompt -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="mb-0">3. System Prompt (Nível 2 - Opcional)</h5>
+            <h5 class="mb-0">4. System Prompt (Nível 2 - Opcional)</h5>
         </div>
         <div class="card-body">
             <!-- Orientação sobre hierarquia -->
@@ -297,7 +390,7 @@ include __DIR__ . '/../../src/views/admin-header.php';
     <!-- User Prompt Template -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="mb-0">4. User Prompt Template (Opcional)</h5>
+            <h5 class="mb-0">5. User Prompt Template (Opcional)</h5>
         </div>
         <div class="card-body">
             <div class="alert alert-warning mb-3">
@@ -330,7 +423,7 @@ include __DIR__ . '/../../src/views/admin-header.php';
     <!-- Configurações -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5 class="mb-0">5. Configurações (Opcional)</h5>
+            <h5 class="mb-0">6. Configurações (Opcional)</h5>
         </div>
         <div class="card-body">
             <div class="alert alert-secondary mb-3">
