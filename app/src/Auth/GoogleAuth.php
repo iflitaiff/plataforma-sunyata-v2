@@ -118,8 +118,13 @@ class GoogleAuth {
             return ['success' => false, 'error' => 'Failed to get user info'];
         }
 
-        // Check if user exists
+        // Check if user exists (by Google ID first, then by email)
         $user = $this->user->findByGoogleId($googleUser['id']);
+
+        if (!$user) {
+            // Check if user exists by email (e.g. created via password auth)
+            $user = $this->user->findByEmail($googleUser['email']);
+        }
 
         if (!$user) {
             // Create new user
@@ -136,11 +141,15 @@ class GoogleAuth {
             // Log audit
             $this->logAudit($userId, 'user_created', 'users', $userId);
         } else {
-            // Update user info
-            $this->user->update($user['id'], [
+            // Update user info (link google_id if missing)
+            $updateData = [
                 'name' => $googleUser['name'],
                 'picture' => $googleUser['picture'] ?? null
-            ]);
+            ];
+            if (empty($user['google_id'])) {
+                $updateData['google_id'] = $googleUser['id'];
+            }
+            $this->user->update($user['id'], $updateData);
 
             // Log audit
             $this->logAudit($user['id'], 'user_login', 'users', $user['id']);

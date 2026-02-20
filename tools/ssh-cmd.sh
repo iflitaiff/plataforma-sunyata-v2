@@ -10,11 +10,13 @@
 #   vm100  — Portal dev VM (192.168.100.10) via host hop
 #   vm102  — AI sandbox VM (192.168.100.12) via qm guest exec (legacy, being replaced)
 #   ct103  — LiteLLM gateway LXC (192.168.100.13) via pct exec
+#   ct104  — N8N automation LXC (192.168.100.14) via pct exec
 #
 # Examples:
 #   ssh-cmd.sh host "uptime"
 #   ssh-cmd.sh vm100 "tail -20 /var/www/sunyata/app/logs/php_errors.log"
 #   ssh-cmd.sh ct103 "docker compose -f /opt/litellm/docker-compose.yml ps"
+#   ssh-cmd.sh ct104 "docker logs n8n | tail -50"
 #   ssh-cmd.sh vm100 -f migrations/007-drafts.sql
 #   ssh-cmd.sh vm100 -f scripts/reset-password.php
 
@@ -81,6 +83,11 @@ run_on_ct103() {
     ssh "$SSH_HOST" "pct exec 103 -- bash -c '$1'"
 }
 
+run_on_ct104() {
+    # CT104 is an LXC container (N8N automation)
+    ssh "$SSH_HOST" "pct exec 104 -- bash -c '$1'"
+}
+
 run_file_on_target() {
     local target="$1"
     local file="$2"
@@ -109,6 +116,7 @@ run_file_on_target() {
         vm100)  run_on_vm100 "$decode_and_run" ;;
         vm102)  run_on_vm102 "$decode_and_run" ;;
         ct103)  run_on_ct103 "$decode_and_run" ;;
+        ct104)  run_on_ct104 "$decode_and_run" ;;
     esac
 }
 
@@ -120,8 +128,8 @@ target="$1"
 shift
 
 case "$target" in
-    host|vm100|vm102|ct103) ;;
-    *) echo "Error: Unknown target '$target'. Use: host, vm100, vm102, ct103" >&2; exit 1 ;;
+    host|vm100|vm102|ct103|ct104) ;;
+    *) echo "Error: Unknown target '$target'. Use: host, vm100, vm102, ct103, ct104" >&2; exit 1 ;;
 esac
 
 if [[ "$1" == "-f" ]]; then
@@ -141,6 +149,7 @@ else
         vm100)  run_on_vm100 "$cmd" ;;
         vm102)  run_on_vm102 "$cmd" ;;
         ct103)  run_on_ct103 "$cmd" ;;
+        ct104)  run_on_ct104 "$cmd" ;;
     esac
     rc=$?
     log "$target" "exit" "rc=$rc"

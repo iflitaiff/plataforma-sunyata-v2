@@ -9,7 +9,8 @@ Todo agente DEVE ler este arquivo antes de operar no ai-comm.
 
 | ID | Nome | Papel | Cor |
 |----|------|-------|-----|
-| `claude` | Claude | Executor Principal | Azul |
+| `claude` | Claude (Code) | Executor Principal | Azul |
+| `claude-chat` | Claude (Chat) | Arquiteto & Consultor | Vermelho |
 | `gemini` | Gemini | QA Infra/Codigo | Amarelo |
 | `manus` | Manus | Arquiteto de Conteudo | Roxo |
 | `codex` | Codex | QA Dados/Templates | Verde |
@@ -112,6 +113,13 @@ ssh -p 65002 u202164171@82.25.72.226 "ls -lt /home/u202164171/ai-comm/ | head -1
 ssh -p 65002 u202164171@82.25.72.226 "cat /home/u202164171/ai-comm/ARQUIVO.md"
 ```
 
+### Claude Chat (Windows, via Filipe)
+- Filipe compartilha contexto/mensagem na sessao do Claude Chat
+- Claude Chat produz resposta no formato padrao ai-comm
+- Filipe salva e executa `send-message.ps1` (PowerShell) para enviar ao servidor
+- Para ler mensagens: `read-messages.ps1 -For "claude-chat"`
+- Setup completo: `ai-comm/claude-chat-setup/`
+
 ### Gemini / Manus (via Filipe)
 - Filipe compartilha o conteudo da mensagem na sessao do agente
 - Agente produz a resposta no formato padrao
@@ -140,3 +148,4 @@ ssh -p 65002 u202164171@82.25.72.226 "cat /home/u202164171/ai-comm/ARQUIVO.md"
 |--------|------|-----------|
 | 1.0 | 2026-02-10 | Versao inicial — consenso Claude + Manus |
 | 1.1 | 2026-02-12 | Adicionados Codex e Copilot. Cabecalho OBRIGATORIO. Fallback no monitor. |
+| 1.2 | 2026-02-19 | Adicionado Claude Chat (Windows). Scripts PowerShell para envio/leitura. |
