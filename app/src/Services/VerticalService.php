@@ -49,31 +49,46 @@ class VerticalService
         $configPath = __DIR__ . '/../../config/verticals.php';
         $configVerticals = file_exists($configPath) ? require $configPath : [];
 
-        // 2. Carregar do banco de dados
+        // 2. Carregar do banco de dados (V2 PostgreSQL schema)
         try {
             $dbVerticals = $this->db->fetchAll("
                 SELECT
-                    slug, nome, icone, descricao, ordem,
-                    disponivel, requer_aprovacao, max_users,
-                    api_params, created_at, updated_at
+                    slug,
+                    name,
+                    config,
+                    is_active,
+                    created_at,
+                    updated_at
                 FROM verticals
-                WHERE disponivel = true
-                ORDER BY ordem ASC, nome ASC
+                WHERE is_active = true
+                ORDER BY name ASC
             ");
 
             // Converter para formato associativo (slug => data)
+            // Mapear colunas V2 (PostgreSQL) para formato esperado V1 (retrocompat)
             $dbVerticalsIndexed = [];
             foreach ($dbVerticals as $vertical) {
                 $slug = $vertical['slug'];
 
-                // Decodificar api_params se for JSON string
-                if (!empty($vertical['api_params'])) {
-                    $vertical['api_params'] = is_string($vertical['api_params'])
-                        ? json_decode($vertical['api_params'], true)
-                        : $vertical['api_params'];
-                }
+                // Decodificar config JSONB
+                $config = !empty($vertical['config'])
+                    ? (is_string($vertical['config']) ? json_decode($vertical['config'], true) : $vertical['config'])
+                    : [];
 
-                $dbVerticalsIndexed[$slug] = $vertical;
+                // Mapear para formato V1 esperado
+                $dbVerticalsIndexed[$slug] = [
+                    'slug' => $vertical['slug'],
+                    'nome' => $vertical['name'],  // V2: 'name' → V1: 'nome'
+                    'icone' => $config['icon'] ?? '',
+                    'descricao' => $config['description'] ?? '',
+                    'ordem' => $config['order'] ?? 0,
+                    'disponivel' => $vertical['is_active'],  // V2: 'is_active' → V1: 'disponivel'
+                    'requer_aprovacao' => $config['requires_approval'] ?? false,
+                    'max_users' => $config['max_users'] ?? null,
+                    'api_params' => $config['api_params'] ?? [],
+                    'created_at' => $vertical['created_at'],
+                    'updated_at' => $vertical['updated_at'],
+                ];
             }
         } catch (Exception $e) {
             // Se tabela não existe ou erro, usar apenas config
@@ -108,45 +123,64 @@ class VerticalService
     /**
      * Criar nova vertical no banco de dados
      *
-     * @param array $data Dados da vertical (slug, nome, icone, etc)
+     * V2: Aceita dados em formato V1 (retrocompat) e converte para V2 schema
+     *
+     * @param array $data Dados da vertical (slug, nome/name, icone/icon, etc)
      * @return int ID da vertical criada
      * @throws Exception
      */
     public function create(array $data): int
     {
+        // Aceitar 'nome' ou 'name' (retrocompat)
+        $name = $data['name'] ?? $data['nome'] ?? null;
+        $slug = $data['slug'] ?? null;
+
         // Validar campos obrigatórios
-        $required = ['slug', 'nome', 'icone'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                throw new Exception("Campo obrigatório ausente: $field");
-            }
+        if (empty($slug)) {
+            throw new Exception("Campo obrigatório ausente: slug");
+        }
+        if (empty($name)) {
+            throw new Exception("Campo obrigatório ausente: name/nome");
         }
 
         // Validar slug único
-        if ($this->slugExists($data['slug'])) {
-            throw new Exception("Slug '{$data['slug']}' já existe");
+        if ($this->slugExists($slug)) {
+            throw new Exception("Slug '{$slug}' já existe");
         }
 
-        // Preparar dados
+        // Construir config JSONB (V2 schema)
+        $config = [];
+
+        // Aceitar icone/icon (retrocompat)
+        if (!empty($data['icone']) || !empty($data['icon'])) {
+            $config['icon'] = $data['icon'] ?? $data['icone'];
+        }
+
+        // Outros campos vão para config
+        if (!empty($data['descricao']) || !empty($data['description'])) {
+            $config['description'] = $data['description'] ?? $data['descricao'];
+        }
+
+        $config['order'] = $data['order'] ?? $data['ordem'] ?? 999;
+        $config['requires_approval'] = $data['requires_approval'] ?? $data['requer_aprovacao'] ?? false;
+        $config['max_users'] = $data['max_users'] ?? null;
+
+        // API params
+        if (!empty($data['api_params'])) {
+            $config['api_params'] = is_array($data['api_params'])
+                ? $data['api_params']
+                : json_decode($data['api_params'], true);
+        }
+
+        // Preparar dados para V2 schema
         $insertData = [
-            'slug' => $data['slug'],
-            'nome' => $data['nome'],
-            'icone' => $data['icone'],
-            'descricao' => $data['descricao'] ?? '',
-            'ordem' => $data['ordem'] ?? 999,
-            'disponivel' => $data['disponivel'] ?? true,
-            'requer_aprovacao' => $data['requer_aprovacao'] ?? false,
-            'max_users' => $data['max_users'] ?? null,
+            'slug' => $slug,
+            'name' => $name,  // V2: 'name' column
+            'config' => json_encode($config, JSON_UNESCAPED_UNICODE),  // V2: JSONB
+            'is_active' => (int)($data['is_active'] ?? $data['disponivel'] ?? true),  // PostgreSQL boolean como 0/1
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
-
-        // Encode api_params se fornecido
-        if (!empty($data['api_params'])) {
-            $insertData['api_params'] = is_array($data['api_params'])
-                ? json_encode($data['api_params'], JSON_UNESCAPED_UNICODE)
-                : $data['api_params'];
-        }
 
         $id = $this->db->insert('verticals', $insertData);
 
@@ -158,6 +192,8 @@ class VerticalService
 
     /**
      * Atualizar vertical existente
+     *
+     * V2: Aceita dados em formato V1 (retrocompat) e converte para V2 schema
      *
      * @param int $id ID da vertical
      * @param array $data Dados a atualizar
@@ -179,21 +215,76 @@ class VerticalService
             }
         }
 
-        // Preparar dados para update
+        // Preparar dados para V2 schema
         $updateData = [];
-        $allowedFields = ['slug', 'nome', 'icone', 'descricao', 'ordem', 'disponivel', 'requer_aprovacao', 'max_users'];
 
-        foreach ($allowedFields as $field) {
-            if (array_key_exists($field, $data)) {
-                $updateData[$field] = $data[$field];
-            }
+        // Slug (V2: direct column)
+        if (isset($data['slug'])) {
+            $updateData['slug'] = $data['slug'];
         }
 
-        // Encode api_params se fornecido
-        if (array_key_exists('api_params', $data)) {
-            $updateData['api_params'] = is_array($data['api_params'])
-                ? json_encode($data['api_params'], JSON_UNESCAPED_UNICODE)
-                : $data['api_params'];
+        // Name (V2: aceitar 'name' ou 'nome' para retrocompat)
+        if (isset($data['name']) || isset($data['nome'])) {
+            $updateData['name'] = $data['name'] ?? $data['nome'];
+        }
+
+        // is_active (V2: aceitar 'is_active' ou 'disponivel')
+        if (isset($data['is_active']) || isset($data['disponivel'])) {
+            $updateData['is_active'] = (int)($data['is_active'] ?? $data['disponivel']);  // PostgreSQL boolean como 0/1
+        }
+
+        // Config JSONB (V2: merge com config existente)
+        $needsConfigUpdate = false;
+        $config = !empty($existing['config'])
+            ? (is_string($existing['config']) ? json_decode($existing['config'], true) : $existing['config'])
+            : [];
+
+        // Icon/Icone
+        if (isset($data['icon']) || isset($data['icone'])) {
+            $config['icon'] = $data['icon'] ?? $data['icone'];
+            $needsConfigUpdate = true;
+        }
+
+        // Description/Descricao
+        if (isset($data['description']) || isset($data['descricao'])) {
+            $config['description'] = $data['description'] ?? $data['descricao'];
+            $needsConfigUpdate = true;
+        }
+
+        // Order/Ordem
+        if (isset($data['order']) || isset($data['ordem'])) {
+            $config['order'] = $data['order'] ?? $data['ordem'];
+            $needsConfigUpdate = true;
+        }
+
+        // Requires approval
+        if (isset($data['requires_approval']) || isset($data['requer_aprovacao'])) {
+            $config['requires_approval'] = $data['requires_approval'] ?? $data['requer_aprovacao'];
+            $needsConfigUpdate = true;
+        }
+
+        // Max users
+        if (isset($data['max_users'])) {
+            $config['max_users'] = $data['max_users'];
+            $needsConfigUpdate = true;
+        }
+
+        // API params
+        if (isset($data['api_params'])) {
+            $config['api_params'] = is_array($data['api_params'])
+                ? $data['api_params']
+                : json_decode($data['api_params'], true);
+            $needsConfigUpdate = true;
+        }
+
+        // Se config mudou, atualizar
+        if ($needsConfigUpdate) {
+            $updateData['config'] = json_encode($config, JSON_UNESCAPED_UNICODE);
+        }
+
+        // Se não há nada para atualizar, retornar true
+        if (empty($updateData)) {
+            return true;
         }
 
         $updateData['updated_at'] = date('Y-m-d H:i:s');
@@ -215,20 +306,22 @@ class VerticalService
      */
     public function delete(int $id): bool
     {
-        // Verificar se há canvas associados
+        // Verificar se há canvas associados (V2: usar junction table)
         $canvasCount = $this->db->fetchOne("
             SELECT COUNT(*) as count
-            FROM canvas_templates
-            WHERE vertical = (SELECT slug FROM verticals WHERE id = :id)
+            FROM canvas_vertical_assignments cva
+            JOIN verticals v ON v.slug = cva.vertical_slug
+            WHERE v.id = :id
         ", ['id' => $id]);
 
         if ($canvasCount['count'] > 0) {
             throw new Exception("Não é possível deletar vertical com {$canvasCount['count']} canvas associados");
         }
 
-        // Soft delete (marca como indisponível)
+        // Soft delete (marca como inativa - V2: is_active ao invés de disponivel)
+        // PostgreSQL boolean: usar 0/1 para evitar problema de binding
         $success = $this->db->update('verticals', [
-            'disponivel' => false,
+            'is_active' => 0,  // PostgreSQL aceita 0/1 para boolean
             'updated_at' => date('Y-m-d H:i:s'),
         ], 'id = :id', ['id' => $id]);
 
@@ -247,11 +340,12 @@ class VerticalService
      */
     public function hardDelete(int $id): bool
     {
-        // Verificar se há canvas associados
+        // Verificar se há canvas associados (V2: usar junction table)
         $canvasCount = $this->db->fetchOne("
             SELECT COUNT(*) as count
-            FROM canvas_templates
-            WHERE vertical = (SELECT slug FROM verticals WHERE id = :id)
+            FROM canvas_vertical_assignments cva
+            JOIN verticals v ON v.slug = cva.vertical_slug
+            WHERE v.id = :id
         ", ['id' => $id]);
 
         if ($canvasCount['count'] > 0) {

@@ -39,9 +39,10 @@ $verticalData = $db->fetchOne("
 
 // Buscar Canvas/ferramentas da vertical prompt-builder do banco
 $canvas_list = $db->fetchAll("
-    SELECT * FROM canvas_templates
-    WHERE vertical = 'prompt-builder' AND is_active = TRUE
-    ORDER BY display_order ASC
+    SELECT ct.* FROM canvas_templates ct
+    INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+    WHERE cva.vertical_slug = 'prompt-builder' AND ct.is_active = TRUE
+    ORDER BY cva.display_order ASC
 ");
 
 $verticalName = $verticalData['name'] ?? 'Prompt Builder - Administrativo';

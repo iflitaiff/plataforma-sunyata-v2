@@ -84,7 +84,7 @@ class SubmissionService
     public function getSubmission(int $submissionId, int $userId): ?array
     {
         return $this->db->fetchOne("
-            SELECT us.*, ct.name as canvas_name, ct.slug as canvas_slug, ct.vertical
+            SELECT us.*, ct.name as canvas_name, ct.slug as canvas_slug
             FROM user_submissions us
             JOIN canvas_templates ct ON ct.id = us.canvas_template_id
             WHERE us.id = :id AND us.user_id = :user_id

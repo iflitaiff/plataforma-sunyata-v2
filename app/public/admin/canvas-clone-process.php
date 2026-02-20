@@ -99,12 +99,11 @@ try {
         redirect(BASE_URL . '/admin/canvas-templates.php');
     }
 
-    // Clonar canvas (inserir novo registro)
+    // Clonar canvas (inserir novo registro) - Phase 3.5: no 'vertical' column
     $db->execute("
         INSERT INTO canvas_templates (
             slug,
             name,
-            vertical,
             form_config,
             system_prompt,
             user_prompt_template,
@@ -115,7 +114,6 @@ try {
         ) VALUES (
             :slug,
             :name,
-            :vertical,
             :form_config,
             :system_prompt,
             :user_prompt_template,
@@ -127,7 +125,6 @@ try {
     ", [
         'slug' => $new_slug,
         'name' => $new_name,
-        'vertical' => $new_vertical,
         'form_config' => $source_canvas['form_config'],
         'system_prompt' => $source_canvas['system_prompt'],
         'user_prompt_template' => $source_canvas['user_prompt_template'],
@@ -136,6 +133,15 @@ try {
     ]);
 
     $new_id = $db->lastInsertId('canvas_templates_id_seq');
+
+    // Phase 3.5: Create vertical assignment in junction table
+    $db->execute("
+        INSERT INTO canvas_vertical_assignments (canvas_id, vertical_slug, display_order, created_at, updated_at)
+        VALUES (:canvas_id, :vertical_slug, 0, NOW(), NOW())
+    ", [
+        'canvas_id' => $new_id,
+        'vertical_slug' => $new_vertical
+    ]);
 
     // Log da ação
     error_log(sprintf(

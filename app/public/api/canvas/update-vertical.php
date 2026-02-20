@@ -89,7 +89,7 @@ try {
 
     // Buscar canvas atual
     $canvas = $db->fetchOne("
-        SELECT id, slug, name, vertical
+        SELECT id, slug, name
         FROM canvas_templates
         WHERE id = :id
     ", ['id' => $canvas_id]);
@@ -103,7 +103,15 @@ try {
         exit;
     }
 
-    $old_vertical = $canvas['vertical'];
+    // Phase 3.5: Get current vertical from junction table (first one if multiple)
+    $current_assignment = $db->fetchOne("
+        SELECT vertical_slug FROM canvas_vertical_assignments
+        WHERE canvas_id = :canvas_id
+        ORDER BY display_order ASC
+        LIMIT 1
+    ", ['canvas_id' => $canvas_id]);
+
+    $old_vertical = $current_assignment['vertical_slug'] ?? null;
 
     // Se já está na vertical desejada, não fazer nada
     if ($old_vertical === $new_vertical) {
@@ -117,16 +125,35 @@ try {
         exit;
     }
 
-    // Atualizar vertical
+    // Phase 3.5: Update junction table instead of vertical column
+    // Remove old assignment (if exists)
+    if ($old_vertical) {
+        $db->execute("
+            DELETE FROM canvas_vertical_assignments
+            WHERE canvas_id = :canvas_id AND vertical_slug = :vertical_slug
+        ", [
+            'canvas_id' => $canvas_id,
+            'vertical_slug' => $old_vertical
+        ]);
+    }
+
+    // Add new assignment
+    $db->execute("
+        INSERT INTO canvas_vertical_assignments (canvas_id, vertical_slug, display_order, created_at, updated_at)
+        VALUES (:canvas_id, :vertical_slug, 0, NOW(), NOW())
+        ON CONFLICT (canvas_id, vertical_slug) DO UPDATE
+            SET updated_at = NOW()
+    ", [
+        'canvas_id' => $canvas_id,
+        'vertical_slug' => $new_vertical
+    ]);
+
+    // Update canvas updated_at timestamp
     $db->execute("
         UPDATE canvas_templates
-        SET vertical = :vertical,
-            updated_at = NOW()
+        SET updated_at = NOW()
         WHERE id = :id
-    ", [
-        'vertical' => $new_vertical,
-        'id' => $canvas_id
-    ]);
+    ", ['id' => $canvas_id]);
 
     // Log da ação
     error_log(sprintf(

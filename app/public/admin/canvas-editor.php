@@ -108,9 +108,9 @@ if ($canvasId && $canvasId !== 'new') {
 } else {
     // Lista de templates para seleção
     $availableTemplates = $db->fetchAll("
-        SELECT id, slug, name, vertical, is_active
+        SELECT id, slug, name, is_active
         FROM canvas_templates
-        ORDER BY vertical, name
+        ORDER BY name
     ");
 }
 

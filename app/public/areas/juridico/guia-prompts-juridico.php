@@ -35,6 +35,7 @@ try {
     $db = Database::getInstance();
     $db->insert('tool_access_logs', [
         'user_id' => $_SESSION['user_id'],
+        'tool_name' => 'Guia Prompts Juridico',
         'tool_slug' => 'guia-prompts-juridico',
         'vertical' => $user_vertical,
         'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,

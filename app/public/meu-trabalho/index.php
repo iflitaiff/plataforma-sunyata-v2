@@ -25,8 +25,9 @@ $verticalManager = VerticalManager::getInstance();
 $verticals = $verticalManager->getAllDisplayData();
 
 // Get canvas templates the user has used
+// V2: vertical_slug está em user_submissions, não em canvas_templates
 $usedCanvases = $db->fetchAll("
-    SELECT DISTINCT ct.id, ct.name, ct.vertical
+    SELECT DISTINCT ct.id, ct.name, us.vertical_slug as vertical
     FROM user_submissions us
     JOIN canvas_templates ct ON ct.id = us.canvas_template_id
     WHERE us.user_id = :user_id AND us.status != 'draft'

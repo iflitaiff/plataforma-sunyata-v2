@@ -35,6 +35,7 @@ try {
     $db = Database::getInstance();
     $db->insert('tool_access_logs', [
         'user_id' => $_SESSION['user_id'],
+        'tool_name' => 'Canvas Pesquisa',
         'tool_slug' => 'canvas-pesquisa',
         'vertical' => $user_vertical,
         'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,

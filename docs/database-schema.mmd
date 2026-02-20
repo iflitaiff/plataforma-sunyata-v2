@@ -1,0 +1,214 @@
+erDiagram
+    %% Users & Authentication
+    users ||--o| user_profiles : "has profile"
+    users ||--o{ sessions : "has sessions"
+    users ||--o{ consents : "gives consents"
+    users ||--o{ contracts : "has contracts"
+    users ||--o{ vertical_access_requests : "requests access"
+
+    %% Canvas & Templates (Many-to-Many since Phase 3.5)
+    canvas_templates ||--o{ canvas_vertical_assignments : "assigned to"
+    verticals ||--o{ canvas_vertical_assignments : "contains"
+    canvas_templates ||--o{ canvas_template_versions : "has versions"
+    canvas_templates ||--o{ artifact_relations : "relates from"
+    canvas_templates ||--o{ artifact_relations : "relates to"
+
+    %% Submissions & Conversations
+    users ||--o{ user_submissions : "creates"
+    canvas_templates ||--o{ user_submissions : "generates"
+    user_submissions ||--o| prompt_history : "logged in"
+    user_submissions ||--o{ submission_documents : "contains"
+    user_documents ||--o{ submission_documents : "attached to"
+
+    users ||--o{ conversations : "starts"
+    canvas_templates ||--o{ conversations : "used in"
+    conversations ||--o{ conversation_messages : "contains"
+    conversations ||--o{ conversation_files : "has attachments"
+    user_files ||--o{ conversation_files : "attached to"
+
+    %% Drafts & Artifacts
+    users ||--o{ form_drafts : "saves"
+    canvas_templates ||--o{ form_drafts : "draft for"
+
+    users ||--o{ form_artifacts : "generates"
+    canvas_templates ||--o{ form_artifacts : "source"
+    user_submissions ||--o| form_artifacts : "creates"
+
+    %% Documents
+    users ||--o{ user_documents : "uploads"
+    users ||--o{ user_files : "uploads (legacy)"
+
+    %% Prompts
+    users ||--o{ prompt_history : "executes"
+    users ||--o{ prompt_dictionary : "creates prompts"
+
+    %% System
+    users ||--o{ audit_logs : "audited"
+    users ||--o{ tool_access_logs : "accesses tools"
+    users ||--o{ formulario_feedback : "gives feedback"
+    users ||--o{ data_requests : "requests data"
+    users ||--o{ settings : "updates settings"
+
+    %% Table Definitions
+    users {
+        integer id PK
+        varchar email UK
+        varchar google_id UK
+        varchar name
+        text access_level
+        text selected_vertical
+        boolean is_demo
+        timestamptz created_at
+    }
+
+    user_profiles {
+        integer id PK
+        integer user_id FK,UK
+        varchar phone
+        varchar organization
+        text organization_size
+    }
+
+    sessions {
+        varchar id PK
+        integer user_id FK
+        varchar ip_address
+        timestamptz last_activity
+    }
+
+    verticals {
+        integer id PK
+        varchar slug UK
+        varchar name
+        jsonb config
+        boolean is_active
+    }
+
+    canvas_templates {
+        integer id PK
+        varchar slug UK
+        varchar name
+        jsonb form_config
+        text system_prompt
+        jsonb api_params_override
+        text status
+        jsonb draft_form_config
+        text type
+        varchar category
+        timestamptz created_at
+    }
+
+    canvas_vertical_assignments {
+        integer id PK
+        integer canvas_id FK
+        text vertical_slug
+        integer display_order
+        timestamptz created_at
+    }
+
+    canvas_template_versions {
+        integer id PK
+        integer template_id FK
+        integer version
+        jsonb form_config
+        timestamptz created_at
+    }
+
+    user_submissions {
+        bigint id PK
+        integer user_id FK
+        integer canvas_template_id FK
+        bigint prompt_history_id FK
+        text vertical_slug
+        varchar title
+        jsonb form_data
+        text result_markdown
+        text status
+        timestamptz created_at
+    }
+
+    form_drafts {
+        integer id PK
+        integer user_id FK
+        integer canvas_template_id FK
+        varchar label
+        jsonb form_data
+        integer page_no
+        timestamptz expires_at
+    }
+
+    form_artifacts {
+        integer id PK
+        integer user_id FK
+        integer canvas_template_id FK
+        integer submission_id FK,UK
+        varchar title
+        varchar artifact_type
+        text content
+    }
+
+    conversations {
+        bigint id PK
+        integer user_id FK
+        integer canvas_id FK
+        varchar title
+        text status
+        timestamptz created_at
+    }
+
+    conversation_messages {
+        bigint id PK
+        bigint conversation_id FK
+        text role
+        text content
+        integer tokens_input
+        integer tokens_output
+    }
+
+    user_documents {
+        bigint id PK
+        integer user_id FK
+        varchar filename
+        varchar mime_type
+        text extracted_text
+        jsonb metadata
+        tsvector search_vector
+    }
+
+    prompt_history {
+        bigint id PK
+        integer user_id FK
+        varchar vertical
+        text generated_prompt
+        text claude_response
+        integer tokens_total
+        numeric cost_usd
+        timestamptz created_at
+    }
+
+    prompt_dictionary {
+        integer id PK
+        text vertical
+        varchar category
+        varchar title
+        text prompt_text
+        text access_level
+    }
+
+    audit_logs {
+        bigint id PK
+        integer user_id FK
+        varchar action
+        varchar entity_type
+        integer entity_id
+        jsonb details
+        timestamptz created_at
+    }
+
+    settings {
+        integer id PK
+        varchar setting_key UK
+        text setting_value
+        text data_type
+        boolean is_public
+    }

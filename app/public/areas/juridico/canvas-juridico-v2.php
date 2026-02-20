@@ -62,11 +62,12 @@ $canvas = null;
 $formConfig = null;
 
 if (!$show_menu) {
-    // Carregar template específico
+    // Carregar template específico (Phase 3.5: via junction table)
     $canvas = $db->fetchOne("
-        SELECT id, slug, name, form_config, system_prompt, user_prompt_template, max_questions
-        FROM canvas_templates
-        WHERE slug = :slug AND vertical = 'juridico' AND is_active = TRUE
+        SELECT ct.id, ct.slug, ct.name, ct.form_config, ct.system_prompt, ct.user_prompt_template, ct.max_questions
+        FROM canvas_templates ct
+        INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+        WHERE ct.slug = :slug AND cva.vertical_slug = 'juridico' AND ct.is_active = TRUE
     ", ['slug' => $selected_aj]);
 
     if (!$canvas) {
@@ -82,13 +83,14 @@ if (!$show_menu) {
 $all_templates = [];
 if ($show_menu) {
     $all_templates = $db->fetchAll("
-        SELECT id, slug, name
-        FROM canvas_templates
-        WHERE vertical = 'juridico' AND is_active = TRUE AND slug != 'juridico-geral'
+        SELECT ct.id, ct.slug, ct.name
+        FROM canvas_templates ct
+        INNER JOIN canvas_vertical_assignments cva ON ct.id = cva.canvas_id
+        WHERE cva.vertical_slug = 'juridico' AND ct.is_active = TRUE AND ct.slug != 'juridico-geral'
         ORDER BY
-            CASE slug
+            CASE ct.slug
                 WHEN 'juridico-livre' THEN 99
-                ELSE id
+                ELSE ct.id
             END
     ");
 }

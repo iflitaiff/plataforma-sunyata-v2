@@ -1,0 +1,335 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link " Admin - Plataforma Sunyata" [ref=e5] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/
+        - generic [ref=e6]: 
+        - generic [ref=e7]: Admin - Plataforma Sunyata
+      - link " Voltar ao Portal" [ref=e9] [cursor=pointer]:
+        - /url: http://158.69.25.114/dashboard.php
+        - generic [ref=e10]: 
+        - generic [ref=e11]: Voltar ao Portal
+      - generic:           
+  - generic [ref=e15]:
+    - generic [ref=e19]:
+      - link " Dashboard" [ref=e20] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/
+        - generic [ref=e21]: 
+        - generic [ref=e22]: Dashboard
+      - link " Usuarios" [ref=e23] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/users.php
+        - generic [ref=e24]: 
+        - generic [ref=e25]: Usuarios
+      - link " Solicitacoes" [ref=e26] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/access-requests.php
+        - generic [ref=e27]: 
+        - generic [ref=e28]: Solicitacoes
+      - link " Canvas Templates" [ref=e29] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/canvas-templates.php
+        - generic [ref=e30]: 
+        - generic [ref=e31]: Canvas Templates
+      - link " Survey Creator" [ref=e32] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/canvas-editor.php
+        - generic [ref=e33]: 
+        - generic [ref=e34]: Survey Creator
+      - link " Config Verticais" [ref=e35] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/verticals-config.php
+        - generic [ref=e36]: 
+        - generic [ref=e37]: Config Verticais
+      - link " Config Portal" [ref=e38] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/portal-config.php
+        - generic [ref=e39]: 
+        - generic [ref=e40]: Config Portal
+      - link " Historico Prompts" [ref=e41] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/prompt-history.php
+        - generic [ref=e42]: 
+        - generic [ref=e43]: Historico Prompts
+      - link " Relatorio de Uso" [ref=e44] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/user-report.php
+        - generic [ref=e45]: 
+        - generic [ref=e46]: Relatorio de Uso
+      - link " Logs Auditoria" [ref=e47] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/audit-logs.php
+        - generic [ref=e48]: 
+        - generic [ref=e49]: Logs Auditoria
+      - link " System Logs" [ref=e50] [cursor=pointer]:
+        - /url: http://158.69.25.114/admin/system-logs.php
+        - generic [ref=e51]: 
+        - generic [ref=e52]: System Logs
+    - generic [ref=e53]:
+      - heading "Gerenciar Verticais" [level=1] [ref=e54]: Gerenciar Verticais
+      - paragraph [ref=e55]:
+        - text: Gerencie as verticais do sistema. Verticais definem áreas temáticas com ferramentas específicas.
+        - generic [ref=e56]:
+          - strong [ref=e57]: "Fonte de verdade:"
+          - text: Banco de dados (prioridade) + config/verticals.php (fallback)
+      - generic [ref=e58]:
+        - button "Criar Nova Vertical" [ref=e59] [cursor=pointer]: Criar Nova Vertical
+        - link "Gerenciar Canvas" [ref=e60] [cursor=pointer]:
+          - /url: canvas-templates.php
+          - text: Gerenciar Canvas
+        - generic [ref=e61]:
+          - text: "Total:"
+          - strong [ref=e62]: "13"
+          - text: verticais
+      - generic [ref=e63]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - heading "👨‍🏫 Docência ATIVO CONFIG" [level=5] [ref=e69]:
+              - text: 👨‍🏫 Docência
+              - generic [ref=e70]: ATIVO
+              - generic [ref=e71]: CONFIG
+            - paragraph [ref=e72]:
+              - strong [ref=e73]: "Slug:"
+              - code [ref=e74]: docencia
+              - text: "|"
+              - strong [ref=e75]: "Ordem:"
+              - text: "1"
+            - paragraph [ref=e76]: Ferramentas para planejamento de aulas, criação de conteúdo educacional e gestão pedagógica.
+            - paragraph [ref=e77]:
+              - strong [ref=e78]: "0"
+              - text: canvas associados
+          - generic [ref=e81]: Somente leitura (config file)
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - heading "🔬 Pesquisa ATIVO CONFIG" [level=5] [ref=e87]:
+              - text: 🔬 Pesquisa
+              - generic [ref=e88]: ATIVO
+              - generic [ref=e89]: CONFIG
+            - paragraph [ref=e90]:
+              - strong [ref=e91]: "Slug:"
+              - code [ref=e92]: pesquisa
+              - text: "|"
+              - strong [ref=e93]: "Ordem:"
+              - text: "2"
+            - paragraph [ref=e94]: Recursos para estruturação de projetos de pesquisa acadêmica e científica.
+            - paragraph [ref=e95]:
+              - strong [ref=e96]: "0"
+              - text: canvas associados
+          - generic [ref=e99]: Somente leitura (config file)
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - heading "🎓 IFRJ - Alunos ATIVO CONFIG" [level=5] [ref=e105]:
+              - text: 🎓 IFRJ - Alunos
+              - generic [ref=e106]: ATIVO
+              - generic [ref=e107]: CONFIG
+            - paragraph [ref=e108]:
+              - strong [ref=e109]: "Slug:"
+              - code [ref=e110]: ifrj_alunos
+              - text: "|"
+              - strong [ref=e111]: "Ordem:"
+              - text: "3"
+            - paragraph [ref=e112]: Área exclusiva para alunos do IFRJ com ferramentas de apoio ao aprendizado.
+            - paragraph [ref=e113]:
+              - strong [ref=e114]: "0"
+              - text: canvas associados
+          - generic [ref=e117]: Somente leitura (config file)
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - heading "⚖️ Jurídico ATIVO CONFIG" [level=5] [ref=e123]:
+              - text: ⚖️ Jurídico
+              - generic [ref=e124]: ATIVO
+              - generic [ref=e125]: CONFIG
+            - paragraph [ref=e126]:
+              - strong [ref=e127]: "Slug:"
+              - code [ref=e128]: juridico
+              - text: "|"
+              - strong [ref=e129]: "Ordem:"
+              - text: "4"
+            - paragraph [ref=e130]: Ferramentas especializadas para profissionais do Direito.
+            - paragraph [ref=e131]:
+              - strong [ref=e132]: "0"
+              - text: canvas associados
+          - generic [ref=e135]: Somente leitura (config file)
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - heading "📈 Vendas INATIVO CONFIG" [level=5] [ref=e141]:
+              - text: 📈 Vendas
+              - generic [ref=e142]: INATIVO
+              - generic [ref=e143]: CONFIG
+            - paragraph [ref=e144]:
+              - strong [ref=e145]: "Slug:"
+              - code [ref=e146]: vendas
+              - text: "|"
+              - strong [ref=e147]: "Ordem:"
+              - text: "5"
+            - paragraph [ref=e148]: Ferramentas para otimizar processos de vendas e relacionamento com clientes.
+            - paragraph [ref=e149]:
+              - strong [ref=e150]: "0"
+              - text: canvas associados
+          - generic [ref=e153]: Somente leitura (config file)
+        - generic [ref=e157]:
+          - generic [ref=e158]:
+            - heading "📢 Marketing INATIVO CONFIG" [level=5] [ref=e159]:
+              - text: 📢 Marketing
+              - generic [ref=e160]: INATIVO
+              - generic [ref=e161]: CONFIG
+            - paragraph [ref=e162]:
+              - strong [ref=e163]: "Slug:"
+              - code [ref=e164]: marketing
+              - text: "|"
+              - strong [ref=e165]: "Ordem:"
+              - text: "6"
+            - paragraph [ref=e166]: Recursos para criação de conteúdo, campanhas e estratégias de marketing digital.
+            - paragraph [ref=e167]:
+              - strong [ref=e168]: "0"
+              - text: canvas associados
+          - generic [ref=e171]: Somente leitura (config file)
+        - generic [ref=e175]:
+          - generic [ref=e176]:
+            - heading "📋 Licitações ATIVO CONFIG" [level=5] [ref=e177]:
+              - text: 📋 Licitações
+              - generic [ref=e178]: ATIVO
+              - generic [ref=e179]: CONFIG
+            - paragraph [ref=e180]:
+              - strong [ref=e181]: "Slug:"
+              - code [ref=e182]: licitacoes
+              - text: "|"
+              - strong [ref=e183]: "Ordem:"
+              - text: "7"
+            - paragraph [ref=e184]: Ferramentas para análise de editais, monitoramento de licitações e gestão de processos licitatórios.
+            - paragraph [ref=e185]:
+              - strong [ref=e186]: "0"
+              - text: canvas associados
+          - generic [ref=e189]: Somente leitura (config file)
+        - generic [ref=e193]:
+          - generic [ref=e194]:
+            - heading "👥 Recursos Humanos INATIVO CONFIG" [level=5] [ref=e195]:
+              - text: 👥 Recursos Humanos
+              - generic [ref=e196]: INATIVO
+              - generic [ref=e197]: CONFIG
+            - paragraph [ref=e198]:
+              - strong [ref=e199]: "Slug:"
+              - code [ref=e200]: rh
+              - text: "|"
+              - strong [ref=e201]: "Ordem:"
+              - text: "8"
+            - paragraph [ref=e202]: Soluções para recrutamento, seleção e gestão de pessoas.
+            - paragraph [ref=e203]:
+              - strong [ref=e204]: "0"
+              - text: canvas associados
+          - generic [ref=e207]: Somente leitura (config file)
+        - generic [ref=e211]:
+          - generic [ref=e212]:
+            - heading "🌐 Geral INATIVO CONFIG" [level=5] [ref=e213]:
+              - text: 🌐 Geral
+              - generic [ref=e214]: INATIVO
+              - generic [ref=e215]: CONFIG
+            - paragraph [ref=e216]:
+              - strong [ref=e217]: "Slug:"
+              - code [ref=e218]: geral
+              - text: "|"
+              - strong [ref=e219]: "Ordem:"
+              - text: "9"
+            - paragraph [ref=e220]: Ferramentas de propósito geral para diversas áreas e aplicações.
+            - paragraph [ref=e221]:
+              - strong [ref=e222]: "0"
+              - text: canvas associados
+          - generic [ref=e225]: Somente leitura (config file)
+        - generic [ref=e229]:
+          - generic [ref=e230]:
+            - heading "🧪 IATR ATIVO CONFIG" [level=5] [ref=e231]:
+              - text: 🧪 IATR
+              - generic [ref=e232]: ATIVO
+              - generic [ref=e233]: CONFIG
+            - paragraph [ref=e234]:
+              - strong [ref=e235]: "Slug:"
+              - code [ref=e236]: iatr
+              - text: "|"
+              - strong [ref=e237]: "Ordem:"
+              - text: "10"
+            - paragraph [ref=e238]: Vertical de testes para escritório de advocacia. Acesso limitado a 5 usuários.
+            - paragraph [ref=e239]:
+              - strong [ref=e240]: "0"
+              - text: canvas associados |
+              - text: "Máx: 5 usuários"
+          - generic [ref=e243]: Somente leitura (config file)
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - heading "🛠️ Administrativo ATIVO CONFIG" [level=5] [ref=e249]:
+              - text: 🛠️ Administrativo
+              - generic [ref=e250]: ATIVO
+              - generic [ref=e251]: CONFIG
+            - paragraph [ref=e252]:
+              - strong [ref=e253]: "Slug:"
+              - code [ref=e254]: prompt-builder
+              - text: "|"
+              - strong [ref=e255]: "Ordem:"
+              - text: "11"
+            - paragraph [ref=e256]: Ferramentas administrativas para construção e otimização de prompts.
+            - paragraph [ref=e257]:
+              - strong [ref=e258]: "0"
+              - text: canvas associados
+          - generic [ref=e261]: Somente leitura (config file)
+        - generic [ref=e265]:
+          - generic [ref=e266]:
+            - heading "⚖️ Nicolay Advogados ATIVO CONFIG" [level=5] [ref=e267]:
+              - text: ⚖️ Nicolay Advogados
+              - generic [ref=e268]: ATIVO
+              - generic [ref=e269]: CONFIG
+            - paragraph [ref=e270]:
+              - strong [ref=e271]: "Slug:"
+              - code [ref=e272]: nicolay-advogados
+              - text: "|"
+              - strong [ref=e273]: "Ordem:"
+              - text: "12"
+            - paragraph [ref=e274]: Ferramentas de análise jurídica com IA para Nicolay Advogados.
+            - paragraph [ref=e275]:
+              - strong [ref=e276]: "0"
+              - text: canvas associados
+          - generic [ref=e279]: Somente leitura (config file)
+        - generic [ref=e283]:
+          - generic [ref=e284]:
+            - heading "⚖️ Legal ATIVO CONFIG" [level=5] [ref=e285]:
+              - text: ⚖️ Legal
+              - generic [ref=e286]: ATIVO
+              - generic [ref=e287]: CONFIG
+            - paragraph [ref=e288]:
+              - strong [ref=e289]: "Slug:"
+              - code [ref=e290]: legal
+              - text: "|"
+              - strong [ref=e291]: "Ordem:"
+              - text: "13"
+            - paragraph [ref=e292]: Ferramentas de análise jurídica com IA para profissionais do Direito.
+            - paragraph [ref=e293]:
+              - strong [ref=e294]: "0"
+              - text: canvas associados
+          - generic [ref=e297]: Somente leitura (config file)
+      - generic [ref=e298]:
+        - heading "Sobre Verticais" [level=6] [ref=e300]: Sobre Verticais
+        - generic [ref=e301]:
+          - heading "O que são Verticais?" [level=6] [ref=e302]
+          - paragraph [ref=e303]: "Verticais definem áreas temáticas do sistema (ex: Jurídico, Marketing, RH). Cada vertical agrupa canvas templates relacionados e pode ter configurações específicas de API (model, temperature, max_tokens)."
+          - heading "Fonte de Verdade Híbrida:" [level=6] [ref=e304]
+          - list [ref=e305]:
+            - listitem [ref=e306]:
+              - strong [ref=e307]: "Banco de Dados (prioridade):"
+              - text: Verticais criadas via admin UI ficam na tabela
+              - code [ref=e308]: verticals
+            - listitem [ref=e309]:
+              - strong [ref=e310]: "Config File (fallback):"
+              - code [ref=e311]: config/verticals.php
+              - text: "- usado se tabela não existe ou vazia"
+            - listitem [ref=e312]:
+              - strong [ref=e313]: "Merge:"
+              - text: Sistema combina ambas fontes, DB sobrescreve config quando há conflito
+          - heading "Badges de Origem:" [level=6] [ref=e314]
+          - list [ref=e315]:
+            - listitem [ref=e316]:
+              - generic [ref=e317]: DB
+              - text: "- Vertical gerenciada via admin (editável)"
+            - listitem [ref=e318]:
+              - generic [ref=e319]: CONFIG
+              - text: "- Vertical do arquivo PHP (somente leitura)"
+          - heading "Funcionalidades:" [level=6] [ref=e320]
+          - list [ref=e321]:
+            - listitem [ref=e322]: ✅ Criar verticais via GUI (sem código)
+            - listitem [ref=e323]: ✅ Ativar/Desativar verticais
+            - listitem [ref=e324]: ✅ Drag-to-reorder (em breve)
+            - listitem [ref=e325]: ✅ Limite de usuários por vertical
+            - listitem [ref=e326]: ✅ Aprovação opcional para acesso
+            - listitem [ref=e327]: 🔄 API Params por vertical (próxima versão)
+```

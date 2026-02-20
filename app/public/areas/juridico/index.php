@@ -11,6 +11,7 @@ session_name(SESSION_NAME);
 session_start();
 
 use Sunyata\Core\Database;
+use Sunyata\Services\CanvasService;
 
 require_login();
 
@@ -34,11 +35,9 @@ if (!in_array($user_vertical, $allowed_verticals) && !$is_demo && !$is_admin) {
 
 // Buscar Canvas do banco (tipo 'forms' apenas, Fase 1)
 $db = Database::getInstance();
-$canvas_list = $db->fetchAll("
-    SELECT * FROM canvas_templates
-    WHERE vertical = 'juridico' AND type = 'forms' AND is_active = TRUE
-    ORDER BY display_order ASC
-");
+// Buscar Canvas usando CanvasService (many-to-many)
+$canvasService = CanvasService::getInstance();
+$canvas_list = $canvasService->getByVertical('juridico', true);
 
 // Converter Canvas para formato de ferramentas (compatibilidade)
 $ferramentas = [];
