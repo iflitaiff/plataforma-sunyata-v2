@@ -1,0 +1,124 @@
+{
+  "name": "Bridge - AI Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "ai/chat",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ws-ac-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-400, 112],
+      "webhookId": "ai-chat"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-auth-token']}}",
+              "value2": "daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c"
+            }
+          ]
+        }
+      },
+      "id": "ws-ac-002",
+      "name": "Check Auth Token",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-208, 112]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.100.13:4000/v1/chat/completions",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-sunyata-ec909e5420572a4c8c496822a9459bcdec1391c7"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.body.model || 'claude-haiku-4-5', messages: $json.body.messages || [{ role: 'user', content: $json.body.prompt || 'Hello' }], max_tokens: $json.body.max_tokens || 1024, temperature: $json.body.temperature || 0.7 }) }}",
+        "options": {}
+      },
+      "id": "ws-ac-003",
+      "name": "Call LiteLLM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst choice = raw.choices && raw.choices[0];\n\nreturn [{\n  json: {\n    success: true,\n    response: choice ? choice.message.content : null,\n    model: raw.model || null,\n    usage: raw.usage || null,\n    finish_reason: choice ? choice.finish_reason : null,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "ws-ac-004",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [208, 0]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ws-ac-005",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [416, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "ws-ac-006",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [0, 208]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Check Auth Token", "type": "main", "index": 0}]]
+    },
+    "Check Auth Token": {
+      "main": [
+        [{"node": "Call LiteLLM", "type": "main", "index": 0}],
+        [{"node": "Respond Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Call LiteLLM": {
+      "main": [[{"node": "Format Response", "type": "main", "index": 0}]]
+    },
+    "Format Response": {
+      "main": [[{"node": "Respond OK", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

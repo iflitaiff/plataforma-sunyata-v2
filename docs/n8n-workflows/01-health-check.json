@@ -1,0 +1,42 @@
+{
+  "name": "Bridge - Health Check",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "health",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-health",
+      "name": "Webhook (Health)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "health-check"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    status: 'ok',\n    timestamp: new Date().toISOString(),\n    service: 'n8n-bridge',\n    version: '1.0',\n    uptime: process.uptime()\n  }\n}];"
+      },
+      "id": "code-health",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook (Health)": {
+      "main": [[{"node": "Build Response", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-19T00:00:00.000Z",
+  "versionId": "1"
+}

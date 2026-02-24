@@ -1,0 +1,106 @@
+{
+  "name": "Bridge - Docker Status",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "docker/status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ws-ds-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-400, 112],
+      "webhookId": "docker-status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-auth-token']}}",
+              "value2": "daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c"
+            }
+          ]
+        }
+      },
+      "id": "ws-ds-002",
+      "name": "Check Auth Token",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-208, 112]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:2375/containers/json?all=true",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "ws-ds-003",
+      "name": "Get Docker Containers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const containers = $input.first().json || [];\n\nconst formatted = (Array.isArray(containers) ? containers : []).map(c => ({\n  name: (c.Names && c.Names[0] || '').replace(/^\\//, ''),\n  image: c.Image || '',\n  state: c.State || '',\n  status: c.Status || '',\n  ports: (c.Ports || []).map(p => p.PublicPort ? `${p.PublicPort}->${p.PrivatePort}/${p.Type}` : `${p.PrivatePort}/${p.Type}`).join(', ')\n}));\n\nconst running = formatted.filter(c => c.state === 'running').length;\nconst stopped = formatted.filter(c => c.state !== 'running').length;\n\nreturn [{\n  json: {\n    success: true,\n    containers: formatted,\n    total: formatted.length,\n    running: running,\n    stopped: stopped,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "ws-ds-004",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [208, 0]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ws-ds-005",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [416, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "ws-ds-006",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [0, 208]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Check Auth Token", "type": "main", "index": 0}]]
+    },
+    "Check Auth Token": {
+      "main": [
+        [{"node": "Get Docker Containers", "type": "main", "index": 0}],
+        [{"node": "Respond Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Docker Containers": {
+      "main": [[{"node": "Format Response", "type": "main", "index": 0}]]
+    },
+    "Format Response": {
+      "main": [[{"node": "Respond OK", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

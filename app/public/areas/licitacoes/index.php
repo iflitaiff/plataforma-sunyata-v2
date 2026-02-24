@@ -51,6 +51,7 @@ foreach ($canvas_list as $canvas) {
 
 // Labels e ícones para as categorias
 $categoryMeta = [
+    'licitacoes'  => ['label' => 'Licitações & Editais',        'icon' => 'bi-clipboard-data',   'color' => '#0d6efd'],
     'analise'     => ['label' => 'Análise de Editais',          'icon' => 'bi-search',           'color' => '#667eea'],
     'monitoramento' => ['label' => 'Monitoramento',             'icon' => 'bi-bell',             'color' => '#28a745'],
     'documentos'  => ['label' => 'Documentos & Propostas',      'icon' => 'bi-file-earmark-text','color' => '#764ba2'],
@@ -59,7 +60,7 @@ $categoryMeta = [
 ];
 
 // Ordem fixa das categorias
-$categoryOrder = ['analise', 'monitoramento', 'documentos', 'ferramentas', 'geral'];
+$categoryOrder = ['licitacoes', 'analise', 'monitoramento', 'documentos', 'ferramentas', 'geral'];
 
 $verticalName = $verticalData['name'] ?? 'Licitações';
 $pageTitle = $verticalName;

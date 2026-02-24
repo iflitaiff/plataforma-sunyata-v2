@@ -139,6 +139,8 @@ require_once __DIR__ . '/error-handler.php';
 function require_login() {
     // Verifica se o usuário está logado (compatível com auth.php)
     if (!isset($_SESSION['user'])) {
+        // Save current URL so we can redirect back after login
+        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
         header('Location: ' . BASE_URL . '/index.php?m=login_required');
         exit;
     }
@@ -179,6 +181,15 @@ function redirect($url) {
         header('Location: ' . $url);
     }
     exit;
+}
+
+function consume_redirect_after_login() {
+    $redirect = $_SESSION['redirect_after_login'] ?? null;
+    unset($_SESSION['redirect_after_login']);
+    if ($redirect && str_starts_with($redirect, '/')) {
+        return BASE_URL . $redirect;
+    }
+    return null;
 }
 
 function json_response($data, $status = 200) {

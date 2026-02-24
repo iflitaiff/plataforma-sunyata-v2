@@ -83,7 +83,7 @@ if ($needsConsent) {
             <h2 class="h2 text-center mb-4">Termos e Consentimentos</h2>
             <p class="text-secondary text-center">Para continuar, precisamos do seu consentimento:</p>
 
-            <form method="POST" action="">
+            <form method="POST" action="" hx-boost="false">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
                 <div class="mb-3">

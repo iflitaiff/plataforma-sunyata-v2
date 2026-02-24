@@ -177,6 +177,12 @@ MarkdownLogger::getInstance()->access(
     ]
 );
 
+// Check for saved redirect URL (e.g., deep-link from email)
+$savedRedirect = consume_redirect_after_login();
+if ($savedRedirect) {
+    redirect($savedRedirect);
+}
+
 // Admins always go to dashboard (they can access all verticals from there)
 if ($isAdmin) {
     redirect(BASE_URL . '/dashboard.php');

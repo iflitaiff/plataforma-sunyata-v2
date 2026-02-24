@@ -1,0 +1,118 @@
+{
+  "name": "Bridge - Proxmox Status",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "proxmox/status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ws-ps-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-400, 112],
+      "webhookId": "proxmox-status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-auth-token']}}",
+              "value2": "daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c"
+            }
+          ]
+        }
+      },
+      "id": "ws-ps-002",
+      "name": "Check Auth Token",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-208, 112]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://192.168.100.1:8006/api2/json/cluster/status",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "PVEAPIToken=bridge@pve!n8n-bridge=6130ae66-ca9d-4cee-b2e3-3ae6418f1e2d"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "ws-ps-003",
+      "name": "Get Proxmox Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst data = raw.data || raw || [];\n\nconst nodes = (Array.isArray(data) ? data : []).filter(d => d.type === 'node').map(n => ({\n  name: n.name,\n  status: n.online ? 'online' : 'offline',\n  id: n.id\n}));\n\nconst cluster = (Array.isArray(data) ? data : []).find(d => d.type === 'cluster');\n\nreturn [{\n  json: {\n    success: true,\n    cluster: cluster ? { name: cluster.name, version: cluster.version, quorate: cluster.quorate } : null,\n    nodes: nodes,\n    total_nodes: nodes.length,\n    online: nodes.filter(n => n.status === 'online').length,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "ws-ps-004",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [208, 0]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ws-ps-005",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [416, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "ws-ps-006",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [0, 208]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Check Auth Token", "type": "main", "index": 0}]]
+    },
+    "Check Auth Token": {
+      "main": [
+        [{"node": "Get Proxmox Status", "type": "main", "index": 0}],
+        [{"node": "Respond Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Proxmox Status": {
+      "main": [[{"node": "Format Response", "type": "main", "index": 0}]]
+    },
+    "Format Response": {
+      "main": [[{"node": "Respond OK", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
