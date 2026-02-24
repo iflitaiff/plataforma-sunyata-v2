@@ -901,6 +901,8 @@ Editais coletados da API PNCP pelo workflow N8N "PNCP Daily Monitor v3". Anális
 | `texto_total_paginas` | integer | YES | - | Total de páginas (todos os PDFs) |
 | `texto_total_caracteres` | integer | YES | - | Total de caracteres em texto_completo |
 | `arquivos_pncp` | jsonb | YES | - | Array de metadata dos ficheiros PNCP |
+| `datajud_orgao` | jsonb | YES | - | Cache DataJud: processos judiciais do órgão (via CNPJ do pncp_id) |
+| `datajud_consultado_em` | timestamptz | YES | - | Timestamp da última consulta DataJud (cache 24h) |
 | `created_at` | timestamptz | YES | now() | Criação do registo |
 | `updated_at` | timestamptz | YES | now() | Última actualização |
 
@@ -926,11 +928,47 @@ SELECT * FROM pncp_editais WHERE uf = ? ORDER BY data_encerramento;
 
 ---
 
+### `datajud_consultas`
+Consultas ad-hoc à API DataJud (Feature 3: Verificação de Idoneidade). Armazena resultados de consultas por CNPJ feitas pelo usuário na página do edital.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | serial | NO | PK, auto | Primary key |
+| `cnpj` | text | NO | - | CNPJ consultado (14 dígitos, sem formatação) |
+| `user_id` | integer | YES | - | FK → users.id (quem consultou) |
+| `edital_id` | integer | YES | - | FK → pncp_editais.id (contexto) |
+| `resultado` | jsonb | YES | - | Resultado completo da consulta DataJud |
+| `created_at` | timestamptz | YES | now() | Timestamp da consulta |
+
+**Constraints:**
+- PK: `id`
+- FK: `edital_id` → `pncp_editais(id)`
+
+**Formato do JSONB `resultado`:**
+```json
+{
+  "total_processos": 5,
+  "processos": [...],
+  "resumo": {"por_classe": {...}, "mais_recente": "...", "mais_antigo": "..."},
+  "alertas": [{"nivel": "CRITICO|ATENCAO|INFO", "titulo": "...", "descricao": "..."}]
+}
+```
+
+**Formato do JSONB `datajud_orgao` (em pncp_editais):**
+Mesmo formato acima, preenchido automaticamente pelo endpoint `/api/ai/datajud/orgao-processos`.
+
+---
+
 ## Migration Notes
 
 **See:** `docs/MIGRATIONS.md` for full migration changelog.
 
-**Latest:** PNCP Phase C Migration 014 (2026-02-24) - Análise complementar
+**Latest:** DataJud Integration Migration 015 (2026-02-24) - Judicial data
+- Added 2 columns to `pncp_editais`: `datajud_orgao` (JSONB), `datajud_consultado_em` (timestamptz)
+- Created `datajud_consultas` table for ad-hoc company idoneidade checks
+- DataJud data cached 24h, auto-queried by FastAPI endpoint, injected into N8N IATR analysis
+
+**Previous:** PNCP Phase C Migration 014 (2026-02-24) - Análise complementar
 - Added 5 columns: `analise_tipo`, `analise_tokens_input`, `analise_tokens_output`, `analise_custo_usd`, `analise_com_texto_completo`
 - Supports N8N workflow v2 with multiple analysis types and LLM cost tracking
 - `analise_resultado` JSONB uses merge (`||`) to accumulate results by type key

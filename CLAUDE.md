@@ -119,9 +119,10 @@ Targets: `host`, `vm100`, `ct103`, `ct104`
 - `system_prompt` bloqueado em canvas overrides (gerido pela hierarquia de 4 níveis)
 - `Settings::set()` com `data_type='json'`: passar PHP array, NÃO JSON string
 
-### Caminhos de IA (dois pipelines)
+### Caminhos de IA (três pipelines)
 1. **Canvas:** Portal → FastAPI → LiteLLM → resposta no formulário
 2. **N8N:** Portal → N8N webhook → LiteLLM → resultado no banco
+3. **DataJud:** Portal → FastAPI `/api/ai/datajud/*` → DataJud API (CNJ) → cache PostgreSQL
 
 ---
 
@@ -144,11 +145,12 @@ Targets: `host`, `vm100`, `ct103`, `ct104`
 - Coleta editais da API PNCP (6 UFs, 17 keywords) → tabela `pncp_editais`
 - Email HTML para `claudesunyata@gmail.com` com links via deep-link resolver `/edital.php`
 
-### IATR Análise de Edital (ID: JzfXXdEuOOe7FFf6)
-- Webhook: POST `/webhook/iatr/analisar` (body: `{"edital_id": N}`)
+### IATR Análise de Edital v2 (ID: 4HJSmPLYTNTUnO8y)
+- Webhook: POST `/webhook/iatr/analisar` (body: `{"edital_id": N, "tipo_analise": "resumo_executivo"|"habilitacao"}`)
 - Auth: header `X-Auth-Token`
-- Flow: Validate → Mark In Progress → Build Prompt → LiteLLM → Save Result
+- Flow: Validate → Mark In Progress → Check Edital Data → [PDF Extract if needed] → Build Prompt (com DataJud context) → LiteLLM → Save Result
 - Portal chama via proxy `/api/pncp/trigger-analise.php` (não direto do browser)
+- **Nota:** v1 (ID: JzfXXdEuOOe7FFf6) está INATIVA — não modificar
 
 ### Portal - Send Email (ID: rWDYKMY0Wav5dMpH)
 - Webhook: POST `/webhook/portal/send-email`
