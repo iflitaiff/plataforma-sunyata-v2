@@ -83,6 +83,20 @@ $headExtra = <<<HTML
     .polling-indicator { display: inline-flex; align-items: center; gap: 0.5rem; }
     .pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: #ffc107; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    /* DataJud styles */
+    .datajud-card { border: 2px solid #e6e8eb; border-radius: 8px; }
+    .datajud-card.loaded { border-color: #6f42c1; }
+    .datajud-card.empty { border-color: #28a745; }
+    .classe-badge { display: inline-flex; flex-direction: column; align-items: center; background: #f8f9fa; border-radius: 8px; padding: 0.5rem 1rem; min-width: 120px; }
+    .classe-badge .count { font-size: 1.5rem; font-weight: 700; color: #6f42c1; }
+    .classe-badge .label { font-size: 0.75rem; color: #64748b; text-align: center; }
+    .alerta-critico { border-left: 4px solid #dc3545; background: #fff5f5; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; }
+    .alerta-atencao { border-left: 4px solid #ffc107; background: #fffdf0; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; }
+    .alerta-info { border-left: 4px solid #0d6efd; background: #f0f7ff; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0; }
+    .cnpj-input { font-family: monospace; letter-spacing: 0.05em; }
+    .processo-table { font-size: 0.85rem; }
+    .processo-table th { background: #f1f3f5; font-weight: 600; white-space: nowrap; }
+    .bg-purple { background-color: #6f42c1; color: #fff; }
 </style>
 HTML;
 
@@ -180,6 +194,43 @@ $pageContent = function () use ($edital, $autoAnalise) {
             <i class="bi bi-box-arrow-up-right"></i> Ver no PNCP
         </a>
         <?php endif; ?>
+    </div>
+
+    <!-- DataJud: Historico Judicial do Orgao (Feature 1) -->
+    <div class="card datajud-card mb-4" id="datajud-orgao-section">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0"><i class="bi bi-briefcase"></i> Hist&oacute;rico Judicial do &Oacute;rg&atilde;o</h4>
+            <div id="datajud-orgao-status"></div>
+        </div>
+        <div class="card-body" id="datajud-orgao-body">
+            <div class="text-center py-3 text-secondary">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span class="ms-2">Consultando hist&oacute;rico judicial...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataJud: Verificacao de Idoneidade (Feature 3) -->
+    <div class="card datajud-card mb-4" id="datajud-empresa-section">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0"><i class="bi bi-shield-check"></i> Verificar Idoneidade de Empresa</h4>
+            <div id="datajud-empresa-status"></div>
+        </div>
+        <div class="card-body" id="datajud-empresa-body">
+            <div class="row align-items-end g-2">
+                <div class="col-auto" style="min-width:220px;">
+                    <label class="form-label">CNPJ da Empresa</label>
+                    <input type="text" id="cnpj-empresa" class="form-control cnpj-input"
+                           placeholder="00.000.000/0000-00" maxlength="18">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary" id="btn-verificar-idoneidade" onclick="verificarIdoneidade()">
+                        <i class="bi bi-search"></i> Consultar
+                    </button>
+                </div>
+            </div>
+            <div id="datajud-empresa-resultado" class="mt-3"></div>
+        </div>
     </div>
 
     <!-- AI Analysis Section -->
@@ -403,6 +454,184 @@ async function sendAnaliseEmail() {
     }
     btn.textContent = 'Enviar';
     btn.disabled = false;
+}
+
+// --- DataJud: Feature 1 - Historico Judicial do Orgao ---
+const DATAJUD_ORGAO_URL = <?= json_encode(BASE_URL . '/api/datajud/orgao-processos.php') ?>;
+const DATAJUD_EMPRESA_URL = <?= json_encode(BASE_URL . '/api/datajud/empresa-idoneidade.php') ?>;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDatajudOrgao();
+
+    // CNPJ mask
+    const cnpjInput = document.getElementById('cnpj-empresa');
+    if (cnpjInput) {
+        cnpjInput.addEventListener('input', function(e) {
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length > 14) v = v.slice(0, 14);
+            if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+            else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
+            else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
+            else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
+            e.target.value = v;
+        });
+        cnpjInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') verificarIdoneidade();
+        });
+    }
+});
+
+async function loadDatajudOrgao(forceRefresh = false) {
+    const body = document.getElementById('datajud-orgao-body');
+    const status = document.getElementById('datajud-orgao-status');
+    const section = document.getElementById('datajud-orgao-section');
+
+    body.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><span class="ms-2">Consultando hist\u00f3rico judicial...</span></div>';
+
+    try {
+        const resp = await fetch(DATAJUD_ORGAO_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+            body: JSON.stringify({ edital_id: EDITAL_ID, force_refresh: forceRefresh })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+            body.innerHTML = '<div class="alert alert-warning mb-0">' + escapeHtml(data.error) + '</div>';
+            return;
+        }
+
+        renderDatajudOrgao(data, body, status, section);
+    } catch (err) {
+        body.innerHTML = '<div class="alert alert-danger mb-0">Erro ao consultar DataJud: ' + escapeHtml(err.message) + '</div>';
+    }
+}
+
+function renderDatajudOrgao(data, body, status, section) {
+    const total = data.total_processos || 0;
+
+    if (total === 0) {
+        section.classList.add('empty');
+        status.innerHTML = '<span class="badge bg-success">Nenhum processo</span>';
+        body.innerHTML =
+            '<div class="text-center py-3 text-success">' +
+                '<i class="bi bi-check-circle" style="font-size: 2rem;"></i>' +
+                '<p class="mt-2 mb-0">Nenhum processo judicial encontrado para este \u00f3rg\u00e3o.</p>' +
+                '<small class="text-muted">Tribunais consultados: ' + (data.tribunais_consultados || []).join(', ') + '</small>' +
+            '</div>' +
+            '<div class="text-end mt-2">' +
+                '<button class="btn btn-ghost-primary btn-sm" onclick="loadDatajudOrgao(true)"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>' +
+            '</div>';
+        return;
+    }
+
+    section.classList.add('loaded');
+    const cached = data.cached ? ' <span class="badge bg-secondary">cache</span>' : '';
+    status.innerHTML = '<span class="badge bg-purple">' + total + ' processo(s)</span>' + cached;
+
+    // Build classe badges
+    const resumo = data.resumo || {};
+    const porClasse = resumo.por_classe || {};
+    let badgesHtml = '';
+    for (const [classe, count] of Object.entries(porClasse)) {
+        badgesHtml += '<div class="classe-badge"><span class="count">' + count + '</span><span class="label">' + escapeHtml(classe) + '</span></div>';
+    }
+
+    // Build processes table
+    let tableRows = '';
+    for (const p of (data.processos || []).slice(0, 50)) {
+        const classe = (p.classe || {}).nome || '?';
+        const dataAj = p.data_ajuizamento ? new Date(p.data_ajuizamento + 'T00:00:00').toLocaleDateString('pt-BR') : '?';
+        const ultMov = p.ultima_movimentacao
+            ? (p.ultima_movimentacao.nome || '?') + ' (' + (p.ultima_movimentacao.data ? new Date(p.ultima_movimentacao.data).toLocaleDateString('pt-BR') : '?') + ')'
+            : '-';
+        tableRows += '<tr><td>' + escapeHtml(p.numero) + '</td><td>' + escapeHtml(classe) + '</td><td>' + escapeHtml(p.tribunal) + '</td><td>' + dataAj + '</td><td>' + escapeHtml(ultMov) + '</td></tr>';
+    }
+
+    body.innerHTML =
+        '<div class="d-flex flex-wrap gap-2 mb-3">' + badgesHtml + '</div>' +
+        '<div class="d-flex justify-content-between align-items-center">' +
+            '<small class="text-muted">Tribunais: ' + (data.tribunais_consultados || []).join(', ') + ' | Per\u00edodo: ' + (resumo.mais_antigo || '?') + ' a ' + (resumo.mais_recente || '?') + '</small>' +
+            '<button class="btn btn-ghost-primary btn-sm" onclick="loadDatajudOrgao(true)"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>' +
+        '</div>' +
+        '<details class="mt-3">' +
+            '<summary class="btn btn-outline-secondary btn-sm">Ver processos detalhados (' + total + ')</summary>' +
+            '<div class="table-responsive mt-2">' +
+                '<table class="table table-sm processo-table">' +
+                    '<thead><tr><th>Processo</th><th>Classe</th><th>Tribunal</th><th>Ajuizamento</th><th>\u00daltima Movimenta\u00e7\u00e3o</th></tr></thead>' +
+                    '<tbody>' + tableRows + '</tbody>' +
+                '</table>' +
+            '</div>' +
+        '</details>';
+}
+
+// --- DataJud: Feature 3 - Verificacao de Idoneidade ---
+
+async function verificarIdoneidade() {
+    const cnpjRaw = document.getElementById('cnpj-empresa').value.replace(/\D/g, '');
+    const resultado = document.getElementById('datajud-empresa-resultado');
+    const btn = document.getElementById('btn-verificar-idoneidade');
+    const status = document.getElementById('datajud-empresa-status');
+
+    if (cnpjRaw.length !== 14) {
+        resultado.innerHTML = '<div class="alert alert-warning py-2">CNPJ deve ter 14 d\u00edgitos.</div>';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Consultando...';
+    resultado.innerHTML = '';
+
+    try {
+        const resp = await fetch(DATAJUD_EMPRESA_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+            body: JSON.stringify({ cnpj: cnpjRaw, edital_id: EDITAL_ID })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+            resultado.innerHTML = '<div class="alert alert-danger py-2">' + escapeHtml(data.error) + '</div>';
+            return;
+        }
+
+        renderIdoneidade(data, resultado, status);
+    } catch (err) {
+        resultado.innerHTML = '<div class="alert alert-danger py-2">Erro: ' + escapeHtml(err.message) + '</div>';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search"></i> Consultar';
+    }
+}
+
+function renderIdoneidade(data, resultado, status) {
+    const total = data.total_processos || 0;
+    const alertas = data.alertas || [];
+
+    if (total === 0) {
+        status.innerHTML = '<span class="badge bg-success">Nenhuma pend\u00eancia</span>';
+        resultado.innerHTML =
+            '<div class="text-center py-2 text-success">' +
+                '<i class="bi bi-check-circle-fill"></i> Nenhuma pend\u00eancia judicial encontrada para CNPJ ' + escapeHtml(data.cnpj) + '.' +
+                '<br><small class="text-muted">Tribunais: ' + (data.tribunais_consultados || []).join(', ') + '</small>' +
+            '</div>';
+        return;
+    }
+
+    const hasCritico = alertas.some(function(a) { return a.tipo === 'CRITICO'; });
+    const hasAtencao = alertas.some(function(a) { return a.tipo === 'ATENCAO'; });
+    const badgeClass = hasCritico ? 'bg-danger' : hasAtencao ? 'bg-warning text-dark' : 'bg-info';
+    status.innerHTML = '<span class="badge ' + badgeClass + '">' + total + ' processo(s)</span>';
+
+    let alertasHtml = '';
+    for (const alerta of alertas) {
+        const cssClass = alerta.tipo === 'CRITICO' ? 'alerta-critico' : alerta.tipo === 'ATENCAO' ? 'alerta-atencao' : 'alerta-info';
+        const icon = alerta.tipo === 'CRITICO' ? 'exclamation-triangle-fill' : alerta.tipo === 'ATENCAO' ? 'exclamation-circle-fill' : 'info-circle-fill';
+        alertasHtml += '<div class="' + cssClass + '"><strong><i class="bi bi-' + icon + '"></i> ' + escapeHtml(alerta.tipo) + ':</strong> ' + escapeHtml(alerta.descricao) + '</div>';
+    }
+
+    resultado.innerHTML = alertasHtml +
+        '<small class="text-muted d-block mt-2">Tribunais: ' + (data.tribunais_consultados || []).join(', ') + '</small>';
 }
 </script>
 
