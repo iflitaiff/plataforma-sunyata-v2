@@ -87,7 +87,7 @@ $headExtra = <<<HTML
 HTML;
 
 $pageContent = function () use ($edital, $autoAnalise) {
-    $csrfToken = $_SESSION['csrf_token'] ?? '';
+    $csrfToken = csrf_token();
     $statusClass = match($edital['status']) {
         'aberto' => 'bg-success',
         'encerrado' => 'bg-secondary',

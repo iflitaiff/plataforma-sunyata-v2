@@ -888,9 +888,19 @@ Editais coletados da API PNCP pelo workflow N8N "PNCP Daily Monitor v3". Anális
 | `status_analise` | text | YES | 'pendente' | pendente/em_analise/concluida/erro |
 | `analise_resultado` | jsonb | YES | - | Resultado da análise IA (chave principal: `resumo_executivo`) |
 | `analise_modelo` | text | YES | - | Modelo LLM usado (ex: claude-haiku-4-5) |
-| `analise_tokens` | integer | YES | - | Total de tokens consumidos |
+| `analise_tipo` | text | YES | - | Tipo da última análise: `resumo_executivo`, `habilitacao` |
+| `analise_tokens` | integer | YES | - | Total de tokens consumidos (input + output, backward compat) |
+| `analise_tokens_input` | integer | YES | - | Tokens do prompt (última análise) |
+| `analise_tokens_output` | integer | YES | - | Tokens da resposta (última análise) |
+| `analise_custo_usd` | numeric(10,6) | YES | - | Custo estimado USD (última análise) |
+| `analise_com_texto_completo` | boolean | YES | false | Se a análise usou texto extraído dos PDFs |
 | `analise_erro` | text | YES | - | Mensagem de erro se análise falhou |
 | `analise_concluida_em` | timestamptz | YES | - | Timestamp de conclusão da análise |
+| `texto_completo` | text | YES | - | Texto extraído de todos os PDFs (cache) |
+| `texto_extraido_em` | timestamptz | YES | - | Timestamp da última extração de texto |
+| `texto_total_paginas` | integer | YES | - | Total de páginas (todos os PDFs) |
+| `texto_total_caracteres` | integer | YES | - | Total de caracteres em texto_completo |
+| `arquivos_pncp` | jsonb | YES | - | Array de metadata dos ficheiros PNCP |
 | `created_at` | timestamptz | YES | now() | Criação do registo |
 | `updated_at` | timestamptz | YES | now() | Última actualização |
 
@@ -920,7 +930,16 @@ SELECT * FROM pncp_editais WHERE uf = ? ORDER BY data_encerramento;
 
 **See:** `docs/MIGRATIONS.md` for full migration changelog.
 
-**Latest:** PNCP Phase A (2026-02-24) - PNCP Editais + AI Analysis
+**Latest:** PNCP Phase C Migration 014 (2026-02-24) - Análise complementar
+- Added 5 columns: `analise_tipo`, `analise_tokens_input`, `analise_tokens_output`, `analise_custo_usd`, `analise_com_texto_completo`
+- Supports N8N workflow v2 with multiple analysis types and LLM cost tracking
+- `analise_resultado` JSONB uses merge (`||`) to accumulate results by type key
+
+**Previous:** PNCP Phase C (2026-02-24) - PDF Text Extraction Cache
+- Added 5 columns to `pncp_editais`: `texto_completo`, `texto_extraido_em`, `texto_total_paginas`, `texto_total_caracteres`, `arquivos_pncp`
+- FastAPI endpoint `/api/ai/iatr/extract-pdf` downloads PDFs from PNCP API, extracts text, caches in DB
+
+**Previous:** PNCP Phase A (2026-02-24) - PNCP Editais + AI Analysis
 - Added `pncp_editais` table (migration 013)
 - User `n8n_worker` with SELECT, INSERT, UPDATE grants
 - JSONB `analise_resultado` stores AI analysis (key: `resumo_executivo`)

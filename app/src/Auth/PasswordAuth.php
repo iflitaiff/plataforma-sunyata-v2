@@ -113,7 +113,15 @@ class PasswordAuth {
      * Create user session (same structure as GoogleAuth)
      */
     private function createSession(array $user): void {
+        // Preserve redirect URL before regeneration (Redis sessions can lose data)
+        $redirectAfterLogin = $_SESSION['redirect_after_login'] ?? null;
+
         session_regenerate_id(true);
+
+        // Restore redirect URL if it was lost during regeneration
+        if ($redirectAfterLogin) {
+            $_SESSION['redirect_after_login'] = $redirectAfterLogin;
+        }
 
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['email'] = $user['email'];
