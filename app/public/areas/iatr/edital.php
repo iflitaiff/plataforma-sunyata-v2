@@ -24,20 +24,25 @@ $user_vertical = $_SESSION['user']['selected_vertical'] ?? null;
 $is_admin = ($_SESSION['user']['access_level'] ?? 'guest') === 'admin';
 $is_demo = $_SESSION['user']['is_demo'] ?? false;
 
-if ($user_vertical !== 'iatr' && !$is_demo && !$is_admin) {
+if (!in_array($user_vertical, ['iatr', 'licitacoes']) && !$is_demo && !$is_admin) {
     $_SESSION['error'] = 'Você não tem acesso a esta vertical';
     redirect(BASE_URL . '/dashboard.php');
 }
 
-// Validate ID
+// Validate ID or pncp_id
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-if (!$id) {
+$pncp_id = $_GET['pncp_id'] ?? null;
+
+$db = Database::getInstance();
+
+if ($id) {
+    $edital = $db->fetchOne("SELECT * FROM pncp_editais WHERE id = ?", [$id]);
+} elseif ($pncp_id) {
+    $edital = $db->fetchOne("SELECT * FROM pncp_editais WHERE pncp_id = ?", [$pncp_id]);
+} else {
     $_SESSION['error'] = 'ID do edital inválido';
     redirect(BASE_URL . '/areas/iatr/');
 }
-
-$db = Database::getInstance();
-$edital = $db->fetchOne("SELECT * FROM pncp_editais WHERE id = ?", [$id]);
 
 if (!$edital) {
     $_SESSION['error'] = 'Edital não encontrado';
@@ -63,7 +68,18 @@ $headExtra = <<<HTML
     .analise-card.concluida { border-color: #28a745; }
     .analise-card.erro { border-color: #dc3545; }
     .analise-card.em-andamento { border-color: #ffc107; }
-    .analise-resultado { white-space: pre-wrap; line-height: 1.7; }
+    .analise-resultado { line-height: 1.7; }
+    .analise-resultado table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.9em; }
+    .analise-resultado th, .analise-resultado td { border: 1px solid #dee2e6; padding: 8px 12px; text-align: left; }
+    .analise-resultado th { background: #f1f3f5; font-weight: 600; }
+    .analise-resultado tr:nth-child(even) { background: #f8f9fa; }
+    .analise-resultado h1, .analise-resultado h2, .analise-resultado h3 { margin-top: 1.5em; margin-bottom: 0.5em; color: #1a2a3a; }
+    .analise-resultado h1 { font-size: 1.4em; border-bottom: 2px solid #3498db; padding-bottom: 0.3em; }
+    .analise-resultado h2 { font-size: 1.2em; }
+    .analise-resultado h3 { font-size: 1.05em; }
+    .analise-resultado hr { margin: 1.5em 0; border: none; border-top: 1px solid #dee2e6; }
+    .analise-resultado ul, .analise-resultado ol { padding-left: 1.5em; }
+    .analise-resultado blockquote { border-left: 3px solid #3498db; padding-left: 1em; color: #666; margin: 1em 0; }
     .polling-indicator { display: inline-flex; align-items: center; gap: 0.5rem; }
     .pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: #ffc107; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -188,8 +204,7 @@ $pageContent = function () use ($edital, $autoAnalise) {
 const EDITAL_ID = <?= (int) $edital['id'] ?>;
 const CSRF_TOKEN = <?= json_encode($csrfToken) ?>;
 const STATUS_URL = <?= json_encode(BASE_URL . '/api/pncp/analise-status.php') ?>;
-const WEBHOOK_URL = <?= json_encode(rtrim(defined('N8N_WEBHOOK_BASE_URL') ? N8N_WEBHOOK_BASE_URL : 'https://158-69-25-114.sslip.io', '/') . '/webhook/iatr/analisar') ?>;
-const N8N_AUTH_TOKEN = <?= json_encode(defined('N8N_WEBHOOK_AUTH_TOKEN') ? N8N_WEBHOOK_AUTH_TOKEN : '') ?>;
+const TRIGGER_URL = <?= json_encode(BASE_URL . '/api/pncp/trigger-analise.php') ?>;
 const AUTO_ANALISE = <?= $autoAnalise ? 'true' : 'false' ?>;
 
 let pollingInterval = null;
@@ -213,11 +228,11 @@ async function triggerAnalise() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
 
     try {
-        const resp = await fetch(WEBHOOK_URL, {
+        const resp = await fetch(TRIGGER_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Auth-Token': N8N_AUTH_TOKEN,
+                'X-CSRF-Token': CSRF_TOKEN,
             },
             body: JSON.stringify({ edital_id: EDITAL_ID })
         });
@@ -298,7 +313,7 @@ function renderAnaliseResult(data) {
         indicator.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Concluída</span>';
 
         const resultado = data.analise_resultado || {};
-        const texto = resultado.texto || resultado.markdown || JSON.stringify(resultado, null, 2);
+        const texto = resultado.resumo_executivo || resultado.texto || resultado.markdown || JSON.stringify(resultado, null, 2);
         const meta = [];
         if (data.analise_modelo) meta.push(`Modelo: ${data.analise_modelo}`);
         if (data.analise_tokens) meta.push(`Tokens: ${data.analise_tokens.toLocaleString('pt-BR')}`);
@@ -307,9 +322,15 @@ function renderAnaliseResult(data) {
         body.innerHTML = `
             <div class="analise-resultado">${renderMarkdown(texto)}</div>
             ${meta.length ? `<hr><small class="text-muted">${meta.join(' | ')}</small>` : ''}
-            <div class="mt-3">
+            <div class="mt-3 d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm" onclick="triggerAnalise()">
-                    <i class="bi bi-arrow-repeat"></i> Reanalisar
+                    <i class="ti ti-refresh"></i> Reanalisar
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="openPdfPreview()">
+                    <i class="ti ti-file-type-pdf"></i> PDF
+                </button>
+                <button class="btn btn-outline-success btn-sm" onclick="showEmailForm()">
+                    <i class="ti ti-mail"></i> Email
                 </button>
             </div>`;
 
@@ -330,17 +351,7 @@ function renderAnaliseResult(data) {
 
 function renderMarkdown(text) {
     if (!text) return '';
-    // Basic markdown rendering (headers, bold, lists, links)
-    return text
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/^### (.+)$/gm, '<h5>$1</h5>')
-        .replace(/^## (.+)$/gm, '<h4>$1</h4>')
-        .replace(/^# (.+)$/gm, '<h3>$1</h3>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/^- (.+)$/gm, '<li>$1</li>')
-        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-        .replace(/\n/g, '<br>');
+    return marked.parse(text);
 }
 
 function escapeHtml(text) {
@@ -349,7 +360,103 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+function openPdfPreview() {
+    const pdfUrl = `<?= BASE_URL ?>/api/pncp/export-pdf.php?id=${EDITAL_ID}`;
+    document.getElementById('pdf-iframe').src = pdfUrl;
+    document.getElementById('pdf-download-link').href = pdfUrl + '&download=1';
+    new bootstrap.Modal(document.getElementById('modal-pdf')).show();
+}
+
+function showEmailForm() {
+    const pdfModal = bootstrap.Modal.getInstance(document.getElementById('modal-pdf'));
+    if (pdfModal) pdfModal.hide();
+    new bootstrap.Modal(document.getElementById('modal-email')).show();
+}
+
+async function sendAnaliseEmail() {
+    const emailTo = document.getElementById('email-to').value.trim();
+    const statusEl = document.getElementById('email-status');
+    if (!emailTo) {
+        statusEl.textContent = 'Informe o email destinatário.';
+        statusEl.className = 'alert alert-warning py-2';
+        return;
+    }
+    const btn = document.getElementById('btn-send-email');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    statusEl.textContent = '';
+    statusEl.className = '';
+    try {
+        const resp = await fetch(`<?= BASE_URL ?>/api/pncp/email-analise.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+            body: JSON.stringify({ edital_id: EDITAL_ID, to: emailTo })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Erro ao enviar');
+        statusEl.textContent = 'Email enviado com sucesso!';
+        statusEl.className = 'alert alert-success py-2';
+    } catch (err) {
+        statusEl.textContent = err.message;
+        statusEl.className = 'alert alert-danger py-2';
+    }
+    btn.textContent = 'Enviar';
+    btn.disabled = false;
+}
 </script>
+
+<!-- PDF Preview Modal -->
+<div class="modal modal-blur" id="modal-pdf" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Resumo Executivo — PDF</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe id="pdf-iframe" style="width:100%;height:500px;border:none;"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        <a id="pdf-download-link" class="btn btn-primary" download>
+          <i class="ti ti-download"></i> Baixar PDF
+        </a>
+        <button type="button" class="btn btn-success" onclick="showEmailForm()">
+          <i class="ti ti-mail"></i> Enviar por Email
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal modal-blur" id="modal-email" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Enviar Resumo por Email</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Destinatário</label>
+          <input type="email" id="email-to" class="form-control"
+                 value="<?= htmlspecialchars($_SESSION['user']['email'] ?? '') ?>"
+                 placeholder="email@exemplo.com">
+        </div>
+        <div id="email-status"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="btn-send-email" onclick="sendAnaliseEmail()">
+          <i class="ti ti-send"></i> Enviar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?php
 };
 

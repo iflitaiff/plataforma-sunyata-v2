@@ -3,7 +3,7 @@
 **Database:** PostgreSQL 16 + pgvector
 **Name:** `sunyata_platform`
 **User:** `sunyata_app`
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-24
 
 ---
 
@@ -15,6 +15,7 @@
 - [Documents & Files](#documents--files)
 - [Prompts](#prompts)
 - [System & Audit](#system--audit)
+- [PNCP & Licitações](#pncp--licitações)
 - [Indexes](#indexes)
 - [Common Queries](#common-queries)
 
@@ -860,11 +861,71 @@ WHERE last_activity >= NOW() - INTERVAL '1 hour';
 
 ---
 
+## PNCP & Licitações
+
+### `pncp_editais`
+Editais coletados da API PNCP pelo workflow N8N "PNCP Daily Monitor v3". Análise IA escrita pelo workflow "IATR - Análise de Edital".
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | integer | NO | PK, auto | Primary key |
+| `pncp_id` | text | NO | - | Identificador PNCP (unique). Formato: `CNPJ-1-SEQNUM/ANO` |
+| `numero` | text | YES | - | Número do edital (ex: "012/2025") |
+| `titulo` | text | NO | - | Título do edital |
+| `objeto` | text | YES | - | Descrição do objeto (truncada em 2000 chars) |
+| `orgao` | text | YES | - | Nome do órgão contratante |
+| `orgao_cnpj` | text | YES | - | CNPJ do órgão |
+| `uf` | text | YES | - | Estado (RJ, SP, MG, BA, PE, DF) |
+| `municipio` | text | YES | - | Município |
+| `modalidade` | text | YES | - | Modalidade de licitação |
+| `valor_estimado` | numeric | YES | - | Valor estimado (0 = sigiloso) |
+| `data_abertura` | timestamptz | YES | - | Data de abertura/publicação |
+| `data_encerramento` | timestamptz | YES | - | Data de encerramento |
+| `url_pncp` | text | YES | - | URL completa no portal PNCP |
+| `status` | text | YES | 'aberto' | Status do edital |
+| `keywords_matched` | text[] | YES | - | Keywords que matcharam na filtragem |
+| `raw_data` | jsonb | YES | - | Dados brutos da API PNCP |
+| `status_analise` | text | YES | 'pendente' | pendente/em_analise/concluida/erro |
+| `analise_resultado` | jsonb | YES | - | Resultado da análise IA (chave principal: `resumo_executivo`) |
+| `analise_modelo` | text | YES | - | Modelo LLM usado (ex: claude-haiku-4-5) |
+| `analise_tokens` | integer | YES | - | Total de tokens consumidos |
+| `analise_erro` | text | YES | - | Mensagem de erro se análise falhou |
+| `analise_concluida_em` | timestamptz | YES | - | Timestamp de conclusão da análise |
+| `created_at` | timestamptz | YES | now() | Criação do registo |
+| `updated_at` | timestamptz | YES | now() | Última actualização |
+
+**Constraints:**
+- PK: `id`
+- UNIQUE: `pncp_id`
+
+**Escrita por:** N8N workflows (via user `n8n_worker` com SELECT, INSERT, UPDATE)
+**Lida por:** Portal (via `sunyata_app`)
+
+**Queries comuns:**
+```sql
+-- Buscar edital por pncp_id (deep-links do email)
+SELECT * FROM pncp_editais WHERE pncp_id = ?;
+
+-- Polling de status de análise (frontend JS)
+SELECT id, status_analise, analise_resultado, analise_modelo, analise_tokens, analise_erro, analise_concluida_em
+FROM pncp_editais WHERE id = ?;
+
+-- Listar editais por UF
+SELECT * FROM pncp_editais WHERE uf = ? ORDER BY data_encerramento;
+```
+
+---
+
 ## Migration Notes
 
 **See:** `docs/MIGRATIONS.md` for full migration changelog.
 
-**Latest:** Phase 3.5 (2026-02-19) - Many-to-Many Canvas-Vertical Assignment
+**Latest:** PNCP Phase A (2026-02-24) - PNCP Editais + AI Analysis
+- Added `pncp_editais` table (migration 013)
+- User `n8n_worker` with SELECT, INSERT, UPDATE grants
+- JSONB `analise_resultado` stores AI analysis (key: `resumo_executivo`)
+
+**Previous:** Phase 3.5 (2026-02-19) - Many-to-Many Canvas-Vertical Assignment
 - Added `canvas_vertical_assignments` junction table
 - Removed `canvas_templates.vertical` column
 - Migrated 55 existing assignments to junction table
