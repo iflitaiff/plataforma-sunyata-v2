@@ -199,10 +199,18 @@ $pageContent = function () use ($edital, $autoAnalise) {
     <!-- DataJud: Historico Judicial do Orgao (Feature 1) -->
     <div class="card datajud-card mb-4" id="datajud-orgao-section">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0"><i class="bi bi-briefcase"></i> Hist&oacute;rico Judicial do &Oacute;rg&atilde;o</h4>
+            <div>
+                <h4 class="card-title mb-0"><i class="bi bi-briefcase"></i> Hist&oacute;rico Judicial do &Oacute;rg&atilde;o</h4>
+                <small class="text-muted"><?= sanitize_output($edital['orgao'] ?: 'Órgão não identificado') ?></small>
+            </div>
             <div id="datajud-orgao-status"></div>
         </div>
         <div class="card-body" id="datajud-orgao-body">
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle"></i>
+                Consulta processos judiciais registrados no <strong>DataJud (CNJ)</strong> envolvendo o CNPJ do &oacute;rg&atilde;o licitante
+                nos tribunais relevantes para o estado. Ajuda a avaliar riscos como execu&ccedil;&otilde;es fiscais, fal&ecirc;ncias e recupera&ccedil;&atilde;o judicial.
+            </p>
             <div class="text-center py-3 text-secondary">
                 <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                 <span class="ms-2">Consultando hist&oacute;rico judicial...</span>
@@ -213,15 +221,28 @@ $pageContent = function () use ($edital, $autoAnalise) {
     <!-- DataJud: Verificacao de Idoneidade (Feature 3) -->
     <div class="card datajud-card mb-4" id="datajud-empresa-section">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0"><i class="bi bi-shield-check"></i> Verificar Idoneidade de Empresa</h4>
+            <div>
+                <h4 class="card-title mb-0"><i class="bi bi-shield-check"></i> Verificar Idoneidade de Empresa</h4>
+                <small class="text-muted">Consulta judicial por CNPJ</small>
+            </div>
             <div id="datajud-empresa-status"></div>
         </div>
         <div class="card-body" id="datajud-empresa-body">
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle"></i>
+                Pesquisa no <strong>DataJud (CNJ)</strong> se a empresa possui processos judiciais que possam afetar sua
+                habilita&ccedil;&atilde;o na licita&ccedil;&atilde;o: fal&ecirc;ncia, recupera&ccedil;&atilde;o judicial, execu&ccedil;&otilde;es fiscais, etc.
+            </p>
             <div class="row align-items-end g-2">
                 <div class="col-auto" style="min-width:220px;">
                     <label class="form-label">CNPJ da Empresa</label>
                     <input type="text" id="cnpj-empresa" class="form-control cnpj-input"
                            placeholder="00.000.000/0000-00" maxlength="18">
+                </div>
+                <div class="col-auto" style="min-width:200px;">
+                    <label class="form-label">Nome da Empresa <small class="text-muted">(opcional)</small></label>
+                    <input type="text" id="nome-empresa" class="form-control"
+                           placeholder="Raz&atilde;o social">
                 </div>
                 <div class="col-auto">
                     <button class="btn btn-primary" id="btn-verificar-idoneidade" onclick="verificarIdoneidade()">
@@ -456,6 +477,13 @@ async function sendAnaliseEmail() {
     btn.disabled = false;
 }
 
+// --- DataJud helpers ---
+function formatCnpj(cnpj) {
+    const d = (cnpj || '').replace(/\D/g, '');
+    if (d.length !== 14) return cnpj || '';
+    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+}
+
 // --- DataJud: Feature 1 - Historico Judicial do Orgao ---
 const DATAJUD_ORGAO_URL = <?= json_encode(BASE_URL . '/api/datajud/orgao-processos.php') ?>;
 const DATAJUD_EMPRESA_URL = <?= json_encode(BASE_URL . '/api/datajud/empresa-idoneidade.php') ?>;
@@ -509,15 +537,24 @@ async function loadDatajudOrgao(forceRefresh = false) {
 
 function renderDatajudOrgao(data, body, status, section) {
     const total = data.total_processos || 0;
+    const orgaoNome = data.orgao || '(nome n\u00e3o dispon\u00edvel)';
+    const cnpjFormatado = formatCnpj(data.cnpj || '');
+    const tribunaisStr = (data.tribunais_consultados || []).join(', ') || 'nenhum';
+    const explanationHtml = '<p class="text-muted small mb-3">' +
+        '<i class="bi bi-info-circle"></i> ' +
+        'Consulta processos judiciais registrados no <strong>DataJud (CNJ)</strong> envolvendo o CNPJ do \u00f3rg\u00e3o licitante ' +
+        'nos tribunais relevantes para o estado. Ajuda a avaliar riscos como execu\u00e7\u00f5es fiscais, fal\u00eancias e recupera\u00e7\u00e3o judicial.' +
+        '</p>';
 
     if (total === 0) {
         section.classList.add('empty');
         status.innerHTML = '<span class="badge bg-success">Nenhum processo</span>';
-        body.innerHTML =
+        body.innerHTML = explanationHtml +
             '<div class="text-center py-3 text-success">' +
                 '<i class="bi bi-check-circle" style="font-size: 2rem;"></i>' +
-                '<p class="mt-2 mb-0">Nenhum processo judicial encontrado para este \u00f3rg\u00e3o.</p>' +
-                '<small class="text-muted">Tribunais consultados: ' + (data.tribunais_consultados || []).join(', ') + '</small>' +
+                '<p class="mt-2 mb-1">Nenhum processo judicial encontrado para <strong>' + escapeHtml(orgaoNome) + '</strong></p>' +
+                '<p class="mb-0"><small class="text-muted">CNPJ consultado: ' + escapeHtml(cnpjFormatado) + '</small></p>' +
+                '<small class="text-muted">Tribunais consultados: ' + escapeHtml(tribunaisStr) + '</small>' +
             '</div>' +
             '<div class="text-end mt-2">' +
                 '<button class="btn btn-ghost-primary btn-sm" onclick="loadDatajudOrgao(true)"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>' +
@@ -525,9 +562,21 @@ function renderDatajudOrgao(data, body, status, section) {
         return;
     }
 
+    // Panorama regional: results are from the region, not specific to this organ's CNPJ
+    const isPanorama = data.panorama_regional === true;
     section.classList.add('loaded');
     const cached = data.cached ? ' <span class="badge bg-secondary">cache</span>' : '';
-    status.innerHTML = '<span class="badge bg-purple">' + total + ' processo(s)</span>' + cached;
+    const buscaAmpla = data.busca_ampla ? ' <span class="badge bg-info" title="Busca sem filtro de classe processual">busca ampla</span>' : '';
+    const panoramaBadge = isPanorama ? ' <span class="badge bg-warning text-dark" title="Dados da regi\u00e3o, n\u00e3o espec\u00edficos deste \u00f3rg\u00e3o">panorama regional</span>' : '';
+    status.innerHTML = '<span class="badge bg-purple">' + total + ' processo(s)</span>' + cached + buscaAmpla + panoramaBadge;
+
+    const panoramaWarning = isPanorama
+        ? '<div class="alert alert-warning py-2 mb-3"><i class="bi bi-exclamation-triangle"></i> ' +
+          '<strong>Panorama regional:</strong> A API p\u00fablica do DataJud n\u00e3o permite busca por CNPJ de partes processuais. ' +
+          'Os processos abaixo s\u00e3o recentes na jurisdi\u00e7\u00e3o (' + escapeHtml(data.uf || '?') + '), ' +
+          'n\u00e3o necessariamente envolvendo <em>' + escapeHtml(orgaoNome) + '</em>. ' +
+          'Para consulta espec\u00edfica, verifique diretamente nos portais dos tribunais.</div>'
+        : '';
 
     // Build classe badges
     const resumo = data.resumo || {};
@@ -548,10 +597,11 @@ function renderDatajudOrgao(data, body, status, section) {
         tableRows += '<tr><td>' + escapeHtml(p.numero) + '</td><td>' + escapeHtml(classe) + '</td><td>' + escapeHtml(p.tribunal) + '</td><td>' + dataAj + '</td><td>' + escapeHtml(ultMov) + '</td></tr>';
     }
 
-    body.innerHTML =
+    body.innerHTML = explanationHtml + panoramaWarning +
+        '<div class="mb-2"><strong>' + escapeHtml(orgaoNome) + '</strong> <small class="text-muted">(CNPJ: ' + escapeHtml(cnpjFormatado) + ')</small></div>' +
         '<div class="d-flex flex-wrap gap-2 mb-3">' + badgesHtml + '</div>' +
         '<div class="d-flex justify-content-between align-items-center">' +
-            '<small class="text-muted">Tribunais: ' + (data.tribunais_consultados || []).join(', ') + ' | Per\u00edodo: ' + (resumo.mais_antigo || '?') + ' a ' + (resumo.mais_recente || '?') + '</small>' +
+            '<small class="text-muted">Tribunais: ' + escapeHtml(tribunaisStr) + ' | Per\u00edodo: ' + (resumo.mais_antigo || '?') + ' a ' + (resumo.mais_recente || '?') + '</small>' +
             '<button class="btn btn-ghost-primary btn-sm" onclick="loadDatajudOrgao(true)"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>' +
         '</div>' +
         '<details class="mt-3">' +
@@ -607,21 +657,41 @@ async function verificarIdoneidade() {
 function renderIdoneidade(data, resultado, status) {
     const total = data.total_processos || 0;
     const alertas = data.alertas || [];
+    const nomeEmpresa = document.getElementById('nome-empresa').value.trim();
+    const cnpjFormatado = formatCnpj(data.cnpj || '');
+    const empresaLabel = nomeEmpresa
+        ? '<strong>' + escapeHtml(nomeEmpresa) + '</strong> (CNPJ: ' + escapeHtml(cnpjFormatado) + ')'
+        : 'CNPJ <strong>' + escapeHtml(cnpjFormatado) + '</strong>';
+    const tribunaisStr = (data.tribunais_consultados || []).join(', ') || 'nenhum';
+    const buscaAmplaNote = data.busca_ampla ? '<br><small class="text-muted"><i class="bi bi-info-circle"></i> Busca ampla (sem filtro de classe processual) — todos os tipos de processo foram considerados.</small>' : '';
 
     if (total === 0) {
         status.innerHTML = '<span class="badge bg-success">Nenhuma pend\u00eancia</span>';
         resultado.innerHTML =
             '<div class="text-center py-2 text-success">' +
-                '<i class="bi bi-check-circle-fill"></i> Nenhuma pend\u00eancia judicial encontrada para CNPJ ' + escapeHtml(data.cnpj) + '.' +
-                '<br><small class="text-muted">Tribunais: ' + (data.tribunais_consultados || []).join(', ') + '</small>' +
+                '<i class="bi bi-check-circle-fill" style="font-size: 1.5rem;"></i>' +
+                '<p class="mt-2 mb-1">Nenhuma pend\u00eancia judicial encontrada para ' + empresaLabel + '</p>' +
+                '<small class="text-muted">Tribunais consultados: ' + escapeHtml(tribunaisStr) + '</small>' +
+                buscaAmplaNote +
             '</div>';
         return;
     }
 
+    const isPanorama = data.panorama_regional === true;
     const hasCritico = alertas.some(function(a) { return a.tipo === 'CRITICO'; });
     const hasAtencao = alertas.some(function(a) { return a.tipo === 'ATENCAO'; });
     const badgeClass = hasCritico ? 'bg-danger' : hasAtencao ? 'bg-warning text-dark' : 'bg-info';
-    status.innerHTML = '<span class="badge ' + badgeClass + '">' + total + ' processo(s)</span>';
+    const panoramaBadge = isPanorama ? ' <span class="badge bg-warning text-dark">panorama</span>' : '';
+    status.innerHTML = '<span class="badge ' + badgeClass + '">' + total + ' processo(s)</span>' + panoramaBadge;
+
+    let headerHtml = '<div class="mb-2">Resultado para ' + empresaLabel + ':</div>';
+
+    const panoramaWarning = isPanorama
+        ? '<div class="alert alert-warning py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ' +
+          '<strong>Panorama regional:</strong> A API p\u00fablica do DataJud n\u00e3o permite busca por CNPJ de partes processuais. ' +
+          'Os processos abaixo s\u00e3o da jurisdi\u00e7\u00e3o, n\u00e3o necessariamente envolvendo esta empresa. ' +
+          'Para consulta espec\u00edfica, verifique diretamente nos portais dos tribunais.</div>'
+        : '';
 
     let alertasHtml = '';
     for (const alerta of alertas) {
@@ -630,8 +700,9 @@ function renderIdoneidade(data, resultado, status) {
         alertasHtml += '<div class="' + cssClass + '"><strong><i class="bi bi-' + icon + '"></i> ' + escapeHtml(alerta.tipo) + ':</strong> ' + escapeHtml(alerta.descricao) + '</div>';
     }
 
-    resultado.innerHTML = alertasHtml +
-        '<small class="text-muted d-block mt-2">Tribunais: ' + (data.tribunais_consultados || []).join(', ') + '</small>';
+    resultado.innerHTML = headerHtml + panoramaWarning + alertasHtml +
+        '<small class="text-muted d-block mt-2">Tribunais: ' + escapeHtml(tribunaisStr) + '</small>' +
+        buscaAmplaNote;
 }
 </script>
 

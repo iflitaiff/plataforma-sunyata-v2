@@ -121,15 +121,31 @@ def _get_tribunais_for_uf(uf: Optional[str]) -> list[str]:
     return list(dict.fromkeys(tribunais))
 
 
-def _build_datajud_query(classes: list[int], size: int = MAX_PROCESSOS_PER_TRIBUNAL) -> dict:
-    """Build Elasticsearch DSL query for DataJud API filtered by procedural classes."""
+def _build_datajud_query(
+    cnpj: str,
+    classes: list[int] | None = None,
+    size: int = MAX_PROCESSOS_PER_TRIBUNAL,
+) -> dict:
+    """Build Elasticsearch DSL query for DataJud API.
+
+    Uses the CNPJ as a full-text search term so DataJud matches it against
+    any indexed field (party documents, process text, etc.).
+    Optionally filters by procedural class codes.
+    """
+    must_clauses: list[dict] = []
+    if cnpj:
+        # Search for CNPJ across all indexed fields
+        must_clauses.append({"query_string": {"query": f'"{cnpj}"'}})
+    filter_clauses: list[dict] = []
+    if classes:
+        filter_clauses.append({"terms": {"classe.codigo": classes}})
+
     return {
         "size": size,
         "query": {
             "bool": {
-                "filter": [
-                    {"terms": {"classe.codigo": classes}},
-                ]
+                "must": must_clauses,
+                "filter": filter_clauses,
             }
         },
         "sort": [{"@timestamp": {"order": "desc"}}],
@@ -150,13 +166,14 @@ def _build_datajud_query(classes: list[int], size: int = MAX_PROCESSOS_PER_TRIBU
 async def _query_tribunal(
     client: httpx.AsyncClient,
     tribunal: str,
-    classes: list[int],
+    cnpj: str,
+    classes: list[int] | None = None,
     size: int = MAX_PROCESSOS_PER_TRIBUNAL,
 ) -> list[dict]:
     """Query a single tribunal endpoint on DataJud."""
     alias = f"api_publica_{tribunal.lower()}"
     url = f"{DATAJUD_BASE_URL}/{alias}/_search"
-    query = _build_datajud_query(classes, size)
+    query = _build_datajud_query(cnpj, classes, size)
 
     try:
         resp = await client.post(
@@ -215,11 +232,12 @@ async def _query_tribunal(
 
 async def _query_datajud_parallel(
     tribunais: list[str],
-    classes: list[int],
+    cnpj: str,
+    classes: list[int] | None = None,
 ) -> tuple[list[dict], list[str]]:
     """Query multiple tribunais in parallel, return (processos, tribunais_consultados)."""
     async with httpx.AsyncClient() as client:
-        tasks = [_query_tribunal(client, tribunal, classes) for tribunal in tribunais]
+        tasks = [_query_tribunal(client, tribunal, cnpj, classes) for tribunal in tribunais]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
     all_processos = []
@@ -367,16 +385,36 @@ async def datajud_orgao_processos(
 
     logger.info("DataJud orgao query: CNPJ=%s, tribunais=%s", cnpj, tribunais)
 
-    # Query DataJud
-    processos, consultados = await _query_datajud_parallel(tribunais, CLASSES_ORGAO)
+    # Query DataJud — try CNPJ-specific search first
+    processos, consultados = await _query_datajud_parallel(tribunais, cnpj, CLASSES_ORGAO)
+
+    # If 0 with CNPJ + classes, retry CNPJ only (no class filter)
+    busca_ampla = False
+    panorama_regional = False
+    if len(processos) == 0:
+        processos, consultados = await _query_datajud_parallel(tribunais, cnpj)
+        busca_ampla = True
+
+    # If still 0, DataJud likely doesn't index party CNPJ.
+    # Fall back to regional landscape (class-based, no CNPJ) so the feature
+    # is still useful — but clearly label it as panorama, not specific results.
+    if len(processos) == 0:
+        processos, consultados = await _query_datajud_parallel(
+            tribunais, cnpj="", classes=CLASSES_ORGAO
+        )
+        panorama_regional = True
+        busca_ampla = False
 
     result = {
         "cnpj": cnpj,
         "orgao": orgao_nome,
+        "uf": uf,
         "total_processos": len(processos),
         "tribunais_consultados": consultados,
         "resumo": _build_resumo(processos),
         "processos": processos,
+        "busca_ampla": busca_ampla,
+        "panorama_regional": panorama_regional,
         "cached": False,
         "consultado_em": datetime.now(timezone.utc).isoformat(),
     }
@@ -432,8 +470,22 @@ async def datajud_empresa_idoneidade(
 
     logger.info("DataJud empresa query: CNPJ=%s, tribunais=%s", cnpj, tribunais)
 
-    # Query DataJud with empresa-specific classes
-    processos, consultados = await _query_datajud_parallel(tribunais, CLASSES_EMPRESA)
+    # Query DataJud — try CNPJ-specific search first
+    processos, consultados = await _query_datajud_parallel(tribunais, cnpj, CLASSES_EMPRESA)
+
+    busca_ampla = False
+    panorama_regional = False
+    if len(processos) == 0:
+        processos, consultados = await _query_datajud_parallel(tribunais, cnpj)
+        busca_ampla = True
+
+    # Fall back to regional landscape if CNPJ search yields nothing
+    if len(processos) == 0:
+        processos, consultados = await _query_datajud_parallel(
+            tribunais, cnpj="", classes=CLASSES_EMPRESA
+        )
+        panorama_regional = True
+        busca_ampla = False
 
     alertas = _build_alertas(processos)
 
@@ -444,6 +496,8 @@ async def datajud_empresa_idoneidade(
         "tribunais_consultados": consultados,
         "resumo": _build_resumo(processos),
         "processos": processos,
+        "busca_ampla": busca_ampla,
+        "panorama_regional": panorama_regional,
         "cached": False,
         "consultado_em": datetime.now(timezone.utc).isoformat(),
     }
