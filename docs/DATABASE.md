@@ -3,7 +3,7 @@
 **Database:** PostgreSQL 16 + pgvector
 **Name:** `sunyata_platform`
 **User:** `sunyata_app`
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-02-25
 
 ---
 
@@ -903,6 +903,9 @@ Editais coletados da API PNCP pelo workflow N8N "PNCP Daily Monitor v3". Anális
 | `arquivos_pncp` | jsonb | YES | - | Array de metadata dos ficheiros PNCP |
 | `datajud_orgao` | jsonb | YES | - | Cache DataJud: processos judiciais do órgão (via CNPJ do pncp_id) |
 | `datajud_consultado_em` | timestamptz | YES | - | Timestamp da última consulta DataJud (cache 24h) |
+| `pncp_detalhes` | jsonb | YES | - | Full details from PNCP API (`/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{seq}`): modoDisputaNome, amparoLegal, srp, processo, orcamentoSigilosoDescricao, informacaoComplementar, unidadeOrgao, etc. |
+| `pncp_itens` | jsonb | YES | - | Items array from PNCP API (`/pncp-api/v1/.../itens`): numeroItem, descricao, quantidade, unidadeMedida, valorUnitarioEstimado, valorTotal, criterioJulgamentoNome, orcamentoSigiloso |
+| `enriquecido_em` | timestamptz | YES | - | Timestamp of last enrichment from PNCP API (null = not yet enriched) |
 | `created_at` | timestamptz | YES | now() | Criação do registo |
 | `updated_at` | timestamptz | YES | now() | Última actualização |
 
@@ -963,7 +966,13 @@ Mesmo formato acima, preenchido automaticamente pelo endpoint `/api/ai/datajud/o
 
 **See:** `docs/MIGRATIONS.md` for full migration changelog.
 
-**Latest:** DataJud Integration Migration 015 (2026-02-24) - Judicial data
+**Latest:** PNCP Enrichment Migration 016 (2026-02-25) - PNCP enrichment columns
+- Added 3 columns to `pncp_editais`: `pncp_detalhes` (JSONB), `pncp_itens` (JSONB), `enriquecido_em` (timestamptz)
+- `pncp_detalhes`: full compra record from PNCP `/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{seq}`
+- `pncp_itens`: items array from PNCP `/pncp-api/v1/.../itens` endpoint
+- `enriquecido_em`: timestamp of last enrichment (null = not yet enriched)
+
+**Previous:** DataJud Integration Migration 015 (2026-02-24) - Judicial data
 - Added 2 columns to `pncp_editais`: `datajud_orgao` (JSONB), `datajud_consultado_em` (timestamptz)
 - Created `datajud_consultas` table for ad-hoc company idoneidade checks
 - DataJud data cached 24h, auto-queried by FastAPI endpoint, injected into N8N IATR analysis
