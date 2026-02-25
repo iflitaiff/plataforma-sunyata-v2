@@ -20,7 +20,12 @@ from slowapi.util import get_remote_address
 
 from ..pncp_keywords import KEYWORD_MAPPING, build_search_query, build_pncp_api_params
 from ..dependencies import get_db, verify_internal_key
-from ..services.document_processor import extract_text_from_pdf
+from ..services.document_processor import (
+    extract_text_from_pdf,
+    extract_text_from_docx,
+    extract_texts_from_zip,
+    detect_format,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -438,19 +443,7 @@ async def extract_pdf_from_pncp(
                 titulo = file_info.get("titulo", "")
                 file_url = file_info.get("url", "")
                 seq_doc = file_info.get("sequencialDocumento", 0)
-
-                # Only process PDFs
-                is_pdf = titulo.lower().endswith(".pdf")
-                if not is_pdf:
-                    arquivos_result.append(PncpArquivo(
-                        sequencial=seq_doc,
-                        titulo=titulo,
-                        tipo=file_info.get("tipoDocumentoNome", ""),
-                        url=file_url,
-                        extraido=False,
-                        erro="Not a PDF, skipped",
-                    ))
-                    continue
+                tipo_doc = file_info.get("tipoDocumentoNome", "")
 
                 try:
                     logger.info(f"Downloading: {titulo} ({file_url})")
@@ -459,39 +452,90 @@ async def extract_pdf_from_pncp(
                         arquivos_result.append(PncpArquivo(
                             sequencial=seq_doc,
                             titulo=titulo,
-                            tipo=file_info.get("tipoDocumentoNome", ""),
+                            tipo=tipo_doc,
                             url=file_url,
                             extraido=False,
                             erro=f"Download failed: HTTP {dl_resp.status_code}",
                         ))
                         continue
 
-                    pdf_bytes = dl_resp.content
-                    result = extract_text_from_pdf(pdf_bytes)
+                    file_bytes = dl_resp.content
+                    fmt = detect_format(file_bytes)
 
-                    if result["success"] and result["text"].strip():
-                        text = result["text"]
-                        pages = result["pages"]
-                        all_texts.append(f"=== {titulo} ({pages} páginas) ===\n\n{text}")
-                        total_pages += pages
+                    if fmt == "pdf":
+                        result = extract_text_from_pdf(file_bytes)
+                        if result["success"] and result["text"].strip():
+                            text = result["text"]
+                            pages = result["pages"]
+                            all_texts.append(f"=== {titulo} ({pages} páginas) ===\n\n{text}")
+                            total_pages += pages
+                            arquivos_result.append(PncpArquivo(
+                                sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
+                                url=file_url, paginas=pages,
+                                caracteres=len(text), extraido=True,
+                            ))
+                        else:
+                            arquivos_result.append(PncpArquivo(
+                                sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
+                                url=file_url, extraido=False,
+                                erro=result.get("error", "Empty text extracted"),
+                            ))
 
+                    elif fmt == "zip":
+                        zip_results = extract_texts_from_zip(file_bytes)
+                        any_extracted = False
+                        for zr in zip_results:
+                            inner_name = zr.get("filename", "unknown")
+                            if zr["success"] and zr["text"].strip():
+                                text = zr["text"]
+                                pages = zr["pages"]
+                                label = f"{titulo}/{inner_name}" if inner_name != "(archive)" else titulo
+                                all_texts.append(f"=== {label} ({pages} páginas) ===\n\n{text}")
+                                total_pages += pages
+                                any_extracted = True
+                        extracted_count = sum(1 for zr in zip_results if zr["success"] and zr["text"].strip())
+                        total_inner = len(zip_results)
+                        inner_pages = sum(zr["pages"] for zr in zip_results if zr["success"])
+                        inner_chars = sum(len(zr["text"]) for zr in zip_results if zr["success"])
                         arquivos_result.append(PncpArquivo(
-                            sequencial=seq_doc,
-                            titulo=titulo,
-                            tipo=file_info.get("tipoDocumentoNome", ""),
-                            url=file_url,
-                            paginas=pages,
-                            caracteres=len(text),
-                            extraido=True,
+                            sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
+                            url=file_url, paginas=inner_pages,
+                            caracteres=inner_chars, extraido=any_extracted,
+                            erro=None if any_extracted else f"ZIP: 0/{total_inner} files extractable",
                         ))
+
+                    elif fmt == "docx":
+                        result = extract_text_from_docx(file_bytes)
+                        if result["success"] and result["text"].strip():
+                            text = result["text"]
+                            all_texts.append(f"=== {titulo} (DOCX) ===\n\n{text}")
+                            arquivos_result.append(PncpArquivo(
+                                sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
+                                url=file_url, paginas=0,
+                                caracteres=len(text), extraido=True,
+                            ))
+                        else:
+                            arquivos_result.append(PncpArquivo(
+                                sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
+                                url=file_url, extraido=False,
+                                erro=result.get("error", "Empty text from DOCX"),
+                            ))
+
+                    elif fmt in ("xlsx", "odt"):
+                        # Recognized format but extraction not implemented yet.
+                        # Log clearly so logs are actionable (not silent empty ZIP result).
+                        logger.info(f"Recognized unsupported format ({fmt.upper()}): {titulo}")
+                        arquivos_result.append(PncpArquivo(
+                            sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
+                            url=file_url, extraido=False,
+                            erro=f"Formato reconhecido mas não suportado: {fmt.upper()}",
+                        ))
+
                     else:
                         arquivos_result.append(PncpArquivo(
-                            sequencial=seq_doc,
-                            titulo=titulo,
-                            tipo=file_info.get("tipoDocumentoNome", ""),
-                            url=file_url,
-                            extraido=False,
-                            erro=result.get("error", "Empty text extracted"),
+                            sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
+                            url=file_url, extraido=False,
+                            erro=f"Formato desconhecido (magic bytes: {file_bytes[:4].hex()})",
                         ))
 
                 except Exception as e:
@@ -499,7 +543,7 @@ async def extract_pdf_from_pncp(
                     arquivos_result.append(PncpArquivo(
                         sequencial=seq_doc,
                         titulo=titulo,
-                        tipo=file_info.get("tipoDocumentoNome", ""),
+                        tipo=tipo_doc,
                         url=file_url,
                         extraido=False,
                         erro=str(e),

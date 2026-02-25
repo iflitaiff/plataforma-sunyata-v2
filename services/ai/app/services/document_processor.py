@@ -6,6 +6,7 @@ import base64
 import io
 import os
 import tempfile
+import zipfile
 
 import pypdf
 from docx import Document as DocxDocument
@@ -57,6 +58,66 @@ def extract_text_from_plain(data: bytes) -> dict:
         "pages": 0,
         "word_count": len(text.split()),
     }
+
+
+def detect_format(data: bytes) -> str:
+    """Detect file format by magic bytes.
+
+    Returns one of: 'pdf', 'zip', 'docx', 'xlsx', 'odt', 'unknown'.
+    Note: DOCX, XLSX, ODT all start with PK\\x03\\x04 (ZIP-based formats).
+    """
+    if data[:4] == b"%PDF":
+        return "pdf"
+    if data[:4] == b"PK\x03\x04":
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                names = zf.namelist()
+                # Identify specific ZIP-based Office formats by their internal structure
+                if any(n.startswith("word/") for n in names):
+                    return "docx"
+                if any(n.startswith("xl/") for n in names):
+                    return "xlsx"
+                if "content.xml" in names and "mimetype" in names:
+                    return "odt"
+                # Generic ZIP (may contain PDFs or other files)
+                return "zip"
+        except zipfile.BadZipFile:
+            return "unknown"
+    return "unknown"
+
+
+def extract_texts_from_zip(data: bytes) -> list[dict]:
+    """Extract text from all supported files inside a ZIP archive.
+
+    Returns a list of extraction results, one per file found inside.
+    Each dict has: filename, success, text, pages, word_count, error.
+    """
+    results = []
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            for name in zf.namelist():
+                # Skip directories and hidden files
+                if name.endswith("/") or name.startswith("__MACOSX"):
+                    continue
+
+                inner_bytes = zf.read(name)
+                fmt = detect_format(inner_bytes)
+
+                if fmt == "pdf":
+                    r = extract_text_from_pdf(inner_bytes)
+                elif fmt == "docx":
+                    r = extract_text_from_docx(inner_bytes)
+                else:
+                    r = {"success": False, "text": "", "pages": 0,
+                         "word_count": 0, "error": f"Unsupported format inside ZIP: {name}"}
+
+                r["filename"] = name
+                results.append(r)
+    except zipfile.BadZipFile:
+        results.append({"success": False, "text": "", "pages": 0,
+                        "word_count": 0, "error": "Invalid ZIP file",
+                        "filename": "(archive)"})
+    return results
 
 
 EXTRACTORS = {
