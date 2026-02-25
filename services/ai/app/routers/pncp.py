@@ -497,11 +497,17 @@ async def extract_pdf_from_pncp(
                         total_inner = len(zip_results)
                         inner_pages = sum(zr["pages"] for zr in zip_results if zr["success"])
                         inner_chars = sum(len(zr["text"]) for zr in zip_results if zr["success"])
+                        if any_extracted:
+                            zip_erro = None
+                        elif total_inner == 0:
+                            zip_erro = "ZIP contained no processable files"
+                        else:
+                            zip_erro = f"ZIP: {extracted_count}/{total_inner} files extractable"
                         arquivos_result.append(PncpArquivo(
                             sequencial=seq_doc, titulo=titulo, tipo=tipo_doc,
                             url=file_url, paginas=inner_pages,
                             caracteres=inner_chars, extraido=any_extracted,
-                            erro=None if any_extracted else f"ZIP: 0/{total_inner} files extractable",
+                            erro=zip_erro,
                         ))
 
                     elif fmt == "docx":

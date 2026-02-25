@@ -100,16 +100,20 @@ def extract_texts_from_zip(data: bytes) -> list[dict]:
                 if name.endswith("/") or name.startswith("__MACOSX"):
                     continue
 
-                inner_bytes = zf.read(name)
-                fmt = detect_format(inner_bytes)
+                try:
+                    inner_bytes = zf.read(name)
+                    fmt = detect_format(inner_bytes)
 
-                if fmt == "pdf":
-                    r = extract_text_from_pdf(inner_bytes)
-                elif fmt == "docx":
-                    r = extract_text_from_docx(inner_bytes)
-                else:
+                    if fmt == "pdf":
+                        r = extract_text_from_pdf(inner_bytes)
+                    elif fmt == "docx":
+                        r = extract_text_from_docx(inner_bytes)
+                    else:
+                        r = {"success": False, "text": "", "pages": 0,
+                             "word_count": 0, "error": f"Unsupported format inside ZIP: {name}"}
+                except Exception as exc:
                     r = {"success": False, "text": "", "pages": 0,
-                         "word_count": 0, "error": f"Unsupported format inside ZIP: {name}"}
+                         "word_count": 0, "error": f"Extraction failed: {exc}"}
 
                 r["filename"] = name
                 results.append(r)
