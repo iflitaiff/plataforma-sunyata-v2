@@ -2,7 +2,7 @@
 
 **Ao iniciar sessão:**
 1. Verifique mensagens em `ai-comm/` (local) e no Hostinger via SSH
-2. Credenciais: `app/config/secrets.php` (VM100) e `config/secrets.php` (Hostinger)
+2. Credenciais nos servidores (não no repo): `app/config/secrets.php` (VM100), `config/secrets.php` (Hostinger)
 
 ---
 
@@ -20,11 +20,11 @@
 
 **Protocolo:** `ai-comm/PROTOCOL.md` (fonte da verdade)
 - **Nomes:** `YYYYMMDD-HHMM-de-ORIGEM-para-DESTINO-assunto.md`
-- **Monitor:** `monitor-aicomm.sh` v4.1 no Hostinger (cron, email HTML com cores por agente)
 - **REGRA:** Ao criar arquivo em `ai-comm/`, copiar para Hostinger imediatamente:
 ```bash
 scp -P 65002 ai-comm/ARQUIVO.md u202164171@82.25.72.226:/home/u202164171/ai-comm/
 ```
+- **Nota:** Claude Chat não envia por ai-comm — comunicação via copy/paste na conversa com Filipe
 
 ### Git Workflow (multi-agente)
 - Agentes trabalham em `feature/*` branches
@@ -47,7 +47,7 @@ scp -P 65002 ai-comm/ARQUIVO.md u202164171@82.25.72.226:/home/u202164171/ai-comm
 
 ### Ferramentas de Acesso
 
-**OBRIGATÓRIO usar `ssh-cmd.sh`** (salva tokens, evita problemas de escaping):
+**OBRIGATÓRIO usar `tools/ssh-cmd.sh`** (salva tokens, evita problemas de escaping):
 ```bash
 # Comando direto
 tools/ssh-cmd.sh vm100 "systemctl status nginx"
@@ -57,14 +57,24 @@ tools/ssh-cmd.sh vm100 -f /tmp/script.sql
 ```
 Targets: `host`, `vm100`, `ct103`, `ct104`
 
-**SSH Tunnels** (systemd, auto-start):
+**SSH Tunnels** (systemd, auto-start — crash-loop frequente):
 - Ports: 8006 (Proxmox), 4000 (LiteLLM), 5678 (N8N)
 - Control: `systemctl --user {start|stop|status} sunyata-tunnels`
+- **Fallback manual:** `ssh -f -N -L 5678:192.168.100.14:5678 -L 4000:192.168.100.13:4000 -L 8006:localhost:8006 ovh`
 
 ### Deploy
 
-**VM100 (v2):** `cd /var/www/sunyata/app && git pull`
+**VM100 (v2) — Portal PHP:** `cd /var/www/sunyata/app && git pull`
+**VM100 (v2) — FastAPI:** Restart manual necessário após mudanças em `services/ai/`:
+```bash
+# Via ssh-cmd.sh:
+tools/ssh-cmd.sh vm100 "cd /var/www/sunyata/services/ai && ps aux | grep uvicorn"
+# Anotar PID, depois:
+tools/ssh-cmd.sh vm100 "kill <PID> && cd /var/www/sunyata/services/ai && nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &"
+```
+**VM100 (v2) — Composer:** `tools/ssh-cmd.sh vm100 "cd /var/www/sunyata/app && composer install --no-dev"`
 **Hostinger (legado):** `scp -P 65002 arquivo.php u202164171@82.25.72.226:/home/u202164171/domains/sunyataconsulting.com/public_html/plataforma-sunyata/public/`
+**Deploy direto (sem git):** `cat file | ssh ovh "ssh root@192.168.100.10 'cat > /var/www/sunyata/app/path/file'"`
 
 ---
 
@@ -74,18 +84,36 @@ Targets: `host`, `vm100`, `ct103`, `ct104`
 |-----------|-----------|
 | **Banco** | PostgreSQL 16 + pgvector |
 | **AI Gateway** | LiteLLM (CT103) — 10 modelos (Anthropic, OpenAI, Google) |
-| **AI Microservice** | Python 3.12 / FastAPI / uvicorn |
+| **AI Microservice** | Python 3.12 / FastAPI / uvicorn (port 8000, Nginx proxy `/api/ai/`) |
 | **Automação** | N8N (CT104) — PNCP Monitor, IATR Análise |
-| **Frontend** | Tabler + HTMX + SSE |
+| **Frontend** | Tabler + HTMX + SSE + marked.js v15 (CDN) |
 | **Formulários** | SurveyJS (tema customizado) |
 | **Web Server** | Nginx 1.24 + PHP 8.3 FPM |
 | **Cache/Sessões** | Redis 7 |
+| **Auth** | Sessions + Google OAuth (`league/oauth2-google`) |
+| **PDF** | mPDF 8.2 (geração) + Parsedown 1.8 (markdown→HTML) |
+
+### Estrutura de Diretórios
+
+```
+app/
+├── config/              # verticals.php, secrets.php (só no servidor)
+├── public/
+│   ├── areas/           # 15 verticais: iatr/, licitacoes/, juridico/, geral/, ...
+│   ├── api/pncp/        # PHP proxies: trigger-analise, export-pdf, email-analise, datajud-*
+│   └── edital.php       # Deep-link resolver (detecta vertical, redireciona)
+├── src/Services/        # VerticalService, CanvasService, AiServiceClient, ...
+└── composer.json
+services/ai/
+├── app/routers/         # canvas, datajud, documents, generate, pncp, stream
+└── .env                 # INTERNAL_API_KEY, LITELLM_URL, DATABASE_URL
+```
 
 ---
 
 ## Documentação de Referência
 
-- `docs/DATABASE.md` — Schema completo (30+ tabelas, colunas, constraints, queries comuns)
+- `docs/DATABASE.md` — Schema completo (colunas, constraints, queries comuns)
 - `docs/MIGRATIONS.md` — Changelog de migrations com rollback
 - `docs/ROADMAP.md` — Roadmap geral do projeto
 - `docs/PROXIMOS-PASSOS.md` — Próximos passos imediatos
@@ -101,13 +129,13 @@ Targets: `host`, `vm100`, `ct103`, `ct104`
 
 ### System Prompt — 4 níveis (CanvasHelper::getCompleteSystemPrompt)
 0. `settings.portal_system_prompt` (portal-wide)
-1. Vertical system_prompt (`config/verticals.php` + DB override)
+1. Vertical system_prompt (`app/config/verticals.php` + DB override)
 2. `canvas_templates.system_prompt` (per-canvas)
 3. `ajSystemPrompt` em form_config JSON
 
 ### API Params — 4 níveis (ClaudeFacade::getPortalDefaults)
 0. `settings.portal_api_params` JSON (portal-wide)
-1. `config/verticals.php` (file defaults)
+1. `app/config/verticals.php` (file defaults)
 2. `verticals.config` DB column (admin UI override)
 3. `canvas_templates.api_params_override` JSON (canvas-level)
 
@@ -119,10 +147,10 @@ Targets: `host`, `vm100`, `ct103`, `ct104`
 - `system_prompt` bloqueado em canvas overrides (gerido pela hierarquia de 4 níveis)
 - `Settings::set()` com `data_type='json'`: passar PHP array, NÃO JSON string
 
-### Caminhos de IA (três pipelines)
+### Caminhos de IA (pipelines)
 1. **Canvas:** Portal → FastAPI → LiteLLM → resposta no formulário
 2. **N8N:** Portal → N8N webhook → LiteLLM → resultado no banco
-3. **DataJud:** Portal → FastAPI `/api/ai/datajud/*` → DataJud API (CNJ) → cache PostgreSQL
+3. **DataJud:** Portal → FastAPI `/api/ai/datajud/*` → DataJud API (CNJ) → cache PostgreSQL *(infraestrutura pronta, UI removida — uso futuro em canvas IATR)*
 
 ---
 
@@ -185,29 +213,17 @@ Targets: `host`, `vm100`, `ct103`, `ct104`
 
 ---
 
-## Instruções por Agente
+## Gotchas e Padrões Críticos
 
-### Restrições Gerais (todos exceto Claude)
-- NÃO instalar pacotes no ambiente local
-- NÃO modificar arquivos de produção diretamente
-- Comunicar via `ai-comm/` para coordenar
-
-### Gemini (QA)
-- Revisar código antes/depois de deploy
-- Validar templates JSON contra schema
-- Criar cenários de teste
-```bash
-# Consultar banco V1 (Hostinger)
-ssh -p 65002 u202164171@82.25.72.226 "/usr/bin/mariadb u202164171_sunyata -e 'QUERY'"
-```
-
-### Codex (QA Dados)
-- Validar form_config JSON, promptInstructionMap
-- Verificar consistência de schemas entre templates
-
-### Copilot (QA Frontend)
-- Testar UI/UX, acessibilidade
-- Testes Playwright
+- `hx-boost="true"` no `<body>` em `base.php` hijacka TODOS os POSTs de form. Forms com redirect server-side devem usar `hx-boost="false"`
+- `orgao_cnpj` está VAZIO em todos os registros `pncp_editais`. Extrair CNPJ dos primeiros 14 dígitos de `pncp_id` (formato: `{CNPJ}-{esfera}-{seq}/{ano}`)
+- `session_regenerate_id(true)` pode perder dados de sessão. Preservar/restaurar `redirect_after_login` ao redor
+- CSRF: usar `csrf_token()` (gera se não existe), NÃO `$_SESSION['csrf_token'] ?? ''` (leitura passiva)
+- CSP `connect-src 'self'` no Nginx bloqueia fetch do browser para domínios externos. Usar proxy server-side para webhooks N8N
+- VM100 não alcança sslip.io (hairpin NAT). Sempre usar IPs internos (`192.168.100.14:5678`) para chamadas server-side
+- PNCP API `item_url` inclui `/compras/` mas frontend PNCP não. Strip: `.replace(/^\/compras/, '')`
+- N8N API PUT: só permite `name, nodes, connections, settings` no payload. Strip campos extras
+- Webhook typeVersion 1.1: campos do body ficam em `$json.body.*` (não `$json.*`)
 
 ---
 
@@ -222,11 +238,11 @@ ssh -p 65002 u202164171@82.25.72.226 "/usr/bin/mariadb u202164171_sunyata -e 'QU
 
 ## Development Mode
 
-- **`.env`:** `APP_ENV=development` desabilita whitelist de DB e rate limiting
+- **`.env`:** `APP_ENV=development` desabilita whitelist de DB e rate limiting (`.env` files só existem nos servidores, não no repo)
 - **Antes de produção:** seguir `docs/PRODUCTION-CHECKLIST.md`
 
 ---
 
-**Versão:** 2.1
-**Última atualização:** 2026-02-20
+**Versão:** 2.2
+**Última atualização:** 2026-02-25
 **Mantido por:** Claude + equipe multi-agente
