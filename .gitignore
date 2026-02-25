@@ -65,6 +65,10 @@ build/
 GEMINI.md
 .mcp.json
 
+# Claude Code (local settings, shared skills/agents committed)
+.claude/settings.local.json
+.claude/projects/
+
 # Temporary
 tmp/
 temp/
