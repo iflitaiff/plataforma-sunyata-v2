@@ -12,6 +12,8 @@
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../config/config.php';
 
+use Sunyata\Core\Database;
+
 session_name(SESSION_NAME);
 session_start();
 
@@ -66,9 +68,25 @@ if (!in_array($nivelProfundidade, $NIVEIS_VALIDOS, true)) {
     echo json_encode(['error' => 'nivel_profundidade inválido']);
     exit;
 }
-$instrucoesComplementares = isset($input['instrucoes_complementares']) && trim((string)$input['instrucoes_complementares']) !== ''
-    ? substr(trim((string)$input['instrucoes_complementares']), 0, 1000)
-    : null;
+$instrucoesComplementares = null;
+if (isset($input['instrucoes_complementares']) && trim((string)$input['instrucoes_complementares']) !== '') {
+    $instrucoesBruto = substr(trim((string)$input['instrucoes_complementares']), 0, 1000);
+    // Strip dollar-quoting sequences that could break N8N's SQL $TAG$...$TAG$ interpolation
+    $instrucoesComplementares = preg_replace('/\$[A-Z]+\$/', '', $instrucoesBruto);
+}
+
+// Fix 1: Block concurrent analysis — prevent double-click / parallel API calls
+// FOR UPDATE serializes concurrent requests; check prevents duplicate N8N workflows
+$db = Database::getInstance();
+$current = $db->fetchOne(
+    "SELECT status_analise FROM pncp_editais WHERE id = ? FOR UPDATE",
+    [$editalId]
+);
+if ($current && $current['status_analise'] === 'em_analise') {
+    http_response_code(409);
+    echo json_encode(['error' => 'Análise já em andamento para este edital']);
+    exit;
+}
 
 // Build N8N webhook URL (internal network: VM100 → CT104 direct)
 // Use internal IP to avoid DNS/SSL issues with sslip.io from inside Proxmox
