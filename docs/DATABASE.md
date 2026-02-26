@@ -885,10 +885,12 @@ Editais coletados da API PNCP pelo workflow N8N "PNCP Daily Monitor v3". Anális
 | `status` | text | YES | 'aberto' | Status do edital |
 | `keywords_matched` | text[] | YES | - | Keywords que matcharam na filtragem |
 | `raw_data` | jsonb | YES | - | Dados brutos da API PNCP |
-| `status_analise` | text | YES | 'pendente' | pendente/em_analise/concluida/erro |
+| `status_analise` | text | YES | 'pendente' | pendente/em_analise/concluida/erro/insuficiente |
 | `analise_resultado` | jsonb | YES | - | Resultado da análise IA (chave principal: `resumo_executivo`) |
 | `analise_modelo` | text | YES | - | Modelo LLM usado (ex: claude-haiku-4-5) |
 | `analise_tipo` | text | YES | - | Tipo da última análise: `resumo_executivo`, `habilitacao` |
+| `analise_nivel` | varchar(20) | YES | - | Nível de profundidade da última análise: `triagem`, `resumo`, `completa` |
+| `analise_instrucoes_complementares` | text | YES | - | Instruções complementares ad hoc enviadas pelo usuário na última execução |
 | `analise_tokens` | integer | YES | - | Total de tokens consumidos (input + output, backward compat) |
 | `analise_tokens_input` | integer | YES | - | Tokens do prompt (última análise) |
 | `analise_tokens_output` | integer | YES | - | Tokens da resposta (última análise) |
@@ -912,6 +914,7 @@ Editais coletados da API PNCP pelo workflow N8N "PNCP Daily Monitor v3". Anális
 **Constraints:**
 - PK: `id`
 - UNIQUE: `pncp_id`
+- CHECK: `chk_analise_nivel` → `analise_nivel IS NULL OR analise_nivel IN ('triagem', 'resumo', 'completa')`
 
 **Escrita por:** N8N workflows (via user `n8n_worker` com SELECT, INSERT, UPDATE)
 **Lida por:** Portal (via `sunyata_app`)
@@ -928,6 +931,46 @@ FROM pncp_editais WHERE id = ?;
 -- Listar editais por UF
 SELECT * FROM pncp_editais WHERE uf = ? ORDER BY data_encerramento;
 ```
+
+**Estrutura real do JSONB `analise_resultado` (produção):**
+
+**1) Caminho A/B — análise concluída (LLM)**
+```json
+{
+  "resumo_executivo": "markdown da análise...",
+  "tipo_analise": "resumo_executivo",
+  "versao_prompt": "3.1",
+  "modelo_usado": "claude-sonnet-4-5",
+  "modo_analise": "completo"
+}
+```
+
+Obs.: a chave principal muda conforme o tipo, por exemplo: `habilitacao`, `verifica_edital`, `contratos`, `sg_contrato`.
+
+**2) Caminho C — dados insuficientes (sem LLM)**
+```json
+{
+  "resumo_executivo": "Dados insuficientes para análise...",
+  "reason": "insufficient_data",
+  "pncp_url": "https://pncp.gov.br/...",
+  "versao_prompt": "3.1",
+  "modo_analise": "insuficiente"
+}
+```
+
+**3) Caminho de erro (resposta inválida/vazia do LLM)**
+```json
+{
+  "error": true,
+  "message": "Empty response from LiteLLM",
+  "tipo_analise": "resumo_executivo"
+}
+```
+
+**Nota importante sobre merge (`||`):**
+- O workflow grava com:
+  `analise_resultado = COALESCE(analise_resultado, '{}'::jsonb) || <fragmento>`
+- Isso acumula chaves por tipo (`resumo_executivo`, `habilitacao`, etc.), mas metacampos de topo (`tipo_analise`, `versao_prompt`, `modelo_usado`, `modo_analise`) são sempre sobrescritos pela última execução.
 
 ---
 
@@ -966,7 +1009,11 @@ Mesmo formato acima, preenchido automaticamente pelo endpoint `/api/ai/datajud/o
 
 **See:** `docs/MIGRATIONS.md` for full migration changelog.
 
-**Latest:** PNCP Enrichment Migration 016 (2026-02-25) - PNCP enrichment columns
+**Latest:** Migration 017 (2026-02-26) - Análise Profundidade
+- Added 2 columns to `pncp_editais`: `analise_nivel` (varchar(20)) and `analise_instrucoes_complementares` (text)
+- Added CHECK constraint `chk_analise_nivel` (`triagem|resumo|completa` or null)
+
+**Previous:** PNCP Enrichment Migration 016 (2026-02-25) - PNCP enrichment columns
 - Added 3 columns to `pncp_editais`: `pncp_detalhes` (JSONB), `pncp_itens` (JSONB), `enriquecido_em` (timestamptz)
 - `pncp_detalhes`: full compra record from PNCP `/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{seq}`
 - `pncp_itens`: items array from PNCP `/pncp-api/v1/.../itens` endpoint

@@ -2,7 +2,7 @@
 
 **Database:** PostgreSQL 16
 **Migration Path:** `migrations/*.sql`
-**Execution:** Sequential (001 → 012)
+**Execution:** Sequential (001 → 017)
 
 ---
 
@@ -397,6 +397,31 @@ ALTER TABLE pncp_editais DROP COLUMN IF EXISTS enriquecido_em;
 
 ---
 
+### Migration 017 — Análise Profundidade (2026-02-26)
+
+**File:** `migrations/017_analise_profundidade.sql`
+
+**Changes:**
+- Added `analise_nivel VARCHAR(20)` to `pncp_editais`
+- Added `analise_instrucoes_complementares TEXT` to `pncp_editais`
+- Added CHECK constraint `chk_analise_nivel`:
+  - allowed values: `triagem`, `resumo`, `completa`
+  - `NULL` remains allowed for backward compatibility
+
+**Columns affected:**
+- `pncp_editais.analise_nivel`
+- `pncp_editais.analise_instrucoes_complementares`
+
+**Rollback:**
+```sql
+ALTER TABLE pncp_editais
+  DROP CONSTRAINT IF EXISTS chk_analise_nivel,
+  DROP COLUMN IF EXISTS analise_nivel,
+  DROP COLUMN IF EXISTS analise_instrucoes_complementares;
+```
+
+---
+
 ## Migration Best Practices
 
 ### Running Migrations
@@ -449,7 +474,7 @@ ALTER TABLE pncp_editais DROP COLUMN IF EXISTS enriquecido_em;
 
 ## Pending Migrations
 
-None - all migrations applied as of 2026-02-25.
+None - all migrations applied as of 2026-02-26.
 
 ---
 
