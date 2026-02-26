@@ -649,3 +649,120 @@ def _parse_url_pncp(url: str) -> tuple[str, int, int]:
     if not m:
         raise ValueError(f"Cannot parse CNPJ/ano/seq from url: {url}")
     return m.group(1), int(m.group(2)), int(m.group(3))
+
+
+# --- Enrich Edital endpoint ---
+
+PNCP_CONSULTA_BASE = "https://pncp.gov.br/api/consulta/v1"
+
+
+class PncpEnrichRequest(BaseModel):
+    edital_id: int | None = None
+    cnpj: str | None = None
+    ano: int | None = None
+    sequencial: int | None = None
+
+
+class PncpEnrichResponse(BaseModel):
+    success: bool
+    edital_id: int | None = None
+    detalhes_ok: bool = False
+    itens_count: int = 0
+    arquivos_count: int = 0
+    error: str | None = None
+
+
+def parse_pncp_id(pncp_id: str) -> tuple[str, int, int]:
+    """Parse pncp_id format 'CNPJ-ESFERA-SEQ/ANO' into (cnpj, ano, seq).
+
+    Example: '42498600000171-1-000313/2026' -> ('42498600000171', 2026, 313)
+    Raises ValueError with a clear message if format is unexpected.
+    """
+    try:
+        parts = pncp_id.split("-")
+        if len(parts) < 3:
+            raise ValueError(f"Expected at least 3 dash-separated parts, got {len(parts)}")
+        cnpj = parts[0]
+        if len(cnpj) != 14 or not cnpj.isdigit():
+            raise ValueError(f"CNPJ part '{cnpj}' is not 14 digits")
+        rest = "-".join(parts[2:])  # Everything after esfera: '000313/2026'
+        if "/" not in rest:
+            raise ValueError(f"Missing '/' in seq/ano part: '{rest}'")
+        seq_str, ano_str = rest.split("/", 1)
+        return cnpj, int(ano_str), int(seq_str)
+    except (ValueError, IndexError) as e:
+        raise ValueError(f"Cannot parse pncp_id '{pncp_id}': {e}") from e
+
+
+@router.post("/iatr/enrich-edital", response_model=PncpEnrichResponse)
+@limiter.limit("30/minute")
+async def enrich_edital(
+    req: PncpEnrichRequest,
+    request: Request,
+    _key=Depends(verify_internal_key),
+    pool: asyncpg.Pool = Depends(get_db),
+):
+    """Fetch details, items, and documents list from PNCP API and save to DB."""
+    import json as json_module
+
+    edital_id = req.edital_id
+    cnpj, ano, seq = req.cnpj, req.ano, req.sequencial
+
+    if edital_id and not (cnpj and ano and seq):
+        row = await pool.fetchrow(
+            "SELECT pncp_id FROM pncp_editais WHERE id = $1", edital_id
+        )
+        if not row:
+            return PncpEnrichResponse(success=False, error="Edital not found")
+        try:
+            cnpj, ano, seq = parse_pncp_id(row["pncp_id"])
+        except ValueError as e:
+            return PncpEnrichResponse(success=False, error=str(e))
+
+    if not (cnpj and ano and seq):
+        return PncpEnrichResponse(success=False, error="Provide edital_id or cnpj+ano+sequencial")
+
+    try:
+        async with httpx.AsyncClient(timeout=PNCP_TIMEOUT) as client:
+            # 1. Full details (different base URL: api/consulta/v1)
+            details_url = f"{PNCP_CONSULTA_BASE}/orgaos/{cnpj}/compras/{ano}/{seq}"
+            det_resp = await client.get(details_url)
+            detalhes = det_resp.json() if det_resp.status_code == 200 else None
+
+            # 2. Items (up to 500, covers virtually all editais)
+            itens_url = f"{PNCP_API_BASE}/orgaos/{cnpj}/compras/{ano}/{seq}/itens?pagina=1&tamanhoPagina=500"
+            itens_resp = await client.get(itens_url)
+            itens = itens_resp.json() if itens_resp.status_code == 200 else None
+
+            # 3. Documents list
+            arqs_url = f"{PNCP_API_BASE}/orgaos/{cnpj}/compras/{ano}/{seq}/arquivos"
+            arqs_resp = await client.get(arqs_url)
+            arquivos = arqs_resp.json() if arqs_resp.status_code == 200 else None
+
+        if edital_id:
+            await pool.execute(
+                """UPDATE pncp_editais
+                   SET pncp_detalhes = COALESCE($1::jsonb, pncp_detalhes),
+                       pncp_itens = COALESCE($2::jsonb, pncp_itens),
+                       arquivos_pncp = COALESCE($3::jsonb, arquivos_pncp),
+                       enriquecido_em = NOW(),
+                       updated_at = NOW()
+                   WHERE id = $4""",
+                json_module.dumps(detalhes, ensure_ascii=False) if detalhes else None,
+                json_module.dumps(itens, ensure_ascii=False) if itens else None,
+                json_module.dumps(arquivos, ensure_ascii=False) if arquivos else None,
+                edital_id,
+            )
+
+        return PncpEnrichResponse(
+            success=True,
+            edital_id=edital_id,
+            detalhes_ok=detalhes is not None,
+            itens_count=len(itens) if isinstance(itens, list) else 0,
+            arquivos_count=len(arquivos) if isinstance(arquivos, list) else 0,
+        )
+    except httpx.TimeoutException:
+        return PncpEnrichResponse(success=False, error="Timeout fetching from PNCP API")
+    except Exception as e:
+        logger.exception(f"enrich-edital error: {e}")
+        return PncpEnrichResponse(success=False, error=str(e))
