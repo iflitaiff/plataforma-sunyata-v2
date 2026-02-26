@@ -394,7 +394,7 @@ let currentStatus = <?= json_encode($edital['status_analise']) ?>;
 
 // Initialize based on current status
 document.addEventListener('DOMContentLoaded', function() {
-    if (currentStatus === 'concluida' || currentStatus === 'erro') {
+    if (currentStatus === 'concluida' || currentStatus === 'erro' || currentStatus === 'insuficiente') {
         loadAnaliseResult();
     } else if (currentStatus === 'em_analise') {
         showPolling();
@@ -461,7 +461,7 @@ async function checkStatus() {
         });
         const data = await resp.json();
 
-        if (data.status_analise === 'concluida' || data.status_analise === 'erro') {
+        if (data.status_analise === 'concluida' || data.status_analise === 'erro' || data.status_analise === 'insuficiente') {
             clearInterval(pollingInterval);
             pollingInterval = null;
             renderAnaliseResult(data);
@@ -489,7 +489,50 @@ function renderAnaliseResult(data) {
     const indicator = document.getElementById('analise-status-indicator');
     const body = document.getElementById('analise-body');
 
-    if (data.status_analise === 'concluida') {
+    if (data.status_analise === 'insuficiente') {
+        const resultado = data.analise_resultado || {};
+        const pncpUrl = (typeof resultado === 'object' && resultado.pncp_url) ? resultado.pncp_url : '';
+
+        section.classList.remove('em-andamento', 'concluida', 'erro');
+        indicator.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-info-circle"></i> Dados insuficientes</span>';
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-warning';
+
+        const icon = document.createElement('i');
+        icon.className = 'bi bi-info-circle me-2';
+        alertDiv.appendChild(icon);
+
+        const strong = document.createElement('strong');
+        strong.textContent = 'Dados insuficientes para análise. ';
+        alertDiv.appendChild(strong);
+
+        alertDiv.appendChild(document.createTextNode(
+            'Os documentos deste edital não estão disponíveis para extração automática.'
+        ));
+
+        if (pncpUrl) {
+            const link = document.createElement('a');
+            link.href = pncpUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'alert-link ms-1';
+            link.textContent = 'Ver documentos no PNCP';
+            alertDiv.appendChild(link);
+        }
+
+        const btnDiv = document.createElement('div');
+        btnDiv.className = 'mt-3';
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'btn btn-outline-secondary btn-sm';
+        retryBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Tentar novamente';
+        retryBtn.onclick = triggerAnalise;
+        btnDiv.appendChild(retryBtn);
+
+        body.replaceChildren(alertDiv, btnDiv);
+        return;
+
+    } else if (data.status_analise === 'concluida') {
         section.classList.add('concluida');
         section.classList.remove('em-andamento', 'erro');
         indicator.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Concluída</span>';
