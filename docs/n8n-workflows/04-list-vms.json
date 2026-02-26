@@ -1,0 +1,146 @@
+{
+  "name": "Bridge - List VMs",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "proxmox/vms",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ws-lv-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-400, 112],
+      "webhookId": "list-vms"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-auth-token']}}",
+              "value2": "daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c"
+            }
+          ]
+        }
+      },
+      "id": "ws-lv-002",
+      "name": "Check Auth Token",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-208, 112]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://192.168.100.1:8006/api2/json/nodes/anatta/qemu",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "PVEAPIToken=bridge@pve!n8n-bridge=6130ae66-ca9d-4cee-b2e3-3ae6418f1e2d"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "ws-lv-003",
+      "name": "Get VMs (QEMU)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://192.168.100.1:8006/api2/json/nodes/anatta/lxc",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "PVEAPIToken=bridge@pve!n8n-bridge=6130ae66-ca9d-4cee-b2e3-3ae6418f1e2d"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "ws-lv-004",
+      "name": "Get Containers (LXC)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [208, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const qemuRaw = $('Get VMs (QEMU)').first().json;\nconst lxcRaw = $('Get Containers (LXC)').first().json;\n\nconst vmsData = qemuRaw.data || [];\nconst ctsData = lxcRaw.data || [];\n\nconst vms = vmsData.map(vm => ({\n  vmid: vm.vmid,\n  name: vm.name || 'unnamed',\n  status: vm.status,\n  type: 'qemu',\n  cpus: vm.cpus || 0,\n  mem_mb: Math.round((vm.mem || 0) / 1048576),\n  maxmem_mb: Math.round((vm.maxmem || 0) / 1048576),\n  uptime_hours: Math.round((vm.uptime || 0) / 3600)\n}));\n\nconst containers = ctsData.map(ct => ({\n  vmid: ct.vmid,\n  name: ct.name || 'unnamed',\n  status: ct.status,\n  type: 'lxc',\n  cpus: ct.cpus || 0,\n  mem_mb: Math.round((ct.mem || 0) / 1048576),\n  maxmem_mb: Math.round((ct.maxmem || 0) / 1048576),\n  uptime_hours: Math.round((ct.uptime || 0) / 3600)\n}));\n\nconst all = [...vms, ...containers];\n\nreturn [{\n  json: {\n    success: true,\n    vms: vms,\n    containers: containers,\n    total: all.length,\n    summary: {\n      vms_count: vms.length,\n      containers_count: containers.length,\n      running: all.filter(x => x.status === 'running').length,\n      stopped: all.filter(x => x.status === 'stopped').length\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "ws-lv-005",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [416, 0]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ws-lv-006",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [624, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "ws-lv-007",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [0, 208]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Check Auth Token", "type": "main", "index": 0}]]
+    },
+    "Check Auth Token": {
+      "main": [
+        [{"node": "Get VMs (QEMU)", "type": "main", "index": 0}],
+        [{"node": "Respond Unauthorized", "type": "main", "index": 0}]
+      ]
+    },
+    "Get VMs (QEMU)": {
+      "main": [[{"node": "Get Containers (LXC)", "type": "main", "index": 0}]]
+    },
+    "Get Containers (LXC)": {
+      "main": [[{"node": "Format Response", "type": "main", "index": 0}]]
+    },
+    "Format Response": {
+      "main": [[{"node": "Respond OK", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

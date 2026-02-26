@@ -3,7 +3,7 @@
 **Database:** PostgreSQL 16 + pgvector
 **Name:** `sunyata_platform`
 **User:** `sunyata_app`
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-25
 
 ---
 
@@ -15,6 +15,7 @@
 - [Documents & Files](#documents--files)
 - [Prompts](#prompts)
 - [System & Audit](#system--audit)
+- [PNCP & Licitações](#pncp--licitações)
 - [Indexes](#indexes)
 - [Common Queries](#common-queries)
 
@@ -860,11 +861,137 @@ WHERE last_activity >= NOW() - INTERVAL '1 hour';
 
 ---
 
+## PNCP & Licitações
+
+### `pncp_editais`
+Editais coletados da API PNCP pelo workflow N8N "PNCP Daily Monitor v3". Análise IA escrita pelo workflow "IATR - Análise de Edital".
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | integer | NO | PK, auto | Primary key |
+| `pncp_id` | text | NO | - | Identificador PNCP (unique). Formato: `CNPJ-1-SEQNUM/ANO` |
+| `numero` | text | YES | - | Número do edital (ex: "012/2025") |
+| `titulo` | text | NO | - | Título do edital |
+| `objeto` | text | YES | - | Descrição do objeto (truncada em 2000 chars) |
+| `orgao` | text | YES | - | Nome do órgão contratante |
+| `orgao_cnpj` | text | YES | - | CNPJ do órgão |
+| `uf` | text | YES | - | Estado (RJ, SP, MG, BA, PE, DF) |
+| `municipio` | text | YES | - | Município |
+| `modalidade` | text | YES | - | Modalidade de licitação |
+| `valor_estimado` | numeric | YES | - | Valor estimado (0 = sigiloso) |
+| `data_abertura` | timestamptz | YES | - | Data de abertura/publicação |
+| `data_encerramento` | timestamptz | YES | - | Data de encerramento |
+| `url_pncp` | text | YES | - | URL completa no portal PNCP |
+| `status` | text | YES | 'aberto' | Status do edital |
+| `keywords_matched` | text[] | YES | - | Keywords que matcharam na filtragem |
+| `raw_data` | jsonb | YES | - | Dados brutos da API PNCP |
+| `status_analise` | text | YES | 'pendente' | pendente/em_analise/concluida/erro |
+| `analise_resultado` | jsonb | YES | - | Resultado da análise IA (chave principal: `resumo_executivo`) |
+| `analise_modelo` | text | YES | - | Modelo LLM usado (ex: claude-haiku-4-5) |
+| `analise_tipo` | text | YES | - | Tipo da última análise: `resumo_executivo`, `habilitacao` |
+| `analise_tokens` | integer | YES | - | Total de tokens consumidos (input + output, backward compat) |
+| `analise_tokens_input` | integer | YES | - | Tokens do prompt (última análise) |
+| `analise_tokens_output` | integer | YES | - | Tokens da resposta (última análise) |
+| `analise_custo_usd` | numeric(10,6) | YES | - | Custo estimado USD (última análise) |
+| `analise_com_texto_completo` | boolean | YES | false | Se a análise usou texto extraído dos PDFs |
+| `analise_erro` | text | YES | - | Mensagem de erro se análise falhou |
+| `analise_concluida_em` | timestamptz | YES | - | Timestamp de conclusão da análise |
+| `texto_completo` | text | YES | - | Texto extraído de todos os PDFs (cache) |
+| `texto_extraido_em` | timestamptz | YES | - | Timestamp da última extração de texto |
+| `texto_total_paginas` | integer | YES | - | Total de páginas (todos os PDFs) |
+| `texto_total_caracteres` | integer | YES | - | Total de caracteres em texto_completo |
+| `arquivos_pncp` | jsonb | YES | - | Array de metadata dos ficheiros PNCP |
+| `datajud_orgao` | jsonb | YES | - | Cache DataJud: processos judiciais do órgão (via CNPJ do pncp_id) |
+| `datajud_consultado_em` | timestamptz | YES | - | Timestamp da última consulta DataJud (cache 24h) |
+| `pncp_detalhes` | jsonb | YES | - | Full details from PNCP API (`/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{seq}`): modoDisputaNome, amparoLegal, srp, processo, orcamentoSigilosoDescricao, informacaoComplementar, unidadeOrgao, etc. |
+| `pncp_itens` | jsonb | YES | - | Items array from PNCP API (`/pncp-api/v1/.../itens`): numeroItem, descricao, quantidade, unidadeMedida, valorUnitarioEstimado, valorTotal, criterioJulgamentoNome, orcamentoSigiloso |
+| `enriquecido_em` | timestamptz | YES | - | Timestamp of last enrichment from PNCP API (null = not yet enriched) |
+| `created_at` | timestamptz | YES | now() | Criação do registo |
+| `updated_at` | timestamptz | YES | now() | Última actualização |
+
+**Constraints:**
+- PK: `id`
+- UNIQUE: `pncp_id`
+
+**Escrita por:** N8N workflows (via user `n8n_worker` com SELECT, INSERT, UPDATE)
+**Lida por:** Portal (via `sunyata_app`)
+
+**Queries comuns:**
+```sql
+-- Buscar edital por pncp_id (deep-links do email)
+SELECT * FROM pncp_editais WHERE pncp_id = ?;
+
+-- Polling de status de análise (frontend JS)
+SELECT id, status_analise, analise_resultado, analise_modelo, analise_tokens, analise_erro, analise_concluida_em
+FROM pncp_editais WHERE id = ?;
+
+-- Listar editais por UF
+SELECT * FROM pncp_editais WHERE uf = ? ORDER BY data_encerramento;
+```
+
+---
+
+### `datajud_consultas`
+Consultas ad-hoc à API DataJud (Feature 3: Verificação de Idoneidade). Armazena resultados de consultas por CNPJ feitas pelo usuário na página do edital.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | serial | NO | PK, auto | Primary key |
+| `cnpj` | text | NO | - | CNPJ consultado (14 dígitos, sem formatação) |
+| `user_id` | integer | YES | - | FK → users.id (quem consultou) |
+| `edital_id` | integer | YES | - | FK → pncp_editais.id (contexto) |
+| `resultado` | jsonb | YES | - | Resultado completo da consulta DataJud |
+| `created_at` | timestamptz | YES | now() | Timestamp da consulta |
+
+**Constraints:**
+- PK: `id`
+- FK: `edital_id` → `pncp_editais(id)`
+
+**Formato do JSONB `resultado`:**
+```json
+{
+  "total_processos": 5,
+  "processos": [...],
+  "resumo": {"por_classe": {...}, "mais_recente": "...", "mais_antigo": "..."},
+  "alertas": [{"nivel": "CRITICO|ATENCAO|INFO", "titulo": "...", "descricao": "..."}]
+}
+```
+
+**Formato do JSONB `datajud_orgao` (em pncp_editais):**
+Mesmo formato acima, preenchido automaticamente pelo endpoint `/api/ai/datajud/orgao-processos`.
+
+---
+
 ## Migration Notes
 
 **See:** `docs/MIGRATIONS.md` for full migration changelog.
 
-**Latest:** Phase 3.5 (2026-02-19) - Many-to-Many Canvas-Vertical Assignment
+**Latest:** PNCP Enrichment Migration 016 (2026-02-25) - PNCP enrichment columns
+- Added 3 columns to `pncp_editais`: `pncp_detalhes` (JSONB), `pncp_itens` (JSONB), `enriquecido_em` (timestamptz)
+- `pncp_detalhes`: full compra record from PNCP `/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{seq}`
+- `pncp_itens`: items array from PNCP `/pncp-api/v1/.../itens` endpoint
+- `enriquecido_em`: timestamp of last enrichment (null = not yet enriched)
+
+**Previous:** DataJud Integration Migration 015 (2026-02-24) - Judicial data
+- Added 2 columns to `pncp_editais`: `datajud_orgao` (JSONB), `datajud_consultado_em` (timestamptz)
+- Created `datajud_consultas` table for ad-hoc company idoneidade checks
+- DataJud data cached 24h, auto-queried by FastAPI endpoint, injected into N8N IATR analysis
+
+**Previous:** PNCP Phase C Migration 014 (2026-02-24) - Análise complementar
+- Added 5 columns: `analise_tipo`, `analise_tokens_input`, `analise_tokens_output`, `analise_custo_usd`, `analise_com_texto_completo`
+- Supports N8N workflow v2 with multiple analysis types and LLM cost tracking
+- `analise_resultado` JSONB uses merge (`||`) to accumulate results by type key
+
+**Previous:** PNCP Phase C (2026-02-24) - PDF Text Extraction Cache
+- Added 5 columns to `pncp_editais`: `texto_completo`, `texto_extraido_em`, `texto_total_paginas`, `texto_total_caracteres`, `arquivos_pncp`
+- FastAPI endpoint `/api/ai/iatr/extract-pdf` downloads PDFs from PNCP API, extracts text, caches in DB
+
+**Previous:** PNCP Phase A (2026-02-24) - PNCP Editais + AI Analysis
+- Added `pncp_editais` table (migration 013)
+- User `n8n_worker` with SELECT, INSERT, UPDATE grants
+- JSONB `analise_resultado` stores AI analysis (key: `resumo_executivo`)
+
+**Previous:** Phase 3.5 (2026-02-19) - Many-to-Many Canvas-Vertical Assignment
 - Added `canvas_vertical_assignments` junction table
 - Removed `canvas_templates.vertical` column
 - Migrated 55 existing assignments to junction table

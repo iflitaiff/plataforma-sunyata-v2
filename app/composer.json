@@ -5,6 +5,7 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.0",
+        "erusev/parsedown": "^1.8",
         "league/oauth2-google": "^4.0",
         "mpdf/mpdf": "^8.2",
         "phpoffice/phpword": "^1.2",

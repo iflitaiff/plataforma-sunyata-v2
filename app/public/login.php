@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Auto-login after registration
                 $loginResult = $auth->login($_POST['email'], $_POST['password']);
                 if ($loginResult['success']) {
-                    redirect(BASE_URL . '/dashboard.php');
+                    redirect(consume_redirect_after_login() ?: BASE_URL . '/dashboard.php');
                 }
                 $success = 'Conta criada com sucesso! Faça login.';
             } else {
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             if ($result['success']) {
-                redirect(BASE_URL . '/dashboard.php');
+                redirect(consume_redirect_after_login() ?: BASE_URL . '/dashboard.php');
             } else {
                 $error = $result['error'];
             }

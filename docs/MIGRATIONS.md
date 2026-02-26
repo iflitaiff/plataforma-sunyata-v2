@@ -379,6 +379,24 @@ SET vertical = (
 
 ---
 
+### Migration 016 — PNCP Enrichment Columns (2026-02-25)
+
+**File:** `migrations/016_pncp_enrichment_columns.sql`
+
+**Changes:**
+- Added `pncp_detalhes JSONB` to `pncp_editais` — full compra record from PNCP `/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{seq}`
+- Added `pncp_itens JSONB` to `pncp_editais` — items array from PNCP `/pncp-api/v1/.../itens`
+- Added `enriquecido_em TIMESTAMPTZ` to `pncp_editais` — timestamp of last enrichment (null = not yet enriched)
+
+**Rollback:**
+```sql
+ALTER TABLE pncp_editais DROP COLUMN IF EXISTS pncp_detalhes;
+ALTER TABLE pncp_editais DROP COLUMN IF EXISTS pncp_itens;
+ALTER TABLE pncp_editais DROP COLUMN IF EXISTS enriquecido_em;
+```
+
+---
+
 ## Migration Best Practices
 
 ### Running Migrations
@@ -431,7 +449,7 @@ SET vertical = (
 
 ## Pending Migrations
 
-None - all migrations applied as of 2026-02-19.
+None - all migrations applied as of 2026-02-25.
 
 ---
 
@@ -471,5 +489,5 @@ None - all migrations applied as of 2026-02-19.
 
 ---
 
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-25
 **Maintained by:** Claude (Executor Principal)

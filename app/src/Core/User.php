@@ -57,7 +57,7 @@ class User {
      * Update user
      */
     public function update($id, $data) {
-        $allowedFields = ['name', 'picture', 'access_level'];
+        $allowedFields = ['name', 'picture', 'access_level', 'google_id'];
         $updateData = array_intersect_key($data, array_flip($allowedFields));
 
         if (empty($updateData)) {

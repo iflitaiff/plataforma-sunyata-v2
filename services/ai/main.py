@@ -19,7 +19,7 @@ load_dotenv()
 
 from app.config import settings
 from app.database import close_pool, get_pool
-from app.routers import canvas, documents, generate, pncp, stream
+from app.routers import canvas, datajud, documents, generate, pncp, stream
 from app.services import redis_cache
 
 logging.basicConfig(
@@ -63,6 +63,7 @@ app.include_router(stream.router, prefix="/api/ai", tags=["stream"])
 app.include_router(canvas.router, prefix="/api/ai", tags=["canvas"])
 app.include_router(documents.router, prefix="/api/ai", tags=["documents"])
 app.include_router(pncp.router, prefix="/api/ai", tags=["pncp"])
+app.include_router(datajud.router, prefix="/api/ai", tags=["datajud"])
 
 
 @app.get("/api/ai/health")

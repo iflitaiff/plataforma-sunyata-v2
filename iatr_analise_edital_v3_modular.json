@@ -1,0 +1,599 @@
+{
+  "name": "IATR - Análise de Edital v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "iatr/analisar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "66d9162a-633a-42d9-bcfc-2b0c6227bbbc",
+      "name": "Webhook Analisar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "iatr-analisar-trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-auth-token']}}",
+              "value2": "daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c"
+            }
+          ]
+        }
+      },
+      "id": "545a3b9b-dc3a-48ee-b027-0c1ed38ddafd",
+      "name": "Check Auth",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "3e12c6a8-9c74-441b-beb1-448445e48cce",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        400,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate input\nconst body = $json.body || {};\nconst editalId = body.edital_id;\nconst tipoAnalise = body.tipo_analise || 'resumo_executivo';\n\nif (!editalId) {\n  throw new Error('Missing edital_id in request body');\n}\n\nif (!['resumo_executivo', 'habilitacao'].includes(tipoAnalise)) {\n  throw new Error('tipo_analise must be resumo_executivo or habilitacao');\n}\n\nreturn [{ json: { edital_id: editalId, tipo_analise: tipoAnalise } }];"
+      },
+      "id": "0aeb54ee-cc65-471a-95c0-d87c5cf95b64",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE pncp_editais SET status_analise = 'em_analise', updated_at = NOW() WHERE id = {{$json.edital_id}} RETURNING id, pncp_id, titulo, objeto, orgao, uf, modalidade, valor_estimado, data_encerramento, url_pncp, raw_data, texto_completo, texto_total_caracteres, datajud_orgao, pncp_detalhes, pncp_itens, enriquecido_em;",
+        "options": {}
+      },
+      "id": "44b01cfc-77ac-42a7-a132-8e4d9e0d7d88",
+      "name": "Mark In Progress",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        608,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "sunyata-pg-001",
+          "name": "Sunyata PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if edital was found — v3: includes pncp_detalhes, pncp_itens\nconst rows = $input.all();\nif (!rows.length || !rows[0].json.id) {\n  throw new Error('Edital not found in database');\n}\n\nconst edital = rows[0].json;\nconst tipoAnalise = $('Validate Input').first().json.tipo_analise;\nconst contextoEmpresa = $('Validate Input').first().json.contexto_empresa || null;\nconst hasTexto = edital.texto_completo && edital.texto_completo.length > 100;\n\nreturn [{ json: {\n  edital_id: edital.id,\n  pncp_id: edital.pncp_id,\n  titulo: edital.titulo,\n  objeto: edital.objeto,\n  orgao: edital.orgao,\n  uf: edital.uf,\n  modalidade: edital.modalidade,\n  valor_estimado: edital.valor_estimado,\n  data_encerramento: edital.data_encerramento,\n  url_pncp: edital.url_pncp,\n  raw_data: edital.raw_data,\n  datajud_orgao: edital.datajud_orgao || null,\n  pncp_detalhes: edital.pncp_detalhes || null,\n  pncp_itens: edital.pncp_itens || null,\n  tipo_analise: tipoAnalise,\n  contexto_empresa: contextoEmpresa,\n  has_texto_completo: hasTexto,\n  texto_completo: hasTexto ? edital.texto_completo : null,\n  texto_total_caracteres: edital.texto_total_caracteres || 0\n} }];"
+      },
+      "id": "c7852d04-2cb0-4c06-93a9-264af8b311fa",
+      "name": "Check Edital Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.has_texto_completo ? 'yes' : 'no' }}",
+              "value2": "yes"
+            }
+          ]
+        }
+      },
+      "id": "a8de1940-ff0c-4967-8028-8ec9e2b801e5",
+      "name": "Has Cached Text?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1816,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.100.10:8000/api/ai/iatr/extract-pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Key",
+              "value": "3be587ec449cb5ddb42c071d61ca5892720179bd7545015aa208275cc200759f"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ edital_id: $json.edital_id, save_to_db: true }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "622354ba-7c70-467e-a42e-ef683ca1536a",
+      "name": "Extract PDF Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2024,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// After PDF extraction — handle failure gracefully\nconst extraction = $json;\nconst editalData = $('Check Edital Data').first().json;\n\n// If extraction failed (neverError means we get error in response body)\nif (!extraction.success) {\n  // Continue with metadata-only analysis (fallback like v1)\n  return [{ json: {\n    ...editalData,\n    texto_completo: null,\n    texto_total_caracteres: 0,\n    has_texto_completo: false\n  } }];\n}\n\nreturn [{ json: {\n  ...editalData,\n  texto_completo: extraction.texto_completo,\n  texto_total_caracteres: extraction.total_caracteres,\n  has_texto_completo: true\n} }];"
+      },
+      "id": "d85604fb-492c-4420-b98e-4989e6db2cdc",
+      "name": "Merge Extraction Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2216,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const edital = $json;\nconst tipoAnalise = edital.tipo_analise;\nconst textoEdital = edital.texto_completo || '';\n\n// Truncate if exceeds ~700k chars (~175k tokens) to leave room for prompt + response\nconst MAX_CHARS = 400000;\nconst textoTruncado = textoEdital.length > MAX_CHARS \n  ? textoEdital.substring(0, MAX_CHARS) + '\\n\\n[... TEXTO TRUNCADO POR LIMITE DE TAMANHO ...]'\n  : textoEdital;\nconst truncated = textoEdital.length > MAX_CHARS;\nconst hasFullText = textoTruncado && textoTruncado.length > 100;\n\n// ============================================================\n// PROMPTS DO MAURÍCIO (versão de produção)\n// ============================================================\n\nconst PROMPT_RESUMO_EXECUTIVO = `PAPEL E MISSÃO\nVocê atuará como analista especializado em editais de licitação no Brasil. Sua missão é realizar a leitura integral do edital e de todos os anexos fornecidos e, com base exclusivamente nesses documentos, elaborar um relatório técnico estruturado nas onze SEÇÕES MÍNIMAS OBRIGATÓRIAS (1 a 11).\n\nENTRADAS (FORNECIDAS PELO USUÁRIO)\n- Edital de licitação e anexos pertinentes (fornecidos em texto extraído dos PDFs).\n\nREGRAS GERAIS\n- Idioma e tom: Português (Brasil), linguagem formal, clara, objetiva e imparcial.\n- Fontes: Basear a análise exclusivamente nos documentos fornecidos (não usar fontes externas).\n- Abrangência: Leitura integral de todos os documentos fornecidos (edital e anexos, incluindo capa, índice, corpo do edital, Termo de Referência, minutas contratuais, modelos, erratas, esclarecimentos etc.).\n- Não duplicar: Caso uma exigência seja mencionada em mais de um local, consolidá-la em um único item, anotando eventuais diferenças de redação ou condições adicionais.\n- Escopo: Relatar somente o que estiver explicitamente previsto nos documentos, sem presumir práticas usuais. Requisitos normalmente esperados, mas ausentes, devem ser registrados como \"não exigidos\".\n- Imparcialidade: Não emitir parecer jurídico nem opinião subjetiva. Descrever e compilar as informações de forma objetiva.\n- Organização única: Estruturar todas as informações exclusivamente nas seções definidas abaixo, evitando repetir conteúdo em seções diferentes (usar referências cruzadas, se necessário).\n\nFORMATAÇÃO E ESTRUTURA DA RESPOSTA\n- Estrutura: Relatório técnico utilizando numeração hierárquica (1., 1.1, 1.1.1) e listas numeradas ou com marcadores para organizar o conteúdo.\n- Títulos: Escrever títulos e subtítulos diferenciados por MAIÚSCULAS, negrito e numeração.\n- Localização das informações: Indicar a fonte exata de cada informação, no formato [seção/cláusula, pág. PDF X; pág. interna Y] ou, se não houver paginação, pela seção/título correspondente.\n- Listas: Não usar tabelas; apresentar o conteúdo em listas numeradas ou com marcadores, evitando subníveis excessivos.\n- Datas e horas: Usar o formato DD/MM/AAAA HH:MM (horário de Brasília), listando eventos em ordem cronológica.\n- Valores: Utilizar o formato R$ 0.000,00 (ponto para separação de milhares e vírgula para decimais).\n- Sem divagações: Não incluir saudações, comentários pessoais, recomendações ou conclusões subjetivas.\n\nSEÇÕES MÍNIMAS OBRIGATÓRIAS (NESTA ORDEM, SEM REPETIR INFORMAÇÕES)\n\n1. INFORMAÇÕES ESSENCIAIS – dados do processo\n- Órgão (ou entidade) licitante e unidade requisitante.\n- Número da UASG, se aplicável.\n- Número da licitação e número do processo administrativo.\n- Modalidade da licitação, forma de disputa e plataforma ou local da sessão pública.\n- Abrangência ou local(is) de execução/entrega do objeto.\n\n2. RESUMO EXECUTIVO – visão geral\n- Síntese do objeto (tipo de bem, serviço ou obra e escopo geral).\n- Modalidade de licitação, forma de disputa e critério de julgamento das propostas.\n- Principais prazos do certame e da execução contratual.\n- Visão geral sobre valores (existência de orçamento estimado, forma de apresentação de preços).\n- Principais riscos, exigências incomuns e pontos que merecem atenção.\n\n3. DETALHAMENTO DO OBJETO – especificações e quantidades\n- Natureza do objeto (bens, serviços, obras ou combinação) e resumo dos itens/lotes com as respectivas quantidades.\n- Principais requisitos técnicos: características, desempenho mínimo, padrões de qualidade e certificações exigidas.\n- Níveis de serviço (SLAs) estabelecidos, métricas de desempenho e penalidades associadas (se houver).\n- Exigência de POCs, amostras, protótipos ou testes de conformidade, com prazos e condições para atendimento.\n- Critérios de aceite do objeto (inspeções, testes, FAT, SAT, relatórios, termos de recebimento etc.).\n- Logística e implantação: condições de entrega, transporte, instalação, treinamento e outros aspectos operacionais.\n- Garantia e suporte: prazo de garantia, serviços de manutenção, suporte técnico e tempos de resposta/solução exigidos.\n- Subcontratação: possibilidade de subcontratação ou uso de terceiros, incluindo proibições, limites e condições estabelecidas.\n- Documentos do fabricante: exigência de cartas de fabricante, declarações de parceria ou autorizações de revenda, se aplicável.\n- Cláusulas sobre propriedade intelectual, confidencialidade, segurança da informação e proteção de dados (LGPD).\n- Exigências de sustentabilidade (critérios ambientais e sociais) e regras sobre a aceitabilidade de marcas/modelos equivalentes.\n\n4. PRAZOS E CRONOGRAMA – processo e execução\n- Datas e horários referentes ao processo licitatório: prazo de envio das propostas, início dos lances, sessão pública de abertura, período para esclarecimentos, impugnações e recursos.\n- Prazos de execução do contrato: prazo de entrega, implantação, instalação ou início da prestação dos serviços, conforme o caso.\n- Vigência contratual, eventuais prorrogações e outros marcos importantes explicitamente previstos.\n\n5. LOCAL, DATA E HORÁRIO DA LICITAÇÃO\n- Local da sessão pública: endereço físico (para licitação presencial) ou plataforma eletrônica utilizada (para licitação online).\n- Data e horário oficiais de abertura da sessão pública, conforme estabelecido em edital.\n\n6. DOCUMENTAÇÃO DE HABILITAÇÃO – requisitos jurídicos, fiscais, técnicos e econômico-financeiros\n- Habilitação jurídica: documentos relativos à constituição da empresa.\n- Regularidade fiscal e trabalhista: certidões negativas, FGTS, INSS, CNDT e outras.\n- Qualificação técnica: atestados de capacidade técnica, certificações, registros profissionais.\n- Qualificação econômico-financeira: balanço patrimonial, índices financeiros, certidões de falência, capital mínimo.\n- Declarações exigidas: listar todas as declarações requeridas, resumindo seu teor e localização exata.\n- Exigências dispersas: consolidar requisitos de habilitação mencionados fora da seção própria.\n\n7. REGRAS DE PARTICIPAÇÃO – condições para participar\n- Requisitos gerais: condições para participação, registro cadastral, vedações.\n- Tratamento diferenciado: benefícios para ME/EPP, cooperativas, margens de preferência.\n- Visita técnica: se exigida, informar detalhes e consequências.\n\n8. CONSÓRCIOS – participação conjunta\n- Informar se permitida, vedada ou não mencionada.\n- Quando permitidos: requisitos detalhados.\n\n9. CRITÉRIOS DE JULGAMENTO – classificação das propostas\n- Critério de julgamento adotado.\n- Forma de classificação das propostas.\n- Critérios de desempate.\n\n10. VALORES – orçamentos e referências de preço\n- Existência de orçamento estimado ou sigilo.\n- Valores de referência estimados.\n- Forma de cotação de preços.\n- Limites de preços e inexequibilidade.\n\n11. LEGISLAÇÃO APLICÁVEL – normas citadas\n- Listar as normas expressamente mencionadas no edital.\n- Limitar-se à identificação, sem interpretação jurídica.`;\n\nconst PROMPT_HABILITACAO = `PAPEL E MISSÃO\nVocê atuará como analista especializado em editais de licitação no Brasil. Sua missão é examinar o edital e os anexos fornecidos, identificando e detalhando TODAS as exigências de habilitação (qualificação) presentes em qualquer parte desses documentos.\n\nENTRADAS (FORNECIDAS PELO USUÁRIO)\n- Edital de licitação e anexos pertinentes (fornecidos em texto extraído dos PDFs).\n\nREGRAS GERAIS\n- Idioma e tom: Português (Brasil), linguagem formal, clara, objetiva e imparcial.\n- Fontes: Basear a análise exclusivamente nos documentos fornecidos (não usar fontes externas).\n- Abrangência: Leitura integral de todos os documentos fornecidos.\n- Não duplicar: Consolidar exigências duplicadas em um único item.\n- Escopo: Relatar somente o que estiver explicitamente previsto. Requisitos ausentes devem ser registrados como \"não exigidos\".\n- Imparcialidade: Não emitir parecer jurídico nem opinião subjetiva.\n- Organização única: Estruturar informações nas seções definidas abaixo.\n\nFORMATAÇÃO E ESTRUTURA DA RESPOSTA\n- Estrutura: Relatório técnico com numeração hierárquica (1., 1.1, 1.1.1).\n- Títulos: MAIÚSCULAS, negrito e numeração.\n- Localização: Indicar fonte exata [seção/cláusula, pág. PDF X; pág. interna Y].\n- Listas numeradas ou com marcadores (sem tabelas).\n- Datas: DD/MM/AAAA HH:MM. Valores: R$ 0.000,00.\n- Sem divagações.\n\nDOCUMENTAÇÃO DE HABILITAÇÃO – requisitos jurídicos, fiscais, técnicos e econômico-financeiros\n- Habilitação jurídica: documentos relativos à constituição da empresa.\n- Regularidade fiscal e trabalhista: certidões negativas, FGTS, INSS, CNDT e outras.\n- Qualificação técnica: atestados de capacidade técnica, certificações, registros profissionais, POCs.\n- Qualificação econômico-financeira: balanço patrimonial, índices financeiros, certidões de falência, capital mínimo, garantias.\n- Declarações exigidas: Listar TODAS as declarações requeridas, resumindo teor e localização exata.\n- Exigências dispersas: Consolidar requisitos de habilitação de QUALQUER parte do edital (TR, minutas, anexos, modelos).\n\nRISCOS, AMBIGUIDADES E OBSERVAÇÕES – pontos críticos\n- Exigências incomuns ou potencialmente restritivas/complexas, com localização exata.\n- Ambiguidades, contradições internas ou lacunas, sem julgamento de valor.\n- Requisitos geralmente esperados mas não exigidos, registrados como \"não exigidos\".\n- Pontos que poderiam motivar pedidos de esclarecimento ou impugnação (sem aconselhamento jurídico).`;\n\n// Select prompt\nconst promptInstrucao = tipoAnalise === 'habilitacao' ? PROMPT_HABILITACAO : PROMPT_RESUMO_EXECUTIVO;\n\n// Build user message\nlet userMessage = '';\n\nif (hasFullText) {\n  userMessage = `Analise o seguinte edital de licitação:\\n\\n` +\n    `DADOS DO EDITAL:\\n` +\n    `- Título: ${edital.titulo || 'N/I'}\\n` +\n    `- Órgão: ${edital.orgao || 'N/I'} (${edital.uf || 'N/I'})\\n` +\n    `- Modalidade: ${edital.modalidade || 'N/I'}\\n` +\n    `- PNCP ID: ${edital.pncp_id || 'N/I'}\\n\\n` +\n    `TEXTO COMPLETO DO EDITAL E ANEXOS:\\n\\n` +\n    textoTruncado;\n    \n  if (truncated) {\n    userMessage += `\\n\\nNOTA: O texto foi truncado de ${textoEdital.length.toLocaleString()} para ${MAX_CHARS.toLocaleString()} caracteres por limite de contexto.`;\n  }\n} else {\n  // Fallback: only metadata (legacy behavior, no PDF text)\n  const titulo = edital.titulo || 'N/I';\n  const objeto = edital.objeto || 'N/I';\n  const orgao = edital.orgao || 'N/I';\n  const uf = edital.uf || 'N/I';\n  const modalidade = edital.modalidade || 'N/I';\n  const valor = edital.valor_estimado;\n  const encerramento = edital.data_encerramento || 'N/I';\n  const url = edital.url_pncp || '';\n\n  userMessage = `Analise o seguinte edital de licitação com base nos dados disponíveis:\\n\\n` +\n    `**Título:** ${titulo}\\n` +\n    `**Órgão:** ${orgao} (${uf})\\n` +\n    `**Modalidade:** ${modalidade}\\n` +\n    `**Valor Estimado:** ${typeof valor === 'number' ? 'R$ ' + valor.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : valor || 'Não informado'}\\n` +\n    `**Encerramento:** ${encerramento}\\n` +\n    `**URL:** ${url}\\n\\n` +\n    `**Descrição do Objeto:**\\n${objeto}\\n\\n` +\n    `NOTA: O texto completo do edital não está disponível. Elabore a análise com base nos dados acima, indicando claramente quais seções não puderam ser preenchidas por falta de informação.`;\n}\n\n\n// --- DataJud context injection (Feature 2) ---\nlet datajudContext = '';\nconst datajudOrgao = edital.datajud_orgao;\nif (datajudOrgao && typeof datajudOrgao === 'object' && datajudOrgao.total_processos > 0) {\n    const resumo = datajudOrgao.resumo || {};\n    const porClasse = resumo.por_classe || {};\n    const classeList = Object.entries(porClasse).map(([k, v]) => k + ' (' + v + ')').join(', ');\n    datajudContext = '\\n\\n--- CONTEXTO JUDICIAL DO ÓRGÃO (DataJud/CNJ) ---\\n';\n    datajudContext += 'O órgão licitante possui ' + datajudOrgao.total_processos + ' processos judiciais registrados.\\n';\n    datajudContext += 'Distribuição por tipo: ' + classeList + '.\\n';\n    if (resumo.mais_recente) datajudContext += 'Processo mais recente: ' + resumo.mais_recente + '.\\n';\n    if (resumo.mais_antigo) datajudContext += 'Processo mais antigo: ' + resumo.mais_antigo + '.\\n';\n    datajudContext += 'Considere estas informações ao avaliar riscos na análise.\\n';\n}\n\nreturn [{ json: {\n  edital_id: edital.edital_id,\n  pncp_id: edital.pncp_id,\n  tipo_analise: tipoAnalise,\n  system_prompt: promptInstrucao,\n  user_message: userMessage + datajudContext,\n  has_full_text: hasFullText,\n  texto_chars: textoTruncado ? textoTruncado.length : 0\n} }];"
+      },
+      "id": "0c6872e2-644e-43d0-86f2-210c0ccc7a53",
+      "name": "Build Analysis Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2424,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.100.13:4000/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk-sunyata-ec909e5420572a4c8c496822a9459bcdec1391c7"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messages\": [\n    { \"role\": \"system\", \"content\": {{ JSON.stringify($json.system_prompt) }} },\n    { \"role\": \"user\", \"content\": {{ JSON.stringify($json.user_message) }} }\n  ],\n  \"model\": \"{{ $json.selected_model || 'claude-sonnet-4-5' }}\",\n  \"max_tokens\": {{ $json.max_tokens || 16000 }},\n  \"temperature\": 0.2\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "40ac74f5-47d7-4053-89cc-fe7cdbf4139f",
+      "name": "Call LiteLLM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2616,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// PROCESS LLM RESPONSE — v3.1: dynamic cost, modo_analise\n// ============================================================\nconst llmResponse = $json;\n// Build Partial Prompt or Build Analysis Prompt may have produced the data\nlet promptData;\ntry {\n  promptData = $('Build Analysis Prompt').first().json;\n} catch(e) {\n  try {\n    promptData = $('Build Partial Prompt').first().json;\n  } catch(e2) {\n    promptData = {};\n  }\n}\n\nconst choices = llmResponse.choices || [];\nconst content = choices.length > 0 ? (choices[0].message?.content || '') : '';\nconst model = llmResponse.model || promptData.selected_model || 'claude-sonnet-4-5';\nconst usage = llmResponse.usage || {};\nconst tokensIn = usage.prompt_tokens || 0;\nconst tokensOut = usage.completion_tokens || 0;\nconst tokensTotal = usage.total_tokens || (tokensIn + tokensOut);\nconst tipoAnalise = promptData.tipo_analise;\nconst modoAnalise = promptData.modo_analise || 'completo';\n\n// Custo por modelo (USD per 1K tokens)\nconst COST_MAP = {\n  'claude-sonnet-4-5':  { input: 0.003, output: 0.015 },\n  'claude-haiku-4-5':   { input: 0.0008, output: 0.004 },\n  'claude-opus-4-5':    { input: 0.015, output: 0.075 }\n};\nconst modelBase = Object.keys(COST_MAP).find(k => model.includes(k)) || 'claude-sonnet-4-5';\nconst costs = COST_MAP[modelBase];\nconst custoUsd = (tokensIn * costs.input / 1000) + (tokensOut * costs.output / 1000);\n\nif (!content) {\n  return [{ json: {\n    edital_id: promptData.edital_id,\n    status: 'erro',\n    resultado: JSON.stringify({\n      error: true,\n      message: llmResponse.error?.message || 'Empty response from LiteLLM',\n      tipo_analise: tipoAnalise\n    }),\n    model: model,\n    tokens: tokensTotal,\n    tokens_input: tokensIn,\n    tokens_output: tokensOut,\n    custo_usd: custoUsd,\n    tipo_analise: tipoAnalise,\n    has_full_text: promptData.has_full_text || false,\n    modo_analise: modoAnalise\n  }}];\n}\n\n// Build JSONB fragment — Portal reads: resultado.resumo_executivo, resultado.habilitacao, etc.\nconst jsonbFragment = {};\njsonbFragment[tipoAnalise] = content;\njsonbFragment.tipo_analise = tipoAnalise;\njsonbFragment.versao_prompt = '3.1';\njsonbFragment.modelo_usado = model;\njsonbFragment.modo_analise = modoAnalise;\n\nreturn [{ json: {\n  edital_id: promptData.edital_id,\n  pncp_id: promptData.pncp_id,\n  status: 'concluida',\n  resultado: JSON.stringify(jsonbFragment),\n  model: model,\n  tokens: tokensTotal,\n  tokens_input: tokensIn,\n  tokens_output: tokensOut,\n  custo_usd: custoUsd,\n  tipo_analise: tipoAnalise,\n  has_full_text: promptData.has_full_text || false,\n  modo_analise: modoAnalise\n}}];"
+      },
+      "id": "66cf19b1-e19e-44e7-be71-acd37266238c",
+      "name": "Process LLM Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2824,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE pncp_editais SET status_analise = '{{ $json.status }}', analise_resultado = COALESCE(analise_resultado, '{}'::jsonb) || $TAG${{ $json.resultado }}$TAG$::jsonb, analise_modelo = '{{ $json.model }}', analise_tipo = '{{ $json.tipo_analise }}', analise_tokens = {{ $json.tokens }}, analise_tokens_input = {{ $json.tokens_input }}, analise_tokens_output = {{ $json.tokens_output }}, analise_custo_usd = {{ $json.custo_usd }}, analise_concluida_em = NOW(), analise_com_texto_completo = {{ $json.has_full_text }}, updated_at = NOW() WHERE id = {{ $json.edital_id }};",
+        "options": {}
+      },
+      "id": "2e3cc335-ee01-42e3-84c7-1fab0d705435",
+      "name": "Save Analysis Result",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        3016,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "sunyata-pg-001",
+          "name": "Sunyata PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FORMAT RESPONSE — v3.2: fixes Mode C detection\n// In N8N executionOrder v1, $('NodeName').first() on a node\n// that did NOT run returns { json: {} } — it does NOT throw.\n// So we cannot use try/catch to detect which path ran.\n// Instead, check for a sentinel field (edital_id) that is\n// always set by both Process LLM Response and Build Insufficient Response.\n// ============================================================\n\nlet parsed = null;\n\n// Try Process LLM Response (Modes A and B)\nconst llmData = $('Process LLM Response').first().json;\nif (llmData && llmData.edital_id) {\n  parsed = llmData;\n}\n\n// Fallback: Build Insufficient Response (Mode C)\nif (!parsed) {\n  const insufficientData = $('Build Insufficient Response').first().json;\n  if (insufficientData && insufficientData.edital_id) {\n    parsed = insufficientData;\n  }\n}\n\n// Last resort: empty shell to avoid null errors\nif (!parsed) {\n  parsed = {};\n}\n\nreturn [{ json: {\n  success: parsed.status === 'concluida' || parsed.status === 'insuficiente',\n  edital_id: parsed.edital_id,\n  tipo_analise: parsed.tipo_analise,\n  status: parsed.status,\n  modelo: parsed.model,\n  tokens_input: parsed.tokens_input || 0,\n  tokens_output: parsed.tokens_output || 0,\n  custo_usd: parsed.custo_usd || 0.0,\n  com_texto_completo: parsed.has_full_text || false,\n  modo_analise: parsed.modo_analise || 'unknown',\n  versao_prompt: '3.1',\n  timestamp: new Date().toISOString()\n} }];"
+      },
+      "id": "41de58c8-33e5-4d50-9721-6b5c95a279e7",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "d15c1dda-fcaf-444f-9261-d76f3f69cd29",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3416,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// DETERMINE ANALYSIS MODE — v3.1\n// A: texto_completo > 500 chars → full 12-section analysis (Sonnet)\n// B: no text but has pncp_itens → partial 5-section (Haiku)\n// C: no text, no items → no LLM call, programmatic response\n// ============================================================\nconst edital = $json;\n\nconst textoCompleto = edital.texto_completo || '';\nconst temTexto = textoCompleto.length > 500;\n\nlet itens = edital.pncp_itens;\nif (typeof itens === 'string') {\n  try { itens = JSON.parse(itens); } catch(e) { itens = null; }\n}\n// Handle paginated: may be array or {data: [...]}\nconst itensList = Array.isArray(itens) ? itens : (itens && Array.isArray(itens.data) ? itens.data : null);\nconst temItens = itensList && itensList.length > 0;\n\nlet detalhes = edital.pncp_detalhes;\nif (typeof detalhes === 'string') {\n  try { detalhes = JSON.parse(detalhes); } catch(e) { detalhes = null; }\n}\n\nlet modo;\nif (temTexto) {\n  modo = 'completo';\n} else if (temItens) {\n  modo = 'parcial';\n} else {\n  modo = 'insuficiente';\n}\n\nreturn [{ json: {\n  ...edital,\n  modo_analise: modo,\n  tem_texto: temTexto,\n  has_texto_completo: temTexto,\n  tem_itens: temItens,\n  pncp_itens_parsed: itensList,\n  pncp_detalhes_parsed: detalhes\n} }];"
+      },
+      "id": "determine-mode-001",
+      "name": "Determine Analysis Mode",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1016,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.modo_analise }}",
+              "value2": "insuficiente"
+            }
+          ]
+        }
+      },
+      "id": "is-insuficiente-001",
+      "name": "Is Insuficiente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// MODE C — Insufficient data, NO LLM call\n// ============================================================\nconst edital = $json;\n\nreturn [{ json: {\n  edital_id: edital.edital_id,\n  pncp_id: edital.pncp_id,\n  status: 'insuficiente',\n  resultado: JSON.stringify({\n    [edital.tipo_analise]: 'Dados insuficientes para análise. Os documentos deste edital não estão disponíveis ou não puderam ser processados. Consulte diretamente no PNCP para baixar os documentos.',\n    reason: 'insufficient_data',\n    pncp_url: edital.url_pncp || '',\n    versao_prompt: '3.1',\n    modo_analise: 'insuficiente'\n  }),\n  model: 'none',\n  tokens: 0,\n  tokens_input: 0,\n  tokens_output: 0,\n  custo_usd: 0,\n  tipo_analise: edital.tipo_analise,\n  has_full_text: false,\n  modo_analise: 'insuficiente'\n} }];"
+      },
+      "id": "build-insufficient-001",
+      "name": "Build Insufficient Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1416,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.modo_analise }}",
+              "value2": "completo"
+            }
+          ]
+        }
+      },
+      "id": "has-full-text-001",
+      "name": "Has Full Text?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1416,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// BUILD PARTIAL ANALYSIS PROMPT — Mode B (items + metadata only)\n// ============================================================\nconst edital = $json;\nconst tipoAnalise = edital.tipo_analise;\nconst itens = edital.pncp_itens_parsed || [];\nconst detalhes = edital.pncp_detalhes_parsed || {};\n\nconst SYSTEM_BASE = `Você é um analista especializado em contratos e editais de licitação no Brasil, com domínio prático da Lei nº 14.133/2021 e normativos correlatos. Você lê documentos de licitação (editais, termos de referência, anexos, minutas de contrato, erratas, esclarecimentos) e produz análises técnicas estruturadas.\n\nREGRAS INVIOLÁVEIS\n\n1. LITERALIDADE: Relatar apenas o que estiver explicitamente previsto nos documentos fornecidos. Não presumir práticas usuais, interpretações extensivas nem entendimentos implícitos.\n2. FONTES EXCLUSIVAS: Basear a análise apenas nos documentos fornecidos pelo usuário. Não usar fontes externas, pesquisas na internet nem conhecimento geral sobre editais.\n3. LEITURA INTEGRAL: Ler todos os documentos fornecidos em sua totalidade — capas, índices, quadros, tabelas, notas de rodapé, apêndices, modelos e anexos.\n4. AUSÊNCIAS: Se um requisito comumente esperado não for encontrado em nenhum documento, registrá-lo como \"não exigido\" — sem juízo de valor.\n5. CONSOLIDAÇÃO: Se o mesmo requisito aparecer em mais de um ponto, consolidá-lo em um único item. Indicar todas as referências onde ocorre. Destacar diferenças de redação, condições adicionais, exceções ou prazos distintos entre as ocorrências.\n6. IMPARCIALIDADE: Não emitir pareceres jurídicos, conclusões subjetivas, recomendações nem opiniões. Limitar-se a descrever e compilar informações.\n7. SEM DIVAGAÇÕES: Não incluir saudações, comentários pessoais, menções a \"boas práticas\", sugestões nem conclusões subjetivas.\n\nFORMATAÇÃO\n\n- Idioma: Português (Brasil), linguagem formal, clara, objetiva.\n- Estrutura: Relatório técnico com numeração hierárquica (1., 1.1, 1.1.1). Listas numeradas ou com marcadores. Até 3 níveis de profundidade.\n- Títulos: Em MAIÚSCULAS com numeração. Sem sintaxe Markdown (#, ##) nem tags HTML.\n- Rastreabilidade: Em cada item relevante, indicar a fonte em itálico: [seção/cláusula, pág. PDF X; pág. interna Y]. Se não houver paginação: [seção/título].\n- Listas: Sem tabelas (exceto quando a tarefa solicitar explicitamente). Conteúdo em listas numeradas ou com marcadores.\n- Layout: Sem recuos artificiais. Sem separadores visuais (---, _____, *, barras). Separação apenas por numeração e títulos.\n- Datas: DD/MM/AAAA HH:MM (Brasília), em ordem cronológica. Converter prazos relativos em datas apenas se todos os elementos estiverem explícitos; caso contrário, manter o prazo relativo e indicar qual elemento falta.\n- Valores: R$ 0.000,00 (ponto para milhares, vírgula para decimais).\n- Organização: Respeitar as seções definidas pela tarefa. Não repetir conteúdo entre seções. Usar referências cruzadas quando necessário.\n\nTRATAMENTO DE EDGE CASES\n\n- Erratas que contradizem o corpo principal: Registrar ambas as redações, indicar a errata como prevalecente e anotar a contradição.\n- Anexos referenciados mas não fornecidos: Registrar como \"Anexo [X] referenciado em [localização] — não fornecido para análise\".\n- Documentos com OCR de baixa qualidade: Se trechos estiverem ilegíveis, indicar \"[trecho ilegível em pág. PDF X]\".\n- Informações conflitantes entre documentos: Registrar ambas as versões com suas respectivas localizações, sem eleger uma como correta.`;\n\n// Format items list\nlet itensText = '';\nif (itens.length > 0) {\n  itensText = 'ITENS DA LICITAÇÃO:\\n\\n';\n  for (const item of itens) {\n    const sigiloso = item.orcamentoSigiloso;\n    const valorUnit = sigiloso ? 'Sigiloso'\n      : (item.valorUnitarioEstimado != null\n          ? 'R$ ' + Number(item.valorUnitarioEstimado).toLocaleString('pt-BR', {minimumFractionDigits: 2})\n          : 'N/I');\n    itensText += `- Item ${item.numeroItem}: ${item.descricao || 'N/I'} | Qtd: ${item.quantidade || 'N/I'} ${item.unidadeMedida || ''} | Valor unit.: ${valorUnit} | Critério: ${item.criterioJulgamentoNome || 'N/I'}\\n`;\n  }\n}\n\nconst amparoLegalRaw = detalhes.amparoLegal || detalhes.amparoLegalNome || '';\nconst amparoLegal = typeof amparoLegalRaw === 'object' ? (amparoLegalRaw.nome || '') : amparoLegalRaw;\n\nconst srp = detalhes.srp != null ? (detalhes.srp ? 'Sim' : 'Não') : 'N/I';\n\nlet valorEstimado = 'Não informado';\nif (typeof edital.valor_estimado === 'number' && edital.valor_estimado > 0) {\n  valorEstimado = 'R$ ' + edital.valor_estimado.toLocaleString('pt-BR', {minimumFractionDigits: 2});\n} else if (detalhes.orcamentoSigilosoDescricao) {\n  valorEstimado = detalhes.orcamentoSigilosoDescricao;\n}\n\nconst userMessage = `TAREFA: ANÁLISE PARCIAL DO EDITAL (baseada em metadados da API PNCP)\n\nAVISO: O texto completo do edital NÃO está disponível. Esta análise é baseada apenas nos dados estruturados da API PNCP (metadados e itens). Gere SOMENTE as 5 seções abaixo — não invente seções adicionais nem tente preencher seções que dependem do texto do edital.\n\n1. INFORMAÇÕES ESSENCIAIS\n2. RESUMO EXECUTIVO (parcial — apenas o que os dados estruturados permitem)\n3. DETALHAMENTO DO OBJETO (itens da API com quantidades e valores)\n10. VALORES (orçamento estimado conforme API — se sigiloso, declarar explicitamente)\n12. RISCOS E LIMITAÇÕES DA ANÁLISE — liste as seções não geradas, o que falta para análise completa, e link para documentos no PNCP\n\nNota: Seções 4, 5, 6, 7, 8, 9, 11 dependem do texto do edital e não serão geradas nesta análise parcial.\n\n---\n\nDADOS DO EDITAL:\n- Título: ${edital.titulo || 'N/I'}\n- Órgão: ${edital.orgao || 'N/I'} (${edital.uf || 'N/I'})\n- Modalidade: ${edital.modalidade || detalhes.modalidadeLicitacaoNome || 'N/I'}\n- Modo de Disputa: ${detalhes.modoDisputaNome || 'N/I'}\n- Amparo Legal: ${amparoLegal || 'N/I'}\n- SRP: ${srp}\n- Processo: ${detalhes.processo || 'N/I'}\n- Valor Estimado: ${valorEstimado}\n- Encerramento: ${edital.data_encerramento || 'N/I'}\n- URL: ${edital.url_pncp || 'N/I'}\n\nDescrição do Objeto:\n${edital.objeto || 'N/I'}\n\n${itensText}${detalhes.informacaoComplementar ? '\\nINFORMAÇÃO COMPLEMENTAR:\\n' + detalhes.informacaoComplementar : ''}`;\n\nreturn [{ json: {\n  edital_id: edital.edital_id,\n  pncp_id: edital.pncp_id,\n  tipo_analise: tipoAnalise,\n  system_prompt: SYSTEM_BASE,\n  user_message: userMessage,\n  selected_model: 'claude-haiku-4-5',\n  max_tokens: 4000,\n  has_full_text: false,\n  texto_chars: userMessage.length,\n  modo_analise: 'parcial'\n} }];"
+      },
+      "id": "build-partial-001",
+      "name": "Build Partial Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        208
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Analisar": {
+      "main": [
+        [
+          {
+            "node": "Check Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Auth": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Mark In Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark In Progress": {
+      "main": [
+        [
+          {
+            "node": "Check Edital Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Edital Data": {
+      "main": [
+        [
+          {
+            "node": "Determine Analysis Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Cached Text?": {
+      "main": [
+        [
+          {
+            "node": "Build Analysis Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Merge Extraction Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Extraction Result": {
+      "main": [
+        [
+          {
+            "node": "Build Analysis Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Analysis Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call LiteLLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call LiteLLM": {
+      "main": [
+        [
+          {
+            "node": "Process LLM Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process LLM Response": {
+      "main": [
+        [
+          {
+            "node": "Save Analysis Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Analysis Result": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determine Analysis Mode": {
+      "main": [
+        [
+          {
+            "node": "Is Insuficiente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Insuficiente?": {
+      "main": [
+        [
+          {
+            "node": "Build Insufficient Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Full Text?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Insufficient Response": {
+      "main": [
+        [
+          {
+            "node": "Save Analysis Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Full Text?": {
+      "main": [
+        [
+          {
+            "node": "Has Cached Text?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Partial Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Partial Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call LiteLLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [],
+  "_meta": {
+    "workflow_id": "4HJSmPLYTNTUnO8y",
+    "version": "3.2",
+    "description": "IATR Análise de Edital v3 — 3 analysis modes: complete (Sonnet), partial (Haiku), insufficient (no LLM)",
+    "last_updated": "2026-02-26"
+  }
+}

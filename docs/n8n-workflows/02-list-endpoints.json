@@ -1,0 +1,79 @@
+{
+  "name": "Bridge - List Endpoints",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "endpoints",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-endpoints",
+      "name": "Webhook (Endpoints)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "list-endpoints"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.headers['x-auth-token']}}",
+              "value2": "daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c"
+            }
+          ]
+        }
+      },
+      "id": "if-auth",
+      "name": "Check Auth Token",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "respond-unauthorized",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true,\n    endpoints: [\n      { method: 'GET',  path: '/webhook/health',          auth: false, desc: 'Health check' },\n      { method: 'GET',  path: '/webhook/endpoints',       auth: true,  desc: 'List all endpoints' },\n      { method: 'GET',  path: '/webhook/proxmox/status',  auth: true,  desc: 'Proxmox cluster status' },\n      { method: 'GET',  path: '/webhook/proxmox/vms',     auth: true,  desc: 'List all VMs and containers' },\n      { method: 'POST', path: '/webhook/proxmox/vm-action', auth: true, desc: 'Start/stop/restart VM/CT',\n        body: '{\"vmid\":\"100\",\"type\":\"qemu\",\"action\":\"start\"}' },\n      { method: 'POST', path: '/webhook/system/exec',      auth: true,  desc: 'Execute whitelisted command',\n        body: '{\"command\":\"df -h\"}' },\n      { method: 'GET',  path: '/webhook/docker/status',    auth: true,  desc: 'Docker containers status' }\n    ],\n    base_url: 'https://158-69-25-114.sslip.io',\n    auth_header: 'X-Auth-Token'\n  }\n}];"
+      },
+      "id": "code-endpoints",
+      "name": "Build Endpoint List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 200]
+    }
+  ],
+  "connections": {
+    "Webhook (Endpoints)": {
+      "main": [[{"node": "Check Auth Token", "type": "main", "index": 0}]]
+    },
+    "Check Auth Token": {
+      "main": [
+        [{"node": "Build Endpoint List", "type": "main", "index": 0}],
+        [{"node": "Respond Unauthorized", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-19T00:00:00.000Z",
+  "versionId": "1"
+}
