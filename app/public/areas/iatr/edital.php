@@ -88,6 +88,51 @@ HTML;
 
 $pageContent = function () use ($edital, $autoAnalise) {
     $csrfToken = csrf_token();
+
+    // Enrich display data from raw_data JSONB (API returns more than we store in columns)
+    $raw = is_string($edital['raw_data'] ?? null)
+        ? json_decode($edital['raw_data'], true) ?: []
+        : ($edital['raw_data'] ?? []);
+
+    $municipio = $edital['municipio'] ?: ($raw['municipio_nome'] ?? '');
+    $unidadeNome = $raw['unidade_nome'] ?? '';
+    $unidadeCodigo = $raw['unidade_codigo'] ?? '';
+    $modalidade = $edital['modalidade'] ?: ($raw['modalidade_licitacao_nome'] ?? '');
+    $esfera = $raw['esfera_nome'] ?? '';
+    $situacao = $raw['situacao_nome'] ?? '';
+    $orgaoCnpj = $edital['orgao_cnpj'] ?: ($raw['orgao_cnpj'] ?? '');
+
+    // Parse pncp_detalhes for enriched info
+    $detalhes = is_string($edital['pncp_detalhes'] ?? null)
+        ? json_decode($edital['pncp_detalhes'], true) ?: []
+        : ($edital['pncp_detalhes'] ?? []);
+
+    $modoDisputa = $detalhes['modoDisputaNome'] ?? '';
+    // amparoLegal may be a nested object {nome, codigo, descricao} or a plain string
+    $amparoLegalRaw = $detalhes['amparoLegal'] ?? '';
+    $amparoLegal = is_array($amparoLegalRaw)
+        ? ($amparoLegalRaw['nome'] ?? '')
+        : (string)$amparoLegalRaw;
+    $srp = isset($detalhes['srp']) ? ($detalhes['srp'] ? 'Sim' : 'Não') : '';
+    $processo = $detalhes['processo'] ?? '';
+    $infoComplementar = $detalhes['informacaoComplementar'] ?? '';
+    // Skip infoComplementar if it's just a URL (it's often duplicated from linkSistemaOrigem)
+    if ($infoComplementar && filter_var($infoComplementar, FILTER_VALIDATE_URL)) {
+        $infoComplementar = '';
+    }
+
+    // Parse pncp_itens
+    $itensRaw = is_string($edital['pncp_itens'] ?? null)
+        ? json_decode($edital['pncp_itens'], true) ?: []
+        : ($edital['pncp_itens'] ?? []);
+    // pncp_itens is stored as a JSON array directly
+    $itensList = isset($itensRaw[0]) ? $itensRaw : ($itensRaw['data'] ?? $itensRaw);
+
+    // Parse arquivos_pncp
+    $arquivos = is_string($edital['arquivos_pncp'] ?? null)
+        ? json_decode($edital['arquivos_pncp'], true) ?: []
+        : ($edital['arquivos_pncp'] ?? []);
+
     $statusClass = match($edital['status']) {
         'aberto' => 'bg-success',
         'encerrado' => 'bg-secondary',
@@ -116,8 +161,8 @@ $pageContent = function () use ($edital, $autoAnalise) {
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <span class="badge <?= $statusClass ?> status-badge me-2"><?= sanitize_output($edital['status']) ?></span>
-                    <?php if ($edital['modalidade']): ?>
-                        <span class="badge bg-info status-badge"><?= sanitize_output($edital['modalidade']) ?></span>
+                    <?php if ($modalidade): ?>
+                        <span class="badge bg-info status-badge"><?= sanitize_output($modalidade) ?></span>
                     <?php endif; ?>
                     <?php if ($edital['numero']): ?>
                         <span class="badge bg-light text-dark status-badge"><?= sanitize_output($edital['numero']) ?></span>
@@ -137,9 +182,15 @@ $pageContent = function () use ($edital, $autoAnalise) {
             <div class="info-label"><i class="bi bi-building"></i> Órgão</div>
             <div class="info-value"><?= sanitize_output($edital['orgao'] ?: 'N/A') ?></div>
         </div>
+        <?php if ($unidadeNome): ?>
+        <div class="info-item">
+            <div class="info-label"><i class="bi bi-diagram-3"></i> Unidade Compradora</div>
+            <div class="info-value"><?= sanitize_output($unidadeCodigo ? "$unidadeCodigo - $unidadeNome" : $unidadeNome) ?></div>
+        </div>
+        <?php endif; ?>
         <div class="info-item">
             <div class="info-label"><i class="bi bi-geo-alt"></i> UF / Município</div>
-            <div class="info-value"><?= sanitize_output(($edital['uf'] ?: '') . ($edital['municipio'] ? ' - ' . $edital['municipio'] : '')) ?: 'N/A' ?></div>
+            <div class="info-value"><?= sanitize_output(($edital['uf'] ?: '') . ($municipio ? ' - ' . $municipio : '')) ?: 'N/A' ?></div>
         </div>
         <div class="info-item">
             <div class="info-label"><i class="bi bi-calendar-event"></i> Abertura</div>
@@ -149,16 +200,52 @@ $pageContent = function () use ($edital, $autoAnalise) {
             <div class="info-label"><i class="bi bi-calendar-x"></i> Encerramento</div>
             <div class="info-value"><?= $dataEncerramento ?></div>
         </div>
-        <?php if ($edital['orgao_cnpj']): ?>
+        <?php if ($orgaoCnpj): ?>
         <div class="info-item">
             <div class="info-label"><i class="bi bi-card-text"></i> CNPJ</div>
-            <div class="info-value"><?= sanitize_output($edital['orgao_cnpj']) ?></div>
+            <div class="info-value"><?= sanitize_output($orgaoCnpj) ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($esfera): ?>
+        <div class="info-item">
+            <div class="info-label"><i class="bi bi-bank"></i> Esfera</div>
+            <div class="info-value"><?= sanitize_output($esfera) ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($situacao): ?>
+        <div class="info-item">
+            <div class="info-label"><i class="bi bi-info-circle"></i> Situação PNCP</div>
+            <div class="info-value"><?= sanitize_output($situacao) ?></div>
         </div>
         <?php endif; ?>
         <?php if ($keywords): ?>
         <div class="info-item">
             <div class="info-label"><i class="bi bi-tags"></i> Keywords</div>
             <div class="info-value"><?= sanitize_output($keywords) ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($modoDisputa): ?>
+        <div class="info-item">
+            <div class="info-label"><i class="bi bi-lightning"></i> Modo de Disputa</div>
+            <div class="info-value"><?= sanitize_output($modoDisputa) ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($amparoLegal): ?>
+        <div class="info-item">
+            <div class="info-label"><i class="bi bi-book"></i> Amparo Legal</div>
+            <div class="info-value"><?= sanitize_output($amparoLegal) ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($srp): ?>
+        <div class="info-item">
+            <div class="info-label"><i class="bi bi-arrow-repeat"></i> SRP</div>
+            <div class="info-value"><?= sanitize_output($srp) ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($processo): ?>
+        <div class="info-item">
+            <div class="info-label"><i class="bi bi-folder2"></i> Processo Administrativo</div>
+            <div class="info-value"><?= sanitize_output($processo) ?></div>
         </div>
         <?php endif; ?>
     </div>
@@ -169,6 +256,101 @@ $pageContent = function () use ($edital, $autoAnalise) {
         <div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-file-text"></i> Objeto</h4></div>
         <div class="card-body">
             <p style="white-space: pre-wrap;"><?= sanitize_output($edital['objeto']) ?></p>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Informação Complementar (collapsible) -->
+    <?php if ($infoComplementar): ?>
+    <div class="card mt-3 mb-3">
+        <div class="card-header" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#info-complementar">
+            <h3 class="card-title"><i class="bi bi-info-circle me-2"></i>Informação Complementar</h3>
+            <div class="card-options"><i class="bi bi-chevron-down"></i></div>
+        </div>
+        <div class="collapse" id="info-complementar">
+            <div class="card-body">
+                <p style="white-space: pre-wrap"><?= sanitize_output($infoComplementar) ?></p>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Itens da Licitação -->
+    <?php if (!empty($itensList)): ?>
+    <div class="card mt-3 mb-3">
+        <div class="card-header">
+            <h3 class="card-title"><i class="bi bi-list-ol me-2"></i>Itens da Licitação (<?= count($itensList) ?>)</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th style="width:50px">#</th>
+                        <th>Descrição</th>
+                        <th style="width:80px" class="text-end">Qtd</th>
+                        <th style="width:70px">Unidade</th>
+                        <th style="width:140px" class="text-end">Valor Unit. Est.</th>
+                        <th style="width:140px" class="text-end">Valor Total Est.</th>
+                        <th style="width:110px">Critério</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($itensList as $item):
+                    $valorUnit = $item['valorUnitarioEstimado'] ?? null;
+                    $valorTotal = $item['valorTotal'] ?? null;
+                    $sigiloso = !empty($item['orcamentoSigiloso']);
+                    $valorUnitFmt = $sigiloso ? '<span class="text-muted fst-italic">Sigiloso</span>'
+                        : ($valorUnit !== null ? 'R$ ' . number_format((float)$valorUnit, 2, ',', '.') : '-');
+                    $valorTotalFmt = $sigiloso ? '<span class="text-muted fst-italic">Sigiloso</span>'
+                        : ($valorTotal !== null ? 'R$ ' . number_format((float)$valorTotal, 2, ',', '.') : '-');
+                ?>
+                    <tr>
+                        <td class="text-muted"><?= (int)($item['numeroItem'] ?? 0) ?></td>
+                        <td><?= sanitize_output($item['descricao'] ?? 'N/I') ?></td>
+                        <td class="text-end"><?= sanitize_output((string)($item['quantidade'] ?? '-')) ?></td>
+                        <td><?= sanitize_output($item['unidadeMedida'] ?? '-') ?></td>
+                        <td class="text-end"><?= $valorUnitFmt ?></td>
+                        <td class="text-end"><?= $valorTotalFmt ?></td>
+                        <td><small><?= sanitize_output($item['criterioJulgamentoNome'] ?? '-') ?></small></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Documentos -->
+    <?php if (!empty($arquivos)): ?>
+    <div class="card mt-3 mb-3">
+        <div class="card-header">
+            <h3 class="card-title"><i class="bi bi-file-earmark-text me-2"></i>Documentos (<?= count($arquivos) ?>)</h3>
+        </div>
+        <div class="list-group list-group-flush">
+        <?php foreach ($arquivos as $arq):
+            $titulo = $arq['titulo'] ?? ($arq['tipoDocumentoNome'] ?? 'Documento');
+            $tipo = $arq['tipoDocumentoNome'] ?? ($arq['tipo'] ?? '');
+            $downloadUrl = $arq['url'] ?? ($arq['uri'] ?? '');
+            $extraido = !empty($arq['extraido']);
+        ?>
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <div>
+                    <i class="bi bi-file-earmark<?= $extraido ? '-check text-success' : '' ?> me-1"></i>
+                    <?= sanitize_output($titulo) ?>
+                    <?php if ($tipo && $tipo !== $titulo): ?>
+                        <span class="text-muted ms-1"><small>(<?= sanitize_output($tipo) ?>)</small></span>
+                    <?php endif; ?>
+                    <?php if ($extraido): ?>
+                        <span class="badge bg-success-lt ms-1">Texto extraído</span>
+                    <?php endif; ?>
+                </div>
+                <?php if ($downloadUrl): ?>
+                <a href="<?= sanitize_output($downloadUrl) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download me-1"></i>Baixar
+                </a>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
         </div>
     </div>
     <?php endif; ?>
