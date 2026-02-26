@@ -224,6 +224,7 @@ services/ai/
 - PNCP API `item_url` inclui `/compras/` mas frontend PNCP não. Strip: `.replace(/^\/compras/, '')`
 - N8N API PUT: só permite `name, nodes, connections, settings` no payload. Strip campos extras
 - Webhook typeVersion 1.1: campos do body ficam em `$json.body.*` (não `$json.*`)
+- **FastAPI (uvicorn) na VM100:** escuta em `127.0.0.1:8000` — inacessível de CT104/CT103. Sempre usar `http://192.168.100.10/api/ai/...` (Nginx porta 80) para chamadas inter-container. NUNCA usar `192.168.100.10:8000` diretamente.
 
 ---
 
