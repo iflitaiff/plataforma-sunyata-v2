@@ -59,6 +59,17 @@ if (!in_array($tipoAnalise, $TIPOS_VALIDOS, true)) {
 }
 $contextoEmpresa = isset($input['contexto_empresa']) ? (string)$input['contexto_empresa'] : null;
 
+$NIVEIS_VALIDOS = ['triagem', 'resumo', 'completa'];
+$nivelProfundidade = $input['nivel_profundidade'] ?? 'completa';
+if (!in_array($nivelProfundidade, $NIVEIS_VALIDOS, true)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'nivel_profundidade inválido']);
+    exit;
+}
+$instrucoesComplementares = isset($input['instrucoes_complementares']) && trim((string)$input['instrucoes_complementares']) !== ''
+    ? substr(trim((string)$input['instrucoes_complementares']), 0, 1000)
+    : null;
+
 // Build N8N webhook URL (internal network: VM100 → CT104 direct)
 // Use internal IP to avoid DNS/SSL issues with sslip.io from inside Proxmox
 $webhookBase = defined('N8N_WEBHOOK_INTERNAL_URL')
@@ -79,9 +90,11 @@ $ch = curl_init($webhookUrl);
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => json_encode(array_filter([
-        'edital_id'        => $editalId,
-        'tipo_analise'     => $tipoAnalise,
-        'contexto_empresa' => $contextoEmpresa,
+        'edital_id'                 => $editalId,
+        'tipo_analise'              => $tipoAnalise,
+        'nivel_profundidade'        => $nivelProfundidade,
+        'instrucoes_complementares' => $instrucoesComplementares,
+        'contexto_empresa'          => $contextoEmpresa,
     ], fn($v) => $v !== null)),
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',

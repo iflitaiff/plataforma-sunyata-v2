@@ -56,6 +56,8 @@ $edital = $db->fetchOne("
         status_analise,
         analise_resultado,
         analise_modelo,
+        analise_tipo,
+        analise_nivel,
         analise_tokens,
         analise_erro,
         analise_concluida_em
@@ -70,11 +72,13 @@ if (!$edital) {
 }
 
 echo json_encode([
-    'id' => (int) $edital['id'],
-    'status_analise' => $edital['status_analise'],
-    'analise_resultado' => $edital['analise_resultado'] ? json_decode($edital['analise_resultado'], true) : null,
-    'analise_modelo' => $edital['analise_modelo'],
-    'analise_tokens' => $edital['analise_tokens'] ? (int) $edital['analise_tokens'] : null,
-    'analise_erro' => $edital['analise_erro'],
+    'id'                 => (int) $edital['id'],
+    'status_analise'     => $edital['status_analise'],
+    'analise_resultado'  => $edital['analise_resultado'] ? json_decode($edital['analise_resultado'], true) : null,
+    'analise_modelo'     => $edital['analise_modelo'],
+    'analise_tipo'       => $edital['analise_tipo'],
+    'analise_nivel'      => $edital['analise_nivel'],
+    'analise_tokens'     => $edital['analise_tokens'] ? (int) $edital['analise_tokens'] : null,
+    'analise_erro'       => $edital['analise_erro'],
     'analise_concluida_em' => $edital['analise_concluida_em'],
 ]);

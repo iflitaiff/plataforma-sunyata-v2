@@ -83,6 +83,9 @@ $headExtra = <<<HTML
     .polling-indicator { display: inline-flex; align-items: center; gap: 0.5rem; }
     .pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: #ffc107; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .data-disponivel { background: #f8f9fa; border: 1px solid #e6e8eb; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.92rem; }
+    .data-disponivel-titulo { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+    .estimativas-panel { font-size: 0.85rem; }
 </style>
 HTML;
 
@@ -127,6 +130,12 @@ $pageContent = function () use ($edital, $autoAnalise) {
         : ($edital['pncp_itens'] ?? []);
     // pncp_itens is stored as a JSON array directly
     $itensList = array_is_list($itensRaw) ? $itensRaw : ($itensRaw['data'] ?? []);
+
+    // Data availability for v4 form (section 1.8)
+    $temTexto    = !empty($edital['texto_completo']) && strlen((string)$edital['texto_completo']) > 500;
+    $temItens    = !empty($itensList) && count($itensList) > 0;
+    $temMetaDados = !empty($detalhes);
+    $emAnalise   = ($edital['status_analise'] ?? '') === 'em_analise';
 
     // Parse arquivos_pncp
     $arquivos = is_string($edital['arquivos_pncp'] ?? null)
@@ -368,97 +377,216 @@ $pageContent = function () use ($edital, $autoAnalise) {
         <?php endif; ?>
     </div>
 
-    <!-- AI Analysis Section -->
-    <div class="card analise-card mb-4" id="analise-section">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0"><i class="bi bi-robot"></i> Análise com IA</h4>
-            <div id="analise-status-indicator"></div>
+    <!-- Formulário de Análise v4 -->
+    <div class="card mb-3" id="form-analise-card"<?= $emAnalise ? ' style="display:none"' : '' ?>>
+        <div class="card-header">
+            <h4 class="card-title mb-0"><i class="bi bi-robot me-2"></i>Solicitar Análise</h4>
         </div>
-        <div class="card-body" id="analise-body">
-            <!-- Filled by JS -->
-            <div class="text-center py-3 text-secondary">
-                <i class="bi bi-robot" style="font-size: 2rem;"></i>
-                <p class="mt-2">Clique no botão abaixo para solicitar análise inteligente deste edital.</p>
-                <button class="btn btn-primary" id="btn-analisar" onclick="triggerAnalise()">
-                    <i class="bi bi-lightning"></i> Analisar com IA
+        <div class="card-body">
+            <!-- 1.8 — Dados disponíveis -->
+            <div class="data-disponivel mb-3">
+                <div class="data-disponivel-titulo">Dados disponíveis para análise</div>
+                <div class="d-flex flex-column gap-1">
+                    <span><?= $temMetaDados ? '✅' : '⚠️' ?> Metadados do edital</span>
+                    <span><?php if ($temItens): ?>✅ Itens (<?= count($itensList) ?> <?= count($itensList) === 1 ? 'item' : 'itens' ?>)<?php else: ?>❌ Itens da licitação<?php endif; ?></span>
+                    <span><?= $temTexto ? '✅ Texto completo do edital' : '❌ Texto completo do edital' ?></span>
+                </div>
+                <?php if (!$temTexto && !$temItens): ?>
+                <div class="alert alert-warning mt-2 mb-0 py-2 small">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    <strong>Atenção:</strong> Sem texto nem itens — a análise pode retornar resultado insuficiente.
+                </div>
+                <?php elseif (!$temTexto): ?>
+                <div class="alert alert-info mt-2 mb-0 py-2 small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Análise baseada nos metadados e itens da API PNCP (sem texto completo).
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Tipo + Profundidade -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold">Tipo de análise</label>
+                    <select id="tipo-analise" class="form-select" onchange="onFormChange()">
+                        <option value="resumo_executivo">Resumo Executivo</option>
+                        <option value="habilitacao">Documentação de Habilitação</option>
+                        <option value="verifica_edital">Verificação de Edital</option>
+                        <option value="contratos">Contratos e Aditivos</option>
+                        <option value="sg_contrato">Seguro-Garantia</option>
+                    </select>
+                </div>
+                <div class="col-md-7" id="profundidade-wrapper">
+                    <label class="form-label fw-semibold">Profundidade</label>
+                    <div class="d-flex gap-3 mt-1">
+                        <label class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="nivel_profundidade" value="triagem" onchange="onFormChange()">
+                            <span class="form-check-label">Triagem <small class="text-muted">(rápida)</small></span>
+                        </label>
+                        <label class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="nivel_profundidade" value="resumo" checked onchange="onFormChange()">
+                            <span class="form-check-label">Resumo</span>
+                        </label>
+                        <label class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="nivel_profundidade" value="completa" onchange="onFormChange()">
+                            <span class="form-check-label">Completa</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instruções complementares -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    Instruções complementares <span class="text-muted fw-normal">(opcional)</span>
+                </label>
+                <textarea id="instrucoes-complementares" class="form-control" rows="2" maxlength="1000"
+                    placeholder="Ex: Foco em requisitos de TI e prazos de entrega"
+                    oninput="updateCharCount()"></textarea>
+                <div class="d-flex justify-content-end mt-1">
+                    <small id="char-count" class="text-muted">0 / 1000</small>
+                </div>
+            </div>
+
+            <!-- Botão + Estimativas -->
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <button id="btn-analisar" class="btn btn-primary" onclick="triggerAnalise()"
+                    <?= (!$temTexto && !$temItens) ? 'disabled title="Dados insuficientes para análise"' : '' ?>>
+                    <i class="bi bi-lightning"></i> Analisar
                 </button>
+                <div class="estimativas-panel px-3 py-2 rounded border bg-light d-flex gap-3 flex-wrap align-items-center">
+                    <small class="text-muted fw-semibold text-uppercase" style="font-size:.7rem">Estimativa</small>
+                    <small><i class="bi bi-cpu me-1 text-secondary"></i><span id="est-modelo">Claude Sonnet 4.5</span></small>
+                    <small><i class="bi bi-coin me-1 text-secondary"></i><span id="est-custo">R$ 0,05</span></small>
+                    <small><i class="bi bi-clock me-1 text-secondary"></i><span id="est-tempo">~45 segundos</span></small>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Resultado da Análise -->
+    <div class="card analise-card mb-4" id="analise-section">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="card-title mb-0"><i class="bi bi-file-text"></i> Resultado</h4>
+            <div id="analise-status-indicator"></div>
+        </div>
+        <div class="card-body" id="analise-body">
+            <!-- Preenchido por JS no DOMContentLoaded -->
+        </div>
+    </div>
+
 <script>
-const EDITAL_ID = <?= (int) $edital['id'] ?>;
-const CSRF_TOKEN = <?= json_encode($csrfToken) ?>;
-const STATUS_URL = <?= json_encode(BASE_URL . '/api/pncp/analise-status.php') ?>;
+const EDITAL_ID   = <?= (int) $edital['id'] ?>;
+const CSRF_TOKEN  = <?= json_encode($csrfToken) ?>;
+const STATUS_URL  = <?= json_encode(BASE_URL . '/api/pncp/analise-status.php') ?>;
 const TRIGGER_URL = <?= json_encode(BASE_URL . '/api/pncp/trigger-analise.php') ?>;
 const AUTO_ANALISE = <?= $autoAnalise ? 'true' : 'false' ?>;
+const TEM_DADOS   = <?= ($temTexto || $temItens) ? 'true' : 'false' ?>;
+
+const TIPOS_SEM_PROFUNDIDADE = ['verifica_edital', 'contratos', 'sg_contrato'];
+const ESTIMATIVAS = {
+    triagem:  { modelo: 'Claude Haiku 4.5',  custo: 'R$ 0,01', tempo: '~15 segundos' },
+    resumo:   { modelo: 'Claude Sonnet 4.5', custo: 'R$ 0,05', tempo: '~45 segundos' },
+    completa: { modelo: 'Claude Sonnet 4.5', custo: 'R$ 0,12', tempo: '~90 segundos' },
+};
+const EST_FIXAS = { modelo: 'Claude Haiku 4.5', custo: 'R$ 0,02', tempo: '~20 segundos' };
+const TIPO_LABELS = {
+    resumo_executivo: 'Resumo Exec.', habilitacao: 'Habilitação',
+    verifica_edital: 'Verif. Edital', contratos: 'Contratos', sg_contrato: 'SG Contrato'
+};
 
 let pollingInterval = null;
 let currentStatus = <?= json_encode($edital['status_analise']) ?>;
 
-// Initialize based on current status
-document.addEventListener('DOMContentLoaded', function() {
-    if (currentStatus === 'concluida' || currentStatus === 'erro' || currentStatus === 'insuficiente') {
+document.addEventListener('DOMContentLoaded', function () {
+    updateEstimativas();
+    if (['concluida', 'erro', 'insuficiente'].includes(currentStatus)) {
         loadAnaliseResult();
     } else if (currentStatus === 'em_analise') {
         showPolling();
         startPolling();
-    } else if (AUTO_ANALISE) {
+    } else if (AUTO_ANALISE && TEM_DADOS) {
         triggerAnalise();
     }
 });
 
+// ── Form helpers ───────────────────────────────────────────
+
+function onFormChange() {
+    const tipo = document.getElementById('tipo-analise').value;
+    document.getElementById('profundidade-wrapper').style.display =
+        TIPOS_SEM_PROFUNDIDADE.includes(tipo) ? 'none' : '';
+    updateEstimativas();
+}
+
+function updateEstimativas() {
+    const tipo  = document.getElementById('tipo-analise')?.value || 'resumo_executivo';
+    const nivel = document.querySelector('input[name="nivel_profundidade"]:checked')?.value || 'resumo';
+    const est   = TIPOS_SEM_PROFUNDIDADE.includes(tipo) ? EST_FIXAS : (ESTIMATIVAS[nivel] || ESTIMATIVAS.resumo);
+    document.getElementById('est-modelo').textContent = est.modelo;
+    document.getElementById('est-custo').textContent  = est.custo;
+    document.getElementById('est-tempo').textContent  = est.tempo;
+}
+
+function updateCharCount() {
+    const el = document.getElementById('instrucoes-complementares');
+    document.getElementById('char-count').textContent = `${el.value.length} / 1000`;
+}
+
+// ── Analysis trigger ───────────────────────────────────────
+
 async function triggerAnalise() {
-    // btn-analisar may not exist when called from the dynamic "Reanalisar" button
-    // (renderAnaliseResult replaces analise-body, removing btn-analisar from DOM)
+    const tipo = document.getElementById('tipo-analise')?.value || 'resumo_executivo';
+    const semProfundidade = TIPOS_SEM_PROFUNDIDADE.includes(tipo);
+    const nivel = semProfundidade
+        ? 'completa'
+        : (document.querySelector('input[name="nivel_profundidade"]:checked')?.value || 'completa');
+    const instrucoes = document.getElementById('instrucoes-complementares')?.value?.trim() || '';
+
     const btn = document.getElementById('btn-analisar');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
-    } else {
-        showPolling(); // show spinner immediately since there's no button to update
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...';
     }
 
     try {
+        const payload = { edital_id: EDITAL_ID, tipo_analise: tipo, nivel_profundidade: nivel };
+        if (instrucoes) payload.instrucoes_complementares = instrucoes;
+
         const resp = await fetch(TRIGGER_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': CSRF_TOKEN,
-            },
-            body: JSON.stringify({ edital_id: EDITAL_ID })
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+            body: JSON.stringify(payload)
         });
-
-        if (!resp.ok) {
-            throw new Error('Webhook retornou HTTP ' + resp.status);
-        }
+        if (!resp.ok) throw new Error('Webhook retornou HTTP ' + resp.status);
 
         showPolling();
         startPolling();
-
     } catch (err) {
         if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar com IA';
+            btn.disabled = !TEM_DADOS;
+            btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar';
         }
-        document.getElementById('analise-body').innerHTML += `
-            <div class="alert alert-danger mt-3">
-                <i class="bi bi-exclamation-triangle"></i> Erro ao disparar análise: ${escapeHtml(err.message)}
-            </div>`;
+        document.getElementById('analise-body').innerHTML =
+            `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao disparar análise: ${escapeHtml(err.message)}</div>`;
     }
 }
 
+// ── Polling ────────────────────────────────────────────────
+
 function showPolling() {
+    const formCard = document.getElementById('form-analise-card');
+    if (formCard) formCard.style.display = 'none';
+
     document.getElementById('analise-status-indicator').innerHTML =
         '<span class="polling-indicator"><span class="pulse-dot"></span> Analisando...</span>';
     document.getElementById('analise-body').innerHTML = `
         <div class="text-center py-4">
             <div class="spinner-border text-primary mb-3" role="status"></div>
-            <p class="text-secondary">A IA está analisando este edital. Aguarde...</p>
+            <p class="text-secondary mb-1">A IA está analisando este edital. Aguarde...</p>
             <small class="text-muted">A página atualiza automaticamente a cada 5 segundos.</small>
         </div>`;
-    document.getElementById('analise-section').classList.add('em-andamento');
-    document.getElementById('analise-section').classList.remove('concluida', 'erro');
+    document.getElementById('analise-section').className = 'card analise-card em-andamento mb-4';
 }
 
 function startPolling() {
@@ -468,97 +596,70 @@ function startPolling() {
 
 async function checkStatus() {
     try {
-        const resp = await fetch(`${STATUS_URL}?id=${EDITAL_ID}`, {
-            headers: { 'X-CSRF-Token': CSRF_TOKEN }
-        });
+        const resp = await fetch(`${STATUS_URL}?id=${EDITAL_ID}`, { headers: { 'X-CSRF-Token': CSRF_TOKEN } });
         const data = await resp.json();
-
-        if (data.status_analise === 'concluida' || data.status_analise === 'erro' || data.status_analise === 'insuficiente') {
+        if (['concluida', 'erro', 'insuficiente'].includes(data.status_analise)) {
             clearInterval(pollingInterval);
             pollingInterval = null;
             renderAnaliseResult(data);
         }
-    } catch (err) {
-        console.error('Polling error:', err);
-    }
+    } catch (err) { console.error('Polling error:', err); }
 }
 
 async function loadAnaliseResult() {
     try {
-        const resp = await fetch(`${STATUS_URL}?id=${EDITAL_ID}`, {
-            headers: { 'X-CSRF-Token': CSRF_TOKEN }
-        });
-        const data = await resp.json();
-        renderAnaliseResult(data);
+        const resp = await fetch(`${STATUS_URL}?id=${EDITAL_ID}`, { headers: { 'X-CSRF-Token': CSRF_TOKEN } });
+        renderAnaliseResult(await resp.json());
     } catch (err) {
-        document.getElementById('analise-body').innerHTML = `
-            <div class="alert alert-danger">Erro ao carregar resultado: ${escapeHtml(err.message)}</div>`;
+        document.getElementById('analise-body').innerHTML =
+            `<div class="alert alert-danger">Erro ao carregar resultado: ${escapeHtml(err.message)}</div>`;
     }
 }
 
+// ── Result rendering ───────────────────────────────────────
+
 function renderAnaliseResult(data) {
-    const section = document.getElementById('analise-section');
+    // Restore form card and button
+    const formCard = document.getElementById('form-analise-card');
+    if (formCard) formCard.style.display = '';
+    const btn = document.getElementById('btn-analisar');
+    if (btn) { btn.disabled = !TEM_DADOS; btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar'; }
+
+    const section   = document.getElementById('analise-section');
     const indicator = document.getElementById('analise-status-indicator');
-    const body = document.getElementById('analise-body');
+    const body      = document.getElementById('analise-body');
 
     if (data.status_analise === 'insuficiente') {
-        const resultado = data.analise_resultado || {};
-        const pncpUrl = (typeof resultado === 'object' && resultado.pncp_url) ? resultado.pncp_url : '';
-
-        section.classList.remove('em-andamento', 'concluida', 'erro');
+        section.className = 'card analise-card mb-4';
         indicator.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-info-circle"></i> Dados insuficientes</span>';
-
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert alert-warning';
-
-        const icon = document.createElement('i');
-        icon.className = 'bi bi-info-circle me-2';
-        alertDiv.appendChild(icon);
-
-        const strong = document.createElement('strong');
-        strong.textContent = 'Dados insuficientes para análise. ';
-        alertDiv.appendChild(strong);
-
-        alertDiv.appendChild(document.createTextNode(
-            'Os documentos deste edital não estão disponíveis para extração automática.'
-        ));
-
-        if (pncpUrl) {
-            const link = document.createElement('a');
-            link.href = pncpUrl;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.className = 'alert-link ms-1';
-            link.textContent = 'Ver documentos no PNCP';
-            alertDiv.appendChild(link);
-        }
-
-        const btnDiv = document.createElement('div');
-        btnDiv.className = 'mt-3';
-        const retryBtn = document.createElement('button');
-        retryBtn.className = 'btn btn-outline-secondary btn-sm';
-        retryBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Tentar novamente';
-        retryBtn.onclick = triggerAnalise;
-        btnDiv.appendChild(retryBtn);
-
-        body.replaceChildren(alertDiv, btnDiv);
-        return;
+        const resultado = data.analise_resultado || {};
+        const pncpUrl = typeof resultado === 'object' ? (resultado.pncp_url || '') : '';
+        let html = `<div class="alert alert-warning mb-3">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Dados insuficientes para análise.</strong>
+            Os documentos deste edital não estão disponíveis para extração automática.
+            ${pncpUrl ? `<a href="${escapeHtml(pncpUrl)}" target="_blank" rel="noopener noreferrer" class="alert-link ms-1">Ver documentos no PNCP</a>` : ''}
+        </div>`;
+        body.innerHTML = html;
 
     } else if (data.status_analise === 'concluida') {
-        section.classList.add('concluida');
-        section.classList.remove('em-andamento', 'erro');
+        section.className = 'card analise-card concluida mb-4';
         indicator.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Concluída</span>';
 
         const resultado = data.analise_resultado || {};
-        const texto = resultado.resumo_executivo || resultado.texto || resultado.markdown || JSON.stringify(resultado, null, 2);
+        const tipoKey = data.analise_tipo || 'resumo_executivo';
+        const texto = resultado[tipoKey] || resultado.resumo_executivo || resultado.texto || resultado.markdown || JSON.stringify(resultado, null, 2);
+
         const meta = [];
-        if (data.analise_modelo) meta.push(`Modelo: ${data.analise_modelo}`);
-        if (data.analise_tokens) meta.push(`Tokens: ${data.analise_tokens.toLocaleString('pt-BR')}`);
-        if (data.analise_concluida_em) meta.push(`Concluída: ${new Date(data.analise_concluida_em).toLocaleString('pt-BR')}`);
+        if (data.analise_modelo)       meta.push(data.analise_modelo.replace('claude-', '').replace(/-\d{8}$/, ''));
+        if (data.analise_tipo)         meta.push(TIPO_LABELS[data.analise_tipo] || data.analise_tipo);
+        if (data.analise_nivel)        meta.push({ triagem: 'Triagem', resumo: 'Resumo', completa: 'Completa' }[data.analise_nivel] || data.analise_nivel);
+        if (data.analise_tokens)       meta.push(`${data.analise_tokens.toLocaleString('pt-BR')} tokens`);
+        if (data.analise_concluida_em) meta.push(new Date(data.analise_concluida_em).toLocaleString('pt-BR'));
 
         body.innerHTML = `
             <div class="analise-resultado">${renderMarkdown(texto)}</div>
-            ${meta.length ? `<hr><small class="text-muted">${meta.join(' | ')}</small>` : ''}
+            ${meta.length ? `<hr><small class="text-muted">${meta.join(' · ')}</small>` : ''}
             <div class="mt-3 d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm" onclick="triggerAnalise()">
                     <i class="ti ti-refresh"></i> Reanalisar
@@ -572,30 +673,27 @@ function renderAnaliseResult(data) {
             </div>`;
 
     } else if (data.status_analise === 'erro') {
-        section.classList.add('erro');
-        section.classList.remove('em-andamento', 'concluida');
+        section.className = 'card analise-card erro mb-4';
         indicator.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Erro</span>';
-
         body.innerHTML = `
             <div class="alert alert-danger">
                 <strong>Erro na análise:</strong> ${escapeHtml(data.analise_erro || 'Erro desconhecido')}
             </div>
-            <button class="btn btn-primary btn-sm" onclick="triggerAnalise()">
+            <button class="btn btn-primary btn-sm mt-2" onclick="triggerAnalise()">
                 <i class="bi bi-arrow-repeat"></i> Tentar novamente
             </button>`;
     }
 }
 
-function renderMarkdown(text) {
-    if (!text) return '';
-    return marked.parse(text);
-}
+// ── Utilities ──────────────────────────────────────────────
+
+function renderMarkdown(text) { return text ? marked.parse(text) : ''; }
 
 function escapeHtml(text) {
     if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
 }
 
 function openPdfPreview() {
@@ -606,24 +704,18 @@ function openPdfPreview() {
 }
 
 function showEmailForm() {
-    const pdfModal = bootstrap.Modal.getInstance(document.getElementById('modal-pdf'));
-    if (pdfModal) pdfModal.hide();
+    const m = bootstrap.Modal.getInstance(document.getElementById('modal-pdf'));
+    if (m) m.hide();
     new bootstrap.Modal(document.getElementById('modal-email')).show();
 }
 
 async function sendAnaliseEmail() {
     const emailTo = document.getElementById('email-to').value.trim();
     const statusEl = document.getElementById('email-status');
-    if (!emailTo) {
-        statusEl.textContent = 'Informe o email destinatário.';
-        statusEl.className = 'alert alert-warning py-2';
-        return;
-    }
+    if (!emailTo) { statusEl.textContent = 'Informe o email destinatário.'; statusEl.className = 'alert alert-warning py-2'; return; }
     const btn = document.getElementById('btn-send-email');
-    btn.disabled = true;
-    btn.textContent = 'Enviando...';
-    statusEl.textContent = '';
-    statusEl.className = '';
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    statusEl.textContent = ''; statusEl.className = '';
     try {
         const resp = await fetch(`<?= BASE_URL ?>/api/pncp/email-analise.php`, {
             method: 'POST',
@@ -638,10 +730,8 @@ async function sendAnaliseEmail() {
         statusEl.textContent = err.message;
         statusEl.className = 'alert alert-danger py-2';
     }
-    btn.textContent = 'Enviar';
-    btn.disabled = false;
+    btn.textContent = 'Enviar'; btn.disabled = false;
 }
-
 </script>
 
 <!-- PDF Preview Modal -->
