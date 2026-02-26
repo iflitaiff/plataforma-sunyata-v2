@@ -49,6 +49,16 @@ if (!$editalId) {
     exit;
 }
 
+// Optional params forwarded to N8N
+$TIPOS_VALIDOS = ['resumo_executivo', 'habilitacao', 'verifica_edital', 'contratos', 'sg_contrato'];
+$tipoAnalise = $input['tipo_analise'] ?? 'resumo_executivo';
+if (!in_array($tipoAnalise, $TIPOS_VALIDOS, true)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'tipo_analise inválido']);
+    exit;
+}
+$contextoEmpresa = isset($input['contexto_empresa']) ? (string)$input['contexto_empresa'] : null;
+
 // Build N8N webhook URL (internal network: VM100 → CT104 direct)
 // Use internal IP to avoid DNS/SSL issues with sslip.io from inside Proxmox
 $webhookBase = defined('N8N_WEBHOOK_INTERNAL_URL')
@@ -68,7 +78,11 @@ $webhookUrl = rtrim($webhookBase, '/') . '/webhook/iatr/analisar';
 $ch = curl_init($webhookUrl);
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => json_encode(['edital_id' => $editalId]),
+    CURLOPT_POSTFIELDS => json_encode(array_filter([
+        'edital_id'        => $editalId,
+        'tipo_analise'     => $tipoAnalise,
+        'contexto_empresa' => $contextoEmpresa,
+    ], fn($v) => $v !== null)),
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
         'X-Auth-Token: ' . $webhookToken,
