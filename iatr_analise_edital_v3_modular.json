@@ -250,7 +250,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format final webhook response — v3.1: supports insuficiente mode\n// Try Process LLM Response first (Modes A and B), then Build Insufficient Response (Mode C)\nlet parsed;\ntry {\n  const llmParsed = $('Process LLM Response').first().json;\n  parsed = llmParsed;\n} catch(e) {\n  try {\n    parsed = $('Build Insufficient Response').first().json;\n  } catch(e2) {\n    parsed = {};\n  }\n}\n\nreturn [{ json: {\n  success: parsed.status === 'concluida' || parsed.status === 'insuficiente',\n  edital_id: parsed.edital_id,\n  tipo_analise: parsed.tipo_analise,\n  status: parsed.status,\n  modelo: parsed.model,\n  tokens_input: parsed.tokens_input,\n  tokens_output: parsed.tokens_output,\n  custo_usd: parsed.custo_usd,\n  com_texto_completo: parsed.has_full_text,\n  modo_analise: parsed.modo_analise,\n  versao_prompt: '3.1',\n  timestamp: new Date().toISOString()\n} }];"
+        "jsCode": "// ============================================================\n// FORMAT RESPONSE — v3.2: fixes Mode C detection\n// In N8N executionOrder v1, $('NodeName').first() on a node\n// that did NOT run returns { json: {} } — it does NOT throw.\n// So we cannot use try/catch to detect which path ran.\n// Instead, check for a sentinel field (edital_id) that is\n// always set by both Process LLM Response and Build Insufficient Response.\n// ============================================================\n\nlet parsed = null;\n\n// Try Process LLM Response (Modes A and B)\nconst llmData = $('Process LLM Response').first().json;\nif (llmData && llmData.edital_id) {\n  parsed = llmData;\n}\n\n// Fallback: Build Insufficient Response (Mode C)\nif (!parsed) {\n  const insufficientData = $('Build Insufficient Response').first().json;\n  if (insufficientData && insufficientData.edital_id) {\n    parsed = insufficientData;\n  }\n}\n\n// Last resort: empty shell to avoid null errors\nif (!parsed) {\n  parsed = {};\n}\n\nreturn [{ json: {\n  success: parsed.status === 'concluida' || parsed.status === 'insuficiente',\n  edital_id: parsed.edital_id,\n  tipo_analise: parsed.tipo_analise,\n  status: parsed.status,\n  modelo: parsed.model,\n  tokens_input: parsed.tokens_input || 0,\n  tokens_output: parsed.tokens_output || 0,\n  custo_usd: parsed.custo_usd || 0.0,\n  com_texto_completo: parsed.has_full_text || false,\n  modo_analise: parsed.modo_analise || 'unknown',\n  versao_prompt: '3.1',\n  timestamp: new Date().toISOString()\n} }];"
       },
       "id": "41de58c8-33e5-4d50-9721-6b5c95a279e7",
       "name": "Format Response",
@@ -592,7 +592,7 @@
   "tags": [],
   "_meta": {
     "workflow_id": "4HJSmPLYTNTUnO8y",
-    "version": "3.1",
+    "version": "3.2",
     "description": "IATR Análise de Edital v3 — 3 analysis modes: complete (Sonnet), partial (Haiku), insufficient (no LLM)",
     "last_updated": "2026-02-26"
   }
