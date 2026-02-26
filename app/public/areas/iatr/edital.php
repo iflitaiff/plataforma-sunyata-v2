@@ -111,7 +111,7 @@ $pageContent = function () use ($edital, $autoAnalise) {
     // amparoLegal may be a nested object {nome, codigo, descricao} or a plain string
     $amparoLegalRaw = $detalhes['amparoLegal'] ?? '';
     $amparoLegal = is_array($amparoLegalRaw)
-        ? ($amparoLegalRaw['nome'] ?? '')
+        ? ($amparoLegalRaw['nome'] ?? $amparoLegalRaw['descricao'] ?? (string)($amparoLegalRaw['codigo'] ?? ''))
         : (string)$amparoLegalRaw;
     $srp = isset($detalhes['srp']) ? ($detalhes['srp'] ? 'Sim' : 'Não') : '';
     $processo = $detalhes['processo'] ?? '';
@@ -126,7 +126,7 @@ $pageContent = function () use ($edital, $autoAnalise) {
         ? json_decode($edital['pncp_itens'], true) ?: []
         : ($edital['pncp_itens'] ?? []);
     // pncp_itens is stored as a JSON array directly
-    $itensList = isset($itensRaw[0]) ? $itensRaw : ($itensRaw['data'] ?? $itensRaw);
+    $itensList = array_is_list($itensRaw) ? $itensRaw : ($itensRaw['data'] ?? []);
 
     // Parse arquivos_pncp
     $arquivos = is_string($edital['arquivos_pncp'] ?? null)
@@ -331,6 +331,10 @@ $pageContent = function () use ($edital, $autoAnalise) {
             $titulo = $arq['titulo'] ?? ($arq['tipoDocumentoNome'] ?? 'Documento');
             $tipo = $arq['tipoDocumentoNome'] ?? ($arq['tipo'] ?? '');
             $downloadUrl = $arq['url'] ?? ($arq['uri'] ?? '');
+            // Block non-HTTP(S) schemes — sanitize_output() won't block javascript:
+            if ($downloadUrl && !preg_match('#^https?://#i', $downloadUrl)) {
+                $downloadUrl = '';
+            }
             $extraido = !empty($arq['extraido']);
         ?>
             <div class="list-group-item d-flex justify-content-between align-items-center py-2">
