@@ -409,9 +409,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function triggerAnalise() {
+    // btn-analisar may not exist when called from the dynamic "Reanalisar" button
+    // (renderAnaliseResult replaces analise-body, removing btn-analisar from DOM)
     const btn = document.getElementById('btn-analisar');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+    } else {
+        showPolling(); // show spinner immediately since there's no button to update
+    }
 
     try {
         const resp = await fetch(TRIGGER_URL, {
@@ -431,8 +437,10 @@ async function triggerAnalise() {
         startPolling();
 
     } catch (err) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar com IA';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar com IA';
+        }
         document.getElementById('analise-body').innerHTML += `
             <div class="alert alert-danger mt-3">
                 <i class="bi bi-exclamation-triangle"></i> Erro ao disparar análise: ${escapeHtml(err.message)}
