@@ -26,7 +26,7 @@ if (!isset($_SESSION['user'])) {
 
 // CSRF check
 $csrfHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-$csrfSession = $_SESSION['csrf_token'] ?? '';
+$csrfSession = csrf_token();
 if (!$csrfHeader || $csrfHeader !== $csrfSession) {
     http_response_code(403);
     echo json_encode(['error' => 'Token CSRF inválido']);
