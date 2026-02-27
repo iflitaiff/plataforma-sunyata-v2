@@ -40,6 +40,7 @@ app/public/uploads/
 .DS_Store
 Thumbs.db
 *.Zone.Identifier
+*:Zone.Identifier
 
 # Node
 node_modules/

@@ -1,0 +1,55 @@
+flowchart LR
+    %% Plataforma Sunyata v2 - Visao macro
+
+    subgraph clients[Usuarios e Canais]
+        U[Usuario final]
+        A[Admin]
+        B[Navegador Web\nHTMX + SurveyJS + SSE]
+        U --> B
+        A --> B
+    end
+
+    subgraph edge[Edge e Web]
+        N[Nginx\nTLS/Headers/Proxy]
+        P[App PHP 8.3\nPaginas + APIs + Auth]
+        B -->|HTTPS| N
+        N -->|PHP-FPM| P
+    end
+
+    subgraph core[Core de IA e Dados]
+        F[FastAPI AI Service\n/api/ai/*]
+        L[LiteLLM Gateway\nOpenAI-compatible]
+        DB[(PostgreSQL 16 + pgvector)]
+        R[(Redis 7\ncache/sessao/stream context)]
+
+        P -->|/api/ai + X-Internal-Key| F
+        F -->|chat completions/stream| L
+        L -->|roteia para modelos| M[Provedores LLM\nAnthropic/OpenAI/Google]
+
+        P -->|CRUD app, templates, historico| DB
+        P -->|sessao/rate limit/cache| R
+        F -->|submissions, prompts, documentos| DB
+        F -->|contexto SSE + rate limit| R
+    end
+
+    subgraph external[Integracoes Externas]
+        PNCP[API PNCP]
+        DJ[API DataJud]
+        N8N[n8n workflows]
+
+        F -->|monitor/search/extract| PNCP
+        F -->|consultas juridicas| DJ
+        P -. webhooks/API .- N8N
+        N8N -. automacoes/ETL .- DB
+        N8N -. chamadas IA .- L
+    end
+
+    classDef app fill:#e8f4ff,stroke:#2368a2,stroke-width:1px;
+    classDef ai fill:#eafaea,stroke:#237a3a,stroke-width:1px;
+    classDef data fill:#fff7e8,stroke:#a26923,stroke-width:1px;
+    classDef ext fill:#f5f0ff,stroke:#5e3a99,stroke-width:1px;
+
+    class N,P app;
+    class F,L,M ai;
+    class DB,R data;
+    class PNCP,DJ,N8N ext;

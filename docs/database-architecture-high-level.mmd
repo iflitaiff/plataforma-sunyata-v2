@@ -1,0 +1,170 @@
+erDiagram
+    %% Plataforma Sunyata v2 - Arquitetura de Banco (alto nivel)
+
+    %% Auth e identidade
+    users ||--o| user_profiles : has
+    users ||--o{ sessions : owns
+    users ||--o{ contracts : has
+    users ||--o{ consents : gives
+    users ||--o{ data_requests : requests
+    users ||--o{ vertical_access_requests : opens
+
+    %% Config e auditoria
+    users ||--o{ audit_logs : generates
+    users ||--o{ tool_access_logs : generates
+    users ||--o{ prompt_dictionary : authors
+    users ||--o{ settings : updates
+
+    %% Canvas e verticais
+    canvas_templates ||--o{ canvas_template_versions : versions
+    canvas_templates ||--o{ canvas_vertical_assignments : assigned_to
+    verticals ||--o{ canvas_vertical_assignments : groups
+
+    %% Execucao de formularios
+    users ||--o{ user_submissions : creates
+    canvas_templates ||--o{ user_submissions : source
+    prompt_history ||--o{ user_submissions : references
+
+    users ||--o{ form_drafts : saves
+    canvas_templates ||--o{ form_drafts : draft_of
+
+    %% Documentos
+    users ||--o{ user_documents : owns
+    users ||--o{ user_files : uploads
+    user_submissions ||--o{ submission_documents : links
+    user_documents ||--o{ submission_documents : attached
+
+    %% Conversas
+    users ||--o{ conversations : starts
+    canvas_templates ||--o{ conversations : context
+    conversations ||--o{ conversation_messages : contains
+    conversations ||--o{ conversation_files : attaches
+    user_files ||--o{ conversation_files : source
+
+    %% Dominio licitacoes
+    pncp_editais {
+        int id PK
+        text pncp_id UK
+        text titulo
+        text orgao
+        text uf
+        text status
+        text status_analise
+        jsonb analise_resultado
+        timestamptz created_at
+    }
+
+    users {
+        int id PK
+        varchar email UK
+        varchar google_id UK
+        varchar name
+        text access_level
+        text selected_vertical
+        bool is_demo
+        timestamptz created_at
+    }
+
+    user_profiles {
+        int id PK
+        int user_id FK,UK
+        varchar organization
+        text organization_size
+        varchar area
+    }
+
+    verticals {
+        int id PK
+        varchar slug UK
+        varchar name
+        bool is_active
+        jsonb config
+    }
+
+    canvas_templates {
+        int id PK
+        varchar slug UK
+        varchar name
+        jsonb form_config
+        text system_prompt
+        jsonb api_params_override
+        text status
+        bool is_active
+    }
+
+    canvas_vertical_assignments {
+        int id PK
+        int canvas_id FK
+        text vertical_slug
+        int display_order
+        timestamptz created_at
+    }
+
+    user_submissions {
+        bigint id PK
+        int user_id FK
+        int canvas_template_id FK
+        bigint prompt_history_id FK
+        text vertical_slug
+        jsonb form_data
+        text result_markdown
+        text status
+        tsvector search_vector
+    }
+
+    form_drafts {
+        int id PK
+        int user_id FK
+        int canvas_template_id FK
+        jsonb form_data
+        int page_no
+        timestamptz expires_at
+    }
+
+    user_documents {
+        bigint id PK
+        int user_id FK
+        varchar filename
+        varchar mime_type
+        text extraction_status
+        text extracted_text
+        tsvector search_vector
+        jsonb metadata
+    }
+
+    submission_documents {
+        bigint submission_id PK,FK
+        bigint document_id PK,FK
+        timestamptz attached_at
+    }
+
+    prompt_history {
+        bigint id PK
+        int user_id FK
+        varchar vertical
+        varchar tool_name
+        text generated_prompt
+        text claude_response
+        int tokens_total
+        numeric cost_usd
+        text status
+        timestamptz created_at
+    }
+
+    conversations {
+        bigint id PK
+        int user_id FK
+        int canvas_id FK
+        text title
+        text status
+        timestamptz created_at
+    }
+
+    conversation_messages {
+        bigint id PK
+        bigint conversation_id FK
+        text role
+        text content
+        int sequence_num
+        timestamptz created_at
+    }
