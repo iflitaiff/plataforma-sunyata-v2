@@ -161,6 +161,17 @@ $pageContent = function () use ($edital, $autoAnalise) {
         ? implode(', ', json_decode($edital['keywords_matched'], true) ?: [])
         : '';
 ?>
+    <!-- Suporte -->
+    <div class="d-flex align-items-center gap-3 mb-3 px-1 text-muted small">
+        <span><i class="bi bi-headset me-1"></i>Suporte:</span>
+        <a href="https://chat.whatsapp.com/KWWg7FUFShwB4V2YY4iOTi" target="_blank" rel="noopener noreferrer" class="text-success fw-semibold text-decoration-none">
+            <i class="bi bi-whatsapp me-1"></i>WhatsApp
+        </a>
+        <a href="mailto:contato@sunyataconsulting.com" class="text-body text-decoration-none">
+            <i class="bi bi-envelope me-1"></i>contato@sunyataconsulting.com
+        </a>
+    </div>
+
     <!-- Back + Header -->
     <div class="page-header mb-3">
         <a href="<?= BASE_URL ?>/areas/iatr/monitor-pncp.php" class="btn btn-ghost-primary btn-sm mb-2">
@@ -495,8 +506,35 @@ const TIPO_LABELS = {
     verifica_edital: 'Verif. Edital', contratos: 'Contratos', sg_contrato: 'SG Contrato'
 };
 
-let pollingInterval = null;
-let currentStatus = <?= json_encode($edital['status_analise']) ?>;
+let pollingInterval  = null;
+let elapsedInterval  = null;
+let analiseStartedAt = null;
+let currentStatus    = <?= json_encode($edital['status_analise']) ?>;
+
+const SUPORTE_HTML = `<div class="mt-2 small text-muted">
+    Precisa de ajuda?
+    <a href="https://chat.whatsapp.com/KWWg7FUFShwB4V2YY4iOTi" target="_blank" rel="noopener noreferrer" class="text-success fw-semibold ms-1"><i class="bi bi-whatsapp"></i> WhatsApp</a>
+    <span class="mx-1">·</span>
+    <a href="mailto:contato@sunyataconsulting.com" class="text-body"><i class="bi bi-envelope"></i> contato@sunyataconsulting.com</a>
+</div>`;
+
+const ERROS_HTTP = {
+    401: 'Token de autenticação inválido. Contacte o suporte.',
+    403: 'Acesso negado pelo serviço de análise. Contacte o suporte.',
+    409: 'Análise já em andamento para este edital. Aguarde a conclusão.',
+    500: 'Erro interno no servidor de análise. Tente novamente em alguns minutos.',
+    502: 'Serviço de análise indisponível (N8N). Verifique se os serviços estão activos.',
+    504: 'Tempo de resposta excedido. A análise pode ter sido concluída — verificando resultado...',
+};
+
+const FASES_ANALISE = [
+    { ate:  10, msg: 'Iniciando análise...' },
+    { ate:  30, msg: 'Verificando dados do edital...' },
+    { ate:  60, msg: 'Extraindo texto dos documentos...' },
+    { ate: 120, msg: 'Processando com IA (pode demorar alguns minutos)...' },
+    { ate: 240, msg: 'A IA está a gerar a análise completa...' },
+    { ate: 999, msg: 'Finalizando e salvando resultado...' },
+];
 
 document.addEventListener('DOMContentLoaded', function () {
     updateEstimativas();
@@ -549,6 +587,10 @@ async function triggerAnalise() {
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...';
     }
 
+    // Mostrar spinner imediatamente — não esperar o fetch síncrono completar
+    showPolling();
+    startPolling();
+
     try {
         const payload = { edital_id: EDITAL_ID, tipo_analise: tipo, nivel_profundidade: nivel };
         if (instrucoes) payload.instrucoes_complementares = instrucoes;
@@ -558,17 +600,37 @@ async function triggerAnalise() {
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
             body: JSON.stringify(payload)
         });
-        if (!resp.ok) throw new Error('Webhook retornou HTTP ' + resp.status);
 
-        showPolling();
-        startPolling();
-    } catch (err) {
-        if (btn) {
-            btn.disabled = !TEM_DADOS;
-            btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar';
+        if (!resp.ok) {
+            const status = resp.status;
+            const msg = ERROS_HTTP[status] || `Erro inesperado (HTTP ${status}). Contacte o suporte.`;
+            const is504 = status === 504;
+            if (!is504) {
+                // Erros definitivos: parar polling e mostrar erro
+                stopPolling();
+                if (btn) { btn.disabled = !TEM_DADOS; btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar'; }
+                document.getElementById('analise-section').className = 'card analise-card erro mb-4';
+                document.getElementById('analise-status-indicator').innerHTML =
+                    '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Erro</span>';
+                document.getElementById('analise-body').innerHTML =
+                    `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-1"></i>
+                    <strong>HTTP ${status}:</strong> ${escapeHtml(msg)}</div>
+                    ${SUPORTE_HTML}`;
+            }
+            // 504: manter polling activo — análise pode ter concluído no N8N
         }
+        // 200: polling já activo, resultado aparecerá automaticamente
+    } catch (err) {
+        // Erro de rede (ex: timeout do browser antes do PHP responder)
+        stopPolling();
+        if (btn) { btn.disabled = !TEM_DADOS; btn.innerHTML = '<i class="bi bi-lightning"></i> Analisar'; }
+        document.getElementById('analise-section').className = 'card analise-card erro mb-4';
+        document.getElementById('analise-status-indicator').innerHTML =
+            '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Erro</span>';
         document.getElementById('analise-body').innerHTML =
-            `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-1"></i> Erro ao disparar análise: ${escapeHtml(err.message)}</div>`;
+            `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-1"></i>
+            <strong>Falha de ligação:</strong> ${escapeHtml(err.message)}</div>
+            ${SUPORTE_HTML}`;
     }
 }
 
@@ -578,15 +640,30 @@ function showPolling() {
     const formCard = document.getElementById('form-analise-card');
     if (formCard) formCard.style.display = 'none';
 
+    analiseStartedAt = Date.now();
     document.getElementById('analise-status-indicator').innerHTML =
-        '<span class="polling-indicator"><span class="pulse-dot"></span> Analisando...</span>';
+        '<span class="polling-indicator"><span class="pulse-dot"></span> <span id="elapsed-label">Analisando...</span></span>';
     document.getElementById('analise-body').innerHTML = `
         <div class="text-center py-4">
             <div class="spinner-border text-primary mb-3" role="status"></div>
-            <p class="text-secondary mb-1">A IA está analisando este edital. Aguarde...</p>
-            <small class="text-muted">A página atualiza automaticamente a cada 5 segundos.</small>
+            <p class="text-secondary mb-1" id="fase-label">Iniciando análise...</p>
+            <small class="text-muted">A página atualiza automaticamente. Pode demorar alguns minutos.</small>
         </div>`;
     document.getElementById('analise-section').className = 'card analise-card em-andamento mb-4';
+
+    // Contador de tempo + fases
+    if (elapsedInterval) clearInterval(elapsedInterval);
+    elapsedInterval = setInterval(() => {
+        const secs = Math.floor((Date.now() - analiseStartedAt) / 1000);
+        const mins = Math.floor(secs / 60);
+        const s    = secs % 60;
+        const label = mins > 0 ? `${mins}m ${String(s).padStart(2,'0')}s` : `${secs}s`;
+        const el = document.getElementById('elapsed-label');
+        if (el) el.textContent = `Analisando... ${label}`;
+        const fase = FASES_ANALISE.find(f => secs <= f.ate);
+        const fl = document.getElementById('fase-label');
+        if (fl && fase) fl.textContent = fase.msg;
+    }, 1000);
 }
 
 function startPolling() {
@@ -594,13 +671,17 @@ function startPolling() {
     pollingInterval = setInterval(checkStatus, 5000);
 }
 
+function stopPolling() {
+    if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+    if (elapsedInterval) { clearInterval(elapsedInterval); elapsedInterval = null; }
+}
+
 async function checkStatus() {
     try {
         const resp = await fetch(`${STATUS_URL}?id=${EDITAL_ID}`, { headers: { 'X-CSRF-Token': CSRF_TOKEN } });
         const data = await resp.json();
         if (['concluida', 'erro', 'insuficiente'].includes(data.status_analise)) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
+            stopPolling();
             renderAnaliseResult(data);
         }
     } catch (err) { console.error('Polling error:', err); }
@@ -681,7 +762,8 @@ function renderAnaliseResult(data) {
             </div>
             <button class="btn btn-primary btn-sm mt-2" onclick="triggerAnalise()">
                 <i class="bi bi-arrow-repeat"></i> Tentar novamente
-            </button>`;
+            </button>
+            ${SUPORTE_HTML}`;
     }
 }
 
@@ -733,6 +815,17 @@ async function sendAnaliseEmail() {
     btn.textContent = 'Enviar'; btn.disabled = false;
 }
 </script>
+
+    <!-- Suporte rodapé -->
+    <div class="d-flex align-items-center gap-3 mt-1 mb-4 px-1 text-muted small">
+        <span><i class="bi bi-headset me-1"></i>Suporte:</span>
+        <a href="https://chat.whatsapp.com/KWWg7FUFShwB4V2YY4iOTi" target="_blank" rel="noopener noreferrer" class="text-success fw-semibold text-decoration-none">
+            <i class="bi bi-whatsapp me-1"></i>WhatsApp
+        </a>
+        <a href="mailto:contato@sunyataconsulting.com" class="text-body text-decoration-none">
+            <i class="bi bi-envelope me-1"></i>contato@sunyataconsulting.com
+        </a>
+    </div>
 
 <!-- PDF Preview Modal -->
 <div class="modal modal-blur" id="modal-pdf" tabindex="-1">
