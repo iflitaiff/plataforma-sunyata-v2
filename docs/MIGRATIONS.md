@@ -2,7 +2,7 @@
 
 **Database:** PostgreSQL 16
 **Migration Path:** `migrations/*.sql`
-**Execution:** Sequential (001 → 017)
+**Execution:** Sequential (001 → 018)
 
 ---
 
@@ -422,6 +422,46 @@ ALTER TABLE pncp_editais
 
 ---
 
+### Migration 018 — System Events (2026-02-26)
+
+**File:** `migrations/018_system_events.sql`
+
+**Changes:**
+- Created table `system_events` for centralized observability with cross-service correlation via `trace_id`
+- Added columns: `trace_id`, `source`, `event_type`, `severity`, `entity_type`, `entity_id`, `summary`, `payload`, `duration_ms`, `created_at`
+- Added 4 indexes for log browsing and trace timeline:
+  - `idx_events_trace_id` (partial on non-null trace_id)
+  - `idx_events_source_time` (`source`, `created_at DESC`)
+  - `idx_events_entity` (`entity_type`, `entity_id`, `created_at DESC`)
+  - `idx_events_severity` (partial for `warning`/`error`)
+- Granted permissions to `n8n_worker`:
+  - `INSERT, SELECT` on `system_events`
+  - `USAGE, SELECT` on `system_events_id_seq`
+
+**Columns affected:**
+- `system_events.id`
+- `system_events.trace_id`
+- `system_events.source`
+- `system_events.event_type`
+- `system_events.severity`
+- `system_events.entity_type`
+- `system_events.entity_id`
+- `system_events.summary`
+- `system_events.payload`
+- `system_events.duration_ms`
+- `system_events.created_at`
+
+**Rollback:**
+```sql
+DROP INDEX IF EXISTS idx_events_severity;
+DROP INDEX IF EXISTS idx_events_entity;
+DROP INDEX IF EXISTS idx_events_source_time;
+DROP INDEX IF EXISTS idx_events_trace_id;
+DROP TABLE IF EXISTS system_events;
+```
+
+---
+
 ## Migration Best Practices
 
 ### Running Migrations
@@ -514,5 +554,5 @@ None - all migrations applied as of 2026-02-26.
 
 ---
 
-**Last Updated:** 2026-02-25
+**Last Updated:** 2026-02-26
 **Maintained by:** Claude (Executor Principal)

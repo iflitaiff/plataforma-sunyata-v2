@@ -3,7 +3,7 @@
 **Database:** PostgreSQL 16 + pgvector
 **Name:** `sunyata_platform`
 **User:** `sunyata_app`
-**Last Updated:** 2026-02-25
+**Last Updated:** 2026-02-26
 
 ---
 
@@ -684,6 +684,37 @@ Audit trail for all admin actions.
 
 ---
 
+### `system_events`
+Centralized event log with `trace_id` correlation across `portal` → `n8n` → `fastapi` → `litellm`.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| `id` | bigserial | NO | PK, auto | Primary key |
+| `trace_id` | uuid | YES | - | Correlation ID da transação (nullable para eventos sem trace) |
+| `source` | varchar(30) | NO | - | Origem do evento: `portal`, `n8n`, `fastapi`, `litellm`, `cron` |
+| `event_type` | varchar(80) | NO | - | Tipo do evento (ex: `iatr.analysis.requested`) |
+| `severity` | varchar(10) | NO | `'info'` | `debug`, `info`, `warning`, `error` |
+| `entity_type` | varchar(30) | YES | - | Tipo de entidade relacionada (ex: `edital`, `workflow`) |
+| `entity_id` | varchar(100) | YES | - | Identificador da entidade relacionada |
+| `summary` | text | YES | - | Resumo legível do evento |
+| `payload` | jsonb | YES | - | Metadados flexíveis (tokens, custo, status HTTP, etc.) |
+| `duration_ms` | integer | YES | - | Duração da operação em milissegundos |
+| `created_at` | timestamptz | NO | now() | Timestamp de criação |
+
+**Constraints:**
+- PK: `id`
+
+**Indexes:**
+- `idx_events_trace_id` on `(trace_id)` WHERE `trace_id IS NOT NULL`
+- `idx_events_source_time` on `(source, created_at DESC)`
+- `idx_events_entity` on `(entity_type, entity_id, created_at DESC)`
+- `idx_events_severity` on `(severity, created_at DESC)` WHERE `severity IN ('warning', 'error')`
+
+**Permissões:**
+- `n8n_worker`: `INSERT, SELECT` em `system_events` + `USAGE, SELECT` em `system_events_id_seq`
+
+---
+
 ### `tool_access_logs`
 Tool/canvas access analytics.
 
@@ -785,6 +816,12 @@ CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_prompt_history_user_id ON prompt_history(user_id);
 CREATE INDEX idx_tool_access_logs_user_id ON tool_access_logs(user_id);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
+
+-- System events observability
+CREATE INDEX idx_events_trace_id ON system_events(trace_id) WHERE trace_id IS NOT NULL;
+CREATE INDEX idx_events_source_time ON system_events(source, created_at DESC);
+CREATE INDEX idx_events_entity ON system_events(entity_type, entity_id, created_at DESC);
+CREATE INDEX idx_events_severity ON system_events(severity, created_at DESC) WHERE severity IN ('warning', 'error');
 ```
 
 ---
@@ -1009,7 +1046,12 @@ Mesmo formato acima, preenchido automaticamente pelo endpoint `/api/ai/datajud/o
 
 **See:** `docs/MIGRATIONS.md` for full migration changelog.
 
-**Latest:** Migration 017 (2026-02-26) - Análise Profundidade
+**Latest:** Migration 018 (2026-02-26) - System Events
+- Added `system_events` table for centralized logging with `trace_id`
+- Added 4 indexes: `idx_events_trace_id`, `idx_events_source_time`, `idx_events_entity`, `idx_events_severity`
+- Granted `INSERT, SELECT` on `system_events` and `USAGE, SELECT` on `system_events_id_seq` to `n8n_worker`
+
+**Previous:** Migration 017 (2026-02-26) - Análise Profundidade
 - Added 2 columns to `pncp_editais`: `analise_nivel` (varchar(20)) and `analise_instrucoes_complementares` (text)
 - Added CHECK constraint `chk_analise_nivel` (`triagem|resumo|completa` or null)
 
