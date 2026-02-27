@@ -36,6 +36,7 @@ $adminNavItems = [
     ['slug' => 'prompt-history',    'icon' => 'ti-message-dots',      'label' => 'Historico Prompts',   'url' => '/admin/prompt-history.php'],
     ['slug' => 'user-report',       'icon' => 'ti-chart-bar',         'label' => 'Relatorio de Uso',    'url' => '/admin/user-report.php'],
     ['slug' => 'audit-logs',        'icon' => 'ti-file-text',         'label' => 'Logs Auditoria',      'url' => '/admin/audit-logs.php'],
+    ['slug' => 'system-events',     'icon' => 'ti-activity',          'label' => 'System Events',       'url' => '/areas/admin/system-logs.php'],
     ['slug' => 'system-logs',       'icon' => 'ti-terminal',          'label' => 'System Logs',         'url' => '/admin/system-logs.php'],
 ];
 
