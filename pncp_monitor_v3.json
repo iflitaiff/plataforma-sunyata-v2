@@ -1,0 +1,921 @@
+{
+    "updatedAt": "2026-02-27T00:41:12.172Z",
+    "createdAt": "2026-02-20T19:47:20.879Z",
+    "id": "kWX9x3IteHYZehKC",
+    "name": "PNCP Daily Monitor v3",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 7 * * 1-5"
+                        }
+                    ]
+                }
+            },
+            "id": "ba3e01c8-0c0f-4606-8d0e-12b43d6bbf8c",
+            "name": "Cron 07h Weekdays",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                0,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "path": "pncp/monitor",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "7298bbf1-343b-41a4-b7e9-69f0ac172e5c",
+            "name": "Webhook Manual",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1.1,
+            "position": [
+                0,
+                224
+            ],
+            "webhookId": "pncp-monitor-trigger"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{$json.headers ? $json.headers['x-auth-token'] : 'cron-bypass'}}",
+                            "value2": "={{$json.headers ? 'daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c' : 'cron-bypass'}}"
+                        }
+                    ]
+                }
+            },
+            "id": "cdbb56e9-afef-4d41-88bd-4a8da2a9c2d5",
+            "name": "Check Auth",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                208,
+                224
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+                "options": {
+                    "responseCode": 401
+                }
+            },
+            "id": "198a5cc2-cd03-4983-b632-60ee660c8d1a",
+            "name": "Respond 401",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                400,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Gerar URLs de busca otimizadas: 2 queries OR \u00d7 at\u00e9 4 p\u00e1ginas = 8 URLs\n// Em produ\u00e7\u00e3o, p\u00e1ginas extras (sem dados) retornam items=[] e s\u00e3o ignoradas\n\nconst PAGE_SIZE = 500;\n\nconst q1 = 'computador OR microcomputador OR notebook OR tablet OR chromebook OR desktop OR GED OR microfilmagem OR digitalizacao OR microfilme OR escanerizacao OR indexacao';\nconst q2 = '\"ar-condicionado\" OR \"estacao de trabalho\" OR \"gestao de documentos\" OR \"gestao documental\" OR \"licenciamento de softwares\" OR \"licenciamento Microsoft\"';\n\nconst searches = [];\nfor (const q of [q1, q2]) {\n  for (let page = 1; page <= 4; page++) {\n    const encoded = encodeURIComponent(q);\n    searches.push({\n      json: {\n        query_group: q === q1 ? 1 : 2,\n        page: page,\n        url: `https://pncp.gov.br/api/search/?q=${encoded}&tipos_documento=edital&ordenacao=-data&pagina=${page}&tam_pagina=${PAGE_SIZE}&status=recebendo_proposta`\n      }\n    });\n  }\n}\n\nreturn searches;"
+            },
+            "id": "ffb35fa6-f45d-49d9-b059-237449d44ff3",
+            "name": "Generate Search URLs",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                400,
+                128
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{$json.url}}",
+                "options": {
+                    "timeout": 30000
+                }
+            },
+            "id": "82bf80bf-9f9c-4d70-88b2-75545b3a51f8",
+            "name": "PNCP Search API",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                608,
+                128
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// ============================================================\n// PNCP Monitor v3 \u2014 Filtrar, Deduplicar, Preparar dados\n// Retorna: editais filtrados + SQL values + HTML email\n// ============================================================\n\nconst TARGET_UFS = new Set(['RJ', 'SP', 'MG', 'BA', 'PE', 'DF']);\nconst UF_ORDER = ['RJ', 'SP', 'MG', 'BA', 'PE', 'DF'];\n\nconst KEYWORDS = {\n  equipamentos_ti: [\n    'computador', 'microcomputador', 'notebook', 'tablet',\n    'chromebook', 'desktop', 'esta\u00e7\u00e3o de trabalho', 'estacao de trabalho',\n  ],\n  gestao_documental: [\n    'ged', 'microfilmagem', 'microfilme', 'digitaliza\u00e7\u00e3o', 'digitalizacao',\n    'escaneriza\u00e7\u00e3o', 'escanerizacao', 'indexa\u00e7\u00e3o', 'indexacao',\n    'gest\u00e3o de documentos', 'gestao de documentos',\n    'gest\u00e3o documental', 'gestao documental',\n  ],\n  software: [\n    'licenciamento microsoft', 'licenciamento de softwares',\n    'licenciamento de software',\n  ],\n  climatizacao: [\n    'ar-condicionado', 'ar condicionado',\n  ],\n};\n\nconst CATEGORY_LABELS = {\n  equipamentos_ti: '\ud83d\udcbb Equipamentos de TI',\n  gestao_documental: '\ud83d\udcc4 Gest\u00e3o Documental',\n  software: '\ud83d\udd11 Licenciamento de Software',\n  climatizacao: '\u2744\ufe0f Climatiza\u00e7\u00e3o',\n};\nconst CATEGORY_COLORS = {\n  equipamentos_ti: '#2980b9',\n  gestao_documental: '#8e44ad',\n  software: '#27ae60',\n  climatizacao: '#e67e22',\n};\n\n// Portal base URL for email links\nconst PORTAL_BASE = 'https://platform.sunyataconsulting.com';\n\n// --- 1. Collect + dedup + filter UF ---\nconst allResponses = $input.all();\nlet totalBruto = 0;\nlet erros = 0;\nconst seen = new Map();\n\nfor (const response of allResponses) {\n  const data = response.json;\n  const items = data.items || [];\n  totalBruto += items.length;\n  if (!items.length && data.total === undefined) { erros++; continue; }\n  for (const item of items) {\n    const ctrl = item.numero_controle_pncp || '';\n    const uf = item.uf || '';\n    if (ctrl && !seen.has(ctrl) && TARGET_UFS.has(uf)) {\n      seen.set(ctrl, item);\n    }\n  }\n}\nconst uniqueItems = Array.from(seen.values());\n\n// --- 2. Filter by keyword in description ---\nfunction matchKeywords(desc) {\n  const lower = desc.toLowerCase();\n  const cats = [];\n  const kws = [];\n  for (const [cat, kwList] of Object.entries(KEYWORDS)) {\n    for (const kw of kwList) {\n      if (lower.includes(kw.toLowerCase())) {\n        cats.push(cat);\n        kws.push(kw);\n        break;\n      }\n    }\n  }\n  return { cats, kws };\n}\n\nconst editais = [];\nfor (const item of uniqueItems) {\n  const desc = item.description || '';\n  const { cats, kws } = matchKeywords(desc);\n  if (!cats.length) continue;\n\n  const urlParts = (item.item_url || '').split('/');\n  const cnpj = urlParts[2] || '';\n  const ano = urlParts[3] || '';\n  const seq = urlParts[4] || '';\n\n  editais.push({\n    pncp_id: item.numero_controle_pncp || '',\n    numero: (item.title || '').replace(/^Edital\\s+n[\u00bao\u00b0]\\s*/i, '').trim() || null,\n    titulo: item.title || '',\n    objeto: desc.substring(0, 2000),\n    orgao: item.orgao_nome || '',\n    orgao_cnpj: item.orgao_cnpj || '',\n    uf: item.uf || '',\n    municipio: item.municipio_nome || '',\n    modalidade: item.modalidade_licitacao_nome || '',\n    valor_estimado: item.valor_global || null,\n    data_abertura: item.data_inicio_vigencia || item.data_publicacao_pncp || null,\n    data_encerramento: item.data_fim_vigencia || null,\n    url_pncp: `https://pncp.gov.br/app/editais${(item.item_url || '').replace(/^\\/compras/, '')}`,\n    keywords_matched: kws,\n    categories: cats,\n    cnpj_orgao: cnpj,\n    ano_compra: ano,\n    seq_compra: seq,\n    raw_data: item,\n  });\n}\n\neditais.sort((a, b) => (a.data_encerramento || '9999').localeCompare(b.data_encerramento || '9999'));\n\n// --- 3. Build SQL for UPSERT ---\n// Using ON CONFLICT (pncp_id) DO UPDATE to handle re-runs\nconst sqlRows = editais.map(e => {\n  const esc = (s) => s ? s.replace(/'/g, \"''\") : null;\n  const arr = (a) => a && a.length ? `'{${a.map(x => '\"' + esc(x) + '\"').join(',')}}'` : 'NULL';\n  const jsonb = (o) => o ? `'${JSON.stringify(o).replace(/'/g, \"''\")}'::jsonb` : 'NULL';\n  const num = (n) => n !== null && n !== undefined ? Number(n) : 'NULL';\n  const ts = (s) => s ? `'${esc(s)}'::timestamptz` : 'NULL';\n  const txt = (s) => s ? `'${esc(s)}'` : 'NULL';\n\n  return `(${txt(e.pncp_id)}, ${txt(e.numero)}, ${txt(e.titulo)}, ${txt(e.objeto)}, ${txt(e.orgao)}, ${txt(e.orgao_cnpj)}, ${txt(e.uf)}, ${txt(e.municipio)}, ${txt(e.modalidade)}, ${num(e.valor_estimado)}, ${ts(e.data_abertura)}, ${ts(e.data_encerramento)}, ${txt(e.url_pncp)}, 'aberto', ${arr(e.keywords_matched)}, ${jsonb(e.raw_data)})`;\n});\n\n// Single SQL UPSERT (223 rows \u00d7 ~1.7KB raw_data = ~374KB \u2014 well within limits)\nconst upsertSql = sqlRows.length > 0 ? `INSERT INTO pncp_editais (pncp_id, numero, titulo, objeto, orgao, orgao_cnpj, uf, municipio, modalidade, valor_estimado, data_abertura, data_encerramento, url_pncp, status, keywords_matched, raw_data)\nVALUES\n${sqlRows.join(',\\n')}\nON CONFLICT (pncp_id) DO UPDATE SET\n  titulo = EXCLUDED.titulo,\n  objeto = EXCLUDED.objeto,\n  orgao_cnpj = EXCLUDED.orgao_cnpj,\n  municipio = EXCLUDED.municipio,\n  valor_estimado = EXCLUDED.valor_estimado,\n  data_encerramento = EXCLUDED.data_encerramento,\n  status = EXCLUDED.status,\n  keywords_matched = EXCLUDED.keywords_matched,\n  raw_data = EXCLUDED.raw_data,\n  updated_at = NOW();` : 'SELECT 1;';\n\n// --- 4. Build HTML email ---\nfunction fmtDate(iso) {\n  if (!iso) return 'N/I';\n  try {\n    const d = new Date(iso);\n    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;\n  } catch(e) { return iso.substring(0,16); }\n}\nfunction diasAte(iso) {\n  if (!iso) return 999;\n  try { return Math.ceil((new Date(iso) - new Date()) / 86400000); }\n  catch(e) { return 999; }\n}\nfunction fmtValor(val) {\n  if (val === null || val === undefined) return '<em>N/I</em>';\n  const n = Number(val);\n  if (n === 0) return '<em>Sigiloso</em>';\n  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});\n}\n\nconst hoje = fmtDate(new Date().toISOString()).split(' ')[0];\nconst byUF = {};\nfor (const e of editais) { if (!byUF[e.uf]) byUF[e.uf] = []; byUF[e.uf].push(e); }\nconst catCounts = {};\nfor (const e of editais) { for (const c of e.categories) { catCounts[c] = (catCounts[c]||0) + 1; } }\nconst urgentes = editais.filter(e => diasAte(e.data_encerramento) <= 7).length;\n\nlet html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"margin:0;padding:0;background:#f4f5f7;font-family:'Segoe UI',Arial,sans-serif\"><div style=\"max-width:960px;margin:0 auto;padding:20px\">`;\n\n// Header\nhtml += `<div style=\"background:linear-gradient(135deg,#1a2a3a,#2c3e50);color:#fff;padding:24px 28px;border-radius:10px 10px 0 0\">`;\nhtml += `<h1 style=\"margin:0;font-size:22px\">\ud83d\udccb Monitoramento PNCP \u2014 ${hoje}</h1>`;\nhtml += `<p style=\"margin:8px 0 0;font-size:14px;opacity:.85\">${editais.length} editais relevantes \u2022 ${Object.keys(byUF).length} UFs \u2022 ${urgentes} urgente(s)</p>`;\nhtml += `<div style=\"margin-top:12px\">`;\nfor (const [cat, count] of Object.entries(catCounts).sort((a,b) => b[1]-a[1])) {\n  html += `<span style=\"display:inline-block;background:${CATEGORY_COLORS[cat]||'#95a5a6'};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;margin:2px\">${CATEGORY_LABELS[cat]||cat}: ${count}</span> `;\n}\nhtml += `</div></div>`;\n\n// Stats\nhtml += `<div style=\"background:#fff;border:1px solid #e0e0e0;border-top:none;padding:12px 28px;font-size:12px;color:#666\">`;\nhtml += `Buscas: ${allResponses.length} \u2022 Bruto: ${totalBruto} \u2022 Dedup+UF: ${uniqueItems.length} \u2022 Relevantes: ${editais.length} \u2022 Ru\u00eddo: ${uniqueItems.length - editais.length}`;\nhtml += `</div>`;\n\n\n\n// Body - by UF\nhtml += `<div style=\"background:#fff;padding:20px 28px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px\">`;\n\nfor (const uf of UF_ORDER) {\n  const items = byUF[uf];\n  if (!items || !items.length) continue;\n  const urg = items.filter(i => diasAte(i.data_encerramento) <= 7).length;\n\n  html += `<h2 style=\"color:#2c3e50;border-bottom:3px solid #3498db;padding-bottom:8px;margin-top:28px\">\ud83d\udccd ${uf} \u2014 ${items.length} editai${items.length!==1?'s':'l'}`;\n  if (urg) html += ` <span style=\"background:#e74c3c;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px\">\u26a0 ${urg} urgente(s)</span>`;\n  html += `</h2>`;\n\n  html += `<table border=\"0\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;font-size:12px;margin-bottom:10px\">`;\n  html += `<tr style=\"background:#34495e;color:#fff\"><th style=\"text-align:left;width:18%\">\u00d3rg\u00e3o</th><th style=\"text-align:left;width:28%\">Objeto</th><th style=\"text-align:center;width:10%\">Categoria</th><th style=\"text-align:center;width:12%\">Encerramento</th><th style=\"text-align:right;width:10%\">Valor</th><th style=\"text-align:center;width:22%\">A\u00e7\u00f5es</th></tr>`;\n\n  for (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    const dias = diasAte(item.data_encerramento);\n    const bg = i%2===0 ? '#fff' : '#f8f9fa';\n    const brd = dias<=3 ? 'border-left:4px solid #e74c3c' : dias<=7 ? 'border-left:4px solid #f39c12' : 'border-left:4px solid transparent';\n    const ds = dias<=3 ? 'color:#e74c3c;font-weight:bold' : dias<=7 ? 'color:#f39c12;font-weight:bold' : '';\n    const dl = dias<=0 ? '(ENCERRADO)' : dias===1 ? '(amanh\u00e3!)' : dias<=7 ? `(${dias} dias)` : '';\n\n    let catBadges = '';\n    for (const cat of item.categories) {\n      const parts = (CATEGORY_LABELS[cat]||cat).split(' ');\n      catBadges += `<span style=\"display:inline-block;background:${CATEGORY_COLORS[cat]||'#95a5a6'};color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;margin:1px\">${parts[0]} ${parts.slice(1).join(' ')}</span> `;\n    }\n\n    const descShort = item.objeto.substring(0,160) + (item.objeto.length>160 ? '...' : '');\n    // Links point to portal, not directly to PNCP\n    // Use pncp_id for lookup \u2014 portal resolves to DB id\n    const portalLink = `${PORTAL_BASE}/edital.php?pncp_id=${encodeURIComponent(item.pncp_id)}`;\n\n    html += `<tr style=\"background:${bg};${brd}\">`;\n    html += `<td style=\"padding:8px;vertical-align:top\"><strong>${item.orgao}</strong><br/><small style=\"color:#777\">${item.municipio}/${item.uf}</small></td>`;\n    html += `<td style=\"padding:8px;vertical-align:top\"><small style=\"color:#555\">${descShort}</small></td>`;\n    html += `<td style=\"padding:8px;text-align:center;vertical-align:top\">${catBadges}</td>`;\n    html += `<td style=\"padding:8px;text-align:center;vertical-align:top;${ds}\">${fmtDate(item.data_encerramento)}<br/><small>${dl}</small></td>`;\n    html += `<td style=\"padding:8px;text-align:right;vertical-align:top\">${fmtValor(item.valor_estimado)}</td>`;\n    html += `<td style=\"padding:8px;text-align:center;vertical-align:top\">`;\n    html += `<a href=\"${portalLink}\" style=\"display:inline-block;background:#2980b9;color:#fff;padding:5px 12px;border-radius:4px;text-decoration:none;font-size:10px;margin:2px\">\ud83d\udccb Detalhes</a>`;\n    html += `<br/><a href=\"${item.url_pncp}\" style=\"color:#999;font-size:9px;text-decoration:underline;margin-top:4px;display:inline-block\">Ver no PNCP \u2197</a>`;\n    html += `</td></tr>`;\n  }\n  html += `</table>`;\n}\n\n// Footer\nhtml += `<hr style=\"margin-top:30px;border:none;border-top:1px solid #dee2e6\"/>`;\nhtml += `<p style=\"font-size:10px;color:#999;margin-top:15px\">Gerado por <strong>Sunyata Consulting</strong> \u2014 IATR Monitoramento PNCP v3.0<br/>${new Date().toISOString()} \u2022 ${allResponses.length} buscas \u2022 ${erros} erros API</p>`;\nhtml += `</div></div></body></html>`;\n\n// --- 5. Return everything ---\nreturn [{ json: {\n  success: true,\n  editais_count: editais.length,\n  stats: {\n    total_buscas: allResponses.length,\n    total_bruto: totalBruto,\n    total_dedup_uf: uniqueItems.length,\n    total_relevante: editais.length,\n    ruido: uniqueItems.length - editais.length,\n    erros_api: erros,\n    por_uf: Object.fromEntries(Object.entries(byUF).map(([k,v]) => [k, v.length])),\n    por_categoria: catCounts,\n    urgentes: urgentes,\n  },\n  upsert_sql: upsertSql,\n  email: {\n    to: 'claudesunyata@gmail.com,filipe.litaiff@ifrj.edu.br,comercial06@iatr.com.br,comercial@iatr.com.br',\n    subject: `[PNCP Monitor] ${editais.length} editais relevantes \u2014 ${hoje}`,\n    html: html\n  },\n  timestamp: new Date().toISOString()\n}}];"
+            },
+            "id": "cde0825c-11fd-4a01-91d4-d3f15eabafc4",
+            "name": "Filter Format SQL",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                800,
+                128
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "={{$json.upsert_sql}}",
+                "options": {}
+            },
+            "id": "74f8acec-5aa6-403c-9c00-d039c58f8638",
+            "name": "Save to PostgreSQL",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.5,
+            "position": [
+                1008,
+                128
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "sunyata-pg-001",
+                    "name": "Sunyata PostgreSQL"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Pass through data, remove large SQL from downstream\nconst data = $('Filter Format SQL').first().json;\n\nreturn [{ json: {\n  success: data.success,\n  editais_count: data.editais_count,\n  stats: data.stats,\n  email: data.email,\n  db_status: 'upsert_complete',\n  timestamp: data.timestamp\n}}];"
+            },
+            "id": "c0693136-92bb-45ab-9716-6d383d4303c0",
+            "name": "Post-DB Cleanup",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1800,
+                128
+            ]
+        },
+        {
+            "parameters": {
+                "fromEmail": "flitaiff@gmail.com",
+                "toEmail": "={{$json.email.to}}",
+                "subject": "={{$json.email.subject}}",
+                "html": "={{$json.email.html}}",
+                "options": {}
+            },
+            "id": "7bb92d04-c8f1-4784-9f58-8cd9b4b2e4ae",
+            "name": "Send Email",
+            "type": "n8n-nodes-base.emailSend",
+            "typeVersion": 2.1,
+            "position": [
+                2008,
+                128
+            ],
+            "webhookId": "50e7bcbb-1e98-480b-b722-b6cc07e13bfa",
+            "credentials": {
+                "smtp": {
+                    "id": "TAZ8C6Oo3qLTak9d",
+                    "name": "SMTP account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "id": "d6de384a-8c50-4f97-8e97-682145d08ced",
+            "name": "Respond OK",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.5,
+            "position": [
+                2200,
+                128
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT id FROM pncp_editais WHERE enriquecido_em IS NULL ORDER BY id DESC LIMIT 50",
+                "options": {}
+            },
+            "id": "enrich-get-ids-001",
+            "name": "Get Unenriched IDs",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.5,
+            "position": [
+                1200,
+                128
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "sunyata-pg-001",
+                    "name": "Sunyata PostgreSQL"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "id": "enrich-split-001",
+            "name": "Split Enrich Batches",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 3,
+            "position": [
+                1400,
+                128
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://192.168.100.10:8000/api/ai/iatr/enrich-edital",
+                "sendHeaders": true,
+                "specifyHeaders": "keypair",
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Internal-Key",
+                            "value": "3be587ec449cb5ddb42c071d61ca5892720179bd7545015aa208275cc200759f"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify({ edital_id: $json.id }) }}",
+                "options": {
+                    "timeout": 60000
+                }
+            },
+            "id": "enrich-edital-001",
+            "name": "Enrich Edital",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1600,
+                128
+            ],
+            "onError": "continueRegularOutput"
+        }
+    ],
+    "connections": {
+        "Cron 07h Weekdays": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Search URLs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook Manual": {
+            "main": [
+                [
+                    {
+                        "node": "Check Auth",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Auth": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Search URLs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Respond 401",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Search URLs": {
+            "main": [
+                [
+                    {
+                        "node": "PNCP Search API",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "PNCP Search API": {
+            "main": [
+                [
+                    {
+                        "node": "Filter Format SQL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Filter Format SQL": {
+            "main": [
+                [
+                    {
+                        "node": "Save to PostgreSQL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save to PostgreSQL": {
+            "main": [
+                [
+                    {
+                        "node": "Get Unenriched IDs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Post-DB Cleanup": {
+            "main": [
+                [
+                    {
+                        "node": "Send Email",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Respond OK",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Unenriched IDs": {
+            "main": [
+                [
+                    {
+                        "node": "Split Enrich Batches",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Enrich Batches": {
+            "main": [
+                [
+                    {
+                        "node": "Enrich Edital",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Post-DB Cleanup",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Enrich Edital": {
+            "main": [
+                [
+                    {
+                        "node": "Split Enrich Batches",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "binaryMode": "separate",
+        "availableInMCP": false,
+        "callerPolicy": "workflowsFromSameOwner"
+    },
+    "staticData": {
+        "node:Cron 07h Weekdays": {
+            "recurrenceRules": []
+        }
+    },
+    "meta": null,
+    "pinData": {
+        "Send Email": [
+            {
+                "json": {
+                    "name": "First item",
+                    "code": 1
+                }
+            },
+            {
+                "json": {
+                    "name": "Second item",
+                    "code": 2
+                }
+            }
+        ]
+    },
+    "versionId": "4467a68a-03b7-41c2-a9cd-3738315ccf4e",
+    "activeVersionId": "4467a68a-03b7-41c2-a9cd-3738315ccf4e",
+    "versionCounter": 41,
+    "triggerCount": 2,
+    "shared": [
+        {
+            "updatedAt": "2026-02-20T19:47:20.881Z",
+            "createdAt": "2026-02-20T19:47:20.881Z",
+            "role": "workflow:owner",
+            "workflowId": "kWX9x3IteHYZehKC",
+            "projectId": "W0KvnPtDbyZicz8v",
+            "project": {
+                "updatedAt": "2026-02-13T21:09:28.728Z",
+                "createdAt": "2026-02-13T20:59:24.901Z",
+                "id": "W0KvnPtDbyZicz8v",
+                "name": "FILIPE flitaiff@gmail.com <flitaiff@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "76b2cbce-e8f9-4d9f-8fc2-fd10d1c154e6",
+                "projectRelations": [
+                    {
+                        "updatedAt": "2026-02-13T20:59:24.901Z",
+                        "createdAt": "2026-02-13T20:59:24.901Z",
+                        "userId": "76b2cbce-e8f9-4d9f-8fc2-fd10d1c154e6",
+                        "projectId": "W0KvnPtDbyZicz8v",
+                        "user": {
+                            "updatedAt": "2026-02-26T14:10:27.000Z",
+                            "createdAt": "2026-02-13T20:59:24.644Z",
+                            "id": "76b2cbce-e8f9-4d9f-8fc2-fd10d1c154e6",
+                            "email": "flitaiff@gmail.com",
+                            "firstName": "FILIPE",
+                            "lastName": "flitaiff@gmail.com",
+                            "personalizationAnswers": {
+                                "version": "v4",
+                                "personalization_survey_submitted_at": "2026-02-13T21:09:19.220Z",
+                                "personalization_survey_n8n_version": "2.7.5"
+                            },
+                            "settings": {
+                                "userActivated": true,
+                                "easyAIWorkflowOnboarded": true,
+                                "firstSuccessfulWorkflowId": "g8A81QZHFVwKRq2Q",
+                                "userActivatedAt": 1771533478645,
+                                "npsSurvey": {
+                                    "waitingForResponse": true,
+                                    "ignoredCount": 1,
+                                    "lastShownAt": 1771958306880
+                                }
+                            },
+                            "disabled": false,
+                            "mfaEnabled": false,
+                            "lastActiveAt": "2026-02-26",
+                            "isPending": false
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "tags": [],
+    "activeVersion": {
+        "updatedAt": "2026-02-27T00:41:12.173Z",
+        "createdAt": "2026-02-27T00:41:12.173Z",
+        "versionId": "4467a68a-03b7-41c2-a9cd-3738315ccf4e",
+        "workflowId": "kWX9x3IteHYZehKC",
+        "nodes": [
+            {
+                "parameters": {
+                    "rule": {
+                        "interval": [
+                            {
+                                "field": "cronExpression",
+                                "expression": "0 7 * * 1-5"
+                            }
+                        ]
+                    }
+                },
+                "id": "ba3e01c8-0c0f-4606-8d0e-12b43d6bbf8c",
+                "name": "Cron 07h Weekdays",
+                "type": "n8n-nodes-base.scheduleTrigger",
+                "typeVersion": 1.2,
+                "position": [
+                    0,
+                    0
+                ]
+            },
+            {
+                "parameters": {
+                    "path": "pncp/monitor",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "id": "7298bbf1-343b-41a4-b7e9-69f0ac172e5c",
+                "name": "Webhook Manual",
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 1.1,
+                "position": [
+                    0,
+                    224
+                ],
+                "webhookId": "pncp-monitor-trigger"
+            },
+            {
+                "parameters": {
+                    "conditions": {
+                        "string": [
+                            {
+                                "value1": "={{$json.headers ? $json.headers['x-auth-token'] : 'cron-bypass'}}",
+                                "value2": "={{$json.headers ? 'daea65de34f273e6755a5ebe9c1bd254243b7b54cc5cd716a9de870c1db6145c' : 'cron-bypass'}}"
+                            }
+                        ]
+                    }
+                },
+                "id": "cdbb56e9-afef-4d41-88bd-4a8da2a9c2d5",
+                "name": "Check Auth",
+                "type": "n8n-nodes-base.if",
+                "typeVersion": 1,
+                "position": [
+                    208,
+                    224
+                ]
+            },
+            {
+                "parameters": {
+                    "respondWith": "json",
+                    "responseBody": "={{ { \"error\": \"Unauthorized\", \"message\": \"Invalid or missing X-Auth-Token header\" } }}",
+                    "options": {
+                        "responseCode": 401
+                    }
+                },
+                "id": "198a5cc2-cd03-4983-b632-60ee660c8d1a",
+                "name": "Respond 401",
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1,
+                "position": [
+                    400,
+                    400
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Gerar URLs de busca otimizadas: 2 queries OR \u00d7 at\u00e9 4 p\u00e1ginas = 8 URLs\n// Em produ\u00e7\u00e3o, p\u00e1ginas extras (sem dados) retornam items=[] e s\u00e3o ignoradas\n\nconst PAGE_SIZE = 500;\n\nconst q1 = 'computador OR microcomputador OR notebook OR tablet OR chromebook OR desktop OR GED OR microfilmagem OR digitalizacao OR microfilme OR escanerizacao OR indexacao';\nconst q2 = '\"ar-condicionado\" OR \"estacao de trabalho\" OR \"gestao de documentos\" OR \"gestao documental\" OR \"licenciamento de softwares\" OR \"licenciamento Microsoft\"';\n\nconst searches = [];\nfor (const q of [q1, q2]) {\n  for (let page = 1; page <= 4; page++) {\n    const encoded = encodeURIComponent(q);\n    searches.push({\n      json: {\n        query_group: q === q1 ? 1 : 2,\n        page: page,\n        url: `https://pncp.gov.br/api/search/?q=${encoded}&tipos_documento=edital&ordenacao=-data&pagina=${page}&tam_pagina=${PAGE_SIZE}&status=recebendo_proposta`\n      }\n    });\n  }\n}\n\nreturn searches;"
+                },
+                "id": "ffb35fa6-f45d-49d9-b059-237449d44ff3",
+                "name": "Generate Search URLs",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    400,
+                    128
+                ]
+            },
+            {
+                "parameters": {
+                    "url": "={{$json.url}}",
+                    "options": {
+                        "timeout": 30000
+                    }
+                },
+                "id": "82bf80bf-9f9c-4d70-88b2-75545b3a51f8",
+                "name": "PNCP Search API",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    608,
+                    128
+                ]
+            },
+            {
+                "parameters": {
+                    "jsCode": "// ============================================================\n// PNCP Monitor v3 \u2014 Filtrar, Deduplicar, Preparar dados\n// Retorna: editais filtrados + SQL values + HTML email\n// ============================================================\n\nconst TARGET_UFS = new Set(['RJ', 'SP', 'MG', 'BA', 'PE', 'DF']);\nconst UF_ORDER = ['RJ', 'SP', 'MG', 'BA', 'PE', 'DF'];\n\nconst KEYWORDS = {\n  equipamentos_ti: [\n    'computador', 'microcomputador', 'notebook', 'tablet',\n    'chromebook', 'desktop', 'esta\u00e7\u00e3o de trabalho', 'estacao de trabalho',\n  ],\n  gestao_documental: [\n    'ged', 'microfilmagem', 'microfilme', 'digitaliza\u00e7\u00e3o', 'digitalizacao',\n    'escaneriza\u00e7\u00e3o', 'escanerizacao', 'indexa\u00e7\u00e3o', 'indexacao',\n    'gest\u00e3o de documentos', 'gestao de documentos',\n    'gest\u00e3o documental', 'gestao documental',\n  ],\n  software: [\n    'licenciamento microsoft', 'licenciamento de softwares',\n    'licenciamento de software',\n  ],\n  climatizacao: [\n    'ar-condicionado', 'ar condicionado',\n  ],\n};\n\nconst CATEGORY_LABELS = {\n  equipamentos_ti: '\ud83d\udcbb Equipamentos de TI',\n  gestao_documental: '\ud83d\udcc4 Gest\u00e3o Documental',\n  software: '\ud83d\udd11 Licenciamento de Software',\n  climatizacao: '\u2744\ufe0f Climatiza\u00e7\u00e3o',\n};\nconst CATEGORY_COLORS = {\n  equipamentos_ti: '#2980b9',\n  gestao_documental: '#8e44ad',\n  software: '#27ae60',\n  climatizacao: '#e67e22',\n};\n\n// Portal base URL for email links\nconst PORTAL_BASE = 'https://platform.sunyataconsulting.com';\n\n// --- 1. Collect + dedup + filter UF ---\nconst allResponses = $input.all();\nlet totalBruto = 0;\nlet erros = 0;\nconst seen = new Map();\n\nfor (const response of allResponses) {\n  const data = response.json;\n  const items = data.items || [];\n  totalBruto += items.length;\n  if (!items.length && data.total === undefined) { erros++; continue; }\n  for (const item of items) {\n    const ctrl = item.numero_controle_pncp || '';\n    const uf = item.uf || '';\n    if (ctrl && !seen.has(ctrl) && TARGET_UFS.has(uf)) {\n      seen.set(ctrl, item);\n    }\n  }\n}\nconst uniqueItems = Array.from(seen.values());\n\n// --- 2. Filter by keyword in description ---\nfunction matchKeywords(desc) {\n  const lower = desc.toLowerCase();\n  const cats = [];\n  const kws = [];\n  for (const [cat, kwList] of Object.entries(KEYWORDS)) {\n    for (const kw of kwList) {\n      if (lower.includes(kw.toLowerCase())) {\n        cats.push(cat);\n        kws.push(kw);\n        break;\n      }\n    }\n  }\n  return { cats, kws };\n}\n\nconst editais = [];\nfor (const item of uniqueItems) {\n  const desc = item.description || '';\n  const { cats, kws } = matchKeywords(desc);\n  if (!cats.length) continue;\n\n  const urlParts = (item.item_url || '').split('/');\n  const cnpj = urlParts[2] || '';\n  const ano = urlParts[3] || '';\n  const seq = urlParts[4] || '';\n\n  editais.push({\n    pncp_id: item.numero_controle_pncp || '',\n    numero: (item.title || '').replace(/^Edital\\s+n[\u00bao\u00b0]\\s*/i, '').trim() || null,\n    titulo: item.title || '',\n    objeto: desc.substring(0, 2000),\n    orgao: item.orgao_nome || '',\n    orgao_cnpj: item.orgao_cnpj || '',\n    uf: item.uf || '',\n    municipio: item.municipio_nome || '',\n    modalidade: item.modalidade_licitacao_nome || '',\n    valor_estimado: item.valor_global || null,\n    data_abertura: item.data_inicio_vigencia || item.data_publicacao_pncp || null,\n    data_encerramento: item.data_fim_vigencia || null,\n    url_pncp: `https://pncp.gov.br/app/editais${(item.item_url || '').replace(/^\\/compras/, '')}`,\n    keywords_matched: kws,\n    categories: cats,\n    cnpj_orgao: cnpj,\n    ano_compra: ano,\n    seq_compra: seq,\n    raw_data: item,\n  });\n}\n\neditais.sort((a, b) => (a.data_encerramento || '9999').localeCompare(b.data_encerramento || '9999'));\n\n// --- 3. Build SQL for UPSERT ---\n// Using ON CONFLICT (pncp_id) DO UPDATE to handle re-runs\nconst sqlRows = editais.map(e => {\n  const esc = (s) => s ? s.replace(/'/g, \"''\") : null;\n  const arr = (a) => a && a.length ? `'{${a.map(x => '\"' + esc(x) + '\"').join(',')}}'` : 'NULL';\n  const jsonb = (o) => o ? `'${JSON.stringify(o).replace(/'/g, \"''\")}'::jsonb` : 'NULL';\n  const num = (n) => n !== null && n !== undefined ? Number(n) : 'NULL';\n  const ts = (s) => s ? `'${esc(s)}'::timestamptz` : 'NULL';\n  const txt = (s) => s ? `'${esc(s)}'` : 'NULL';\n\n  return `(${txt(e.pncp_id)}, ${txt(e.numero)}, ${txt(e.titulo)}, ${txt(e.objeto)}, ${txt(e.orgao)}, ${txt(e.orgao_cnpj)}, ${txt(e.uf)}, ${txt(e.municipio)}, ${txt(e.modalidade)}, ${num(e.valor_estimado)}, ${ts(e.data_abertura)}, ${ts(e.data_encerramento)}, ${txt(e.url_pncp)}, 'aberto', ${arr(e.keywords_matched)}, ${jsonb(e.raw_data)})`;\n});\n\n// Single SQL UPSERT (223 rows \u00d7 ~1.7KB raw_data = ~374KB \u2014 well within limits)\nconst upsertSql = sqlRows.length > 0 ? `INSERT INTO pncp_editais (pncp_id, numero, titulo, objeto, orgao, orgao_cnpj, uf, municipio, modalidade, valor_estimado, data_abertura, data_encerramento, url_pncp, status, keywords_matched, raw_data)\nVALUES\n${sqlRows.join(',\\n')}\nON CONFLICT (pncp_id) DO UPDATE SET\n  titulo = EXCLUDED.titulo,\n  objeto = EXCLUDED.objeto,\n  orgao_cnpj = EXCLUDED.orgao_cnpj,\n  municipio = EXCLUDED.municipio,\n  valor_estimado = EXCLUDED.valor_estimado,\n  data_encerramento = EXCLUDED.data_encerramento,\n  status = EXCLUDED.status,\n  keywords_matched = EXCLUDED.keywords_matched,\n  raw_data = EXCLUDED.raw_data,\n  updated_at = NOW();` : 'SELECT 1;';\n\n// --- 4. Build HTML email ---\nfunction fmtDate(iso) {\n  if (!iso) return 'N/I';\n  try {\n    const d = new Date(iso);\n    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;\n  } catch(e) { return iso.substring(0,16); }\n}\nfunction diasAte(iso) {\n  if (!iso) return 999;\n  try { return Math.ceil((new Date(iso) - new Date()) / 86400000); }\n  catch(e) { return 999; }\n}\nfunction fmtValor(val) {\n  if (val === null || val === undefined) return '<em>N/I</em>';\n  const n = Number(val);\n  if (n === 0) return '<em>Sigiloso</em>';\n  return 'R$ ' + n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});\n}\n\nconst hoje = fmtDate(new Date().toISOString()).split(' ')[0];\nconst byUF = {};\nfor (const e of editais) { if (!byUF[e.uf]) byUF[e.uf] = []; byUF[e.uf].push(e); }\nconst catCounts = {};\nfor (const e of editais) { for (const c of e.categories) { catCounts[c] = (catCounts[c]||0) + 1; } }\nconst urgentes = editais.filter(e => diasAte(e.data_encerramento) <= 7).length;\n\nlet html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"margin:0;padding:0;background:#f4f5f7;font-family:'Segoe UI',Arial,sans-serif\"><div style=\"max-width:960px;margin:0 auto;padding:20px\">`;\n\n// Header\nhtml += `<div style=\"background:linear-gradient(135deg,#1a2a3a,#2c3e50);color:#fff;padding:24px 28px;border-radius:10px 10px 0 0\">`;\nhtml += `<h1 style=\"margin:0;font-size:22px\">\ud83d\udccb Monitoramento PNCP \u2014 ${hoje}</h1>`;\nhtml += `<p style=\"margin:8px 0 0;font-size:14px;opacity:.85\">${editais.length} editais relevantes \u2022 ${Object.keys(byUF).length} UFs \u2022 ${urgentes} urgente(s)</p>`;\nhtml += `<div style=\"margin-top:12px\">`;\nfor (const [cat, count] of Object.entries(catCounts).sort((a,b) => b[1]-a[1])) {\n  html += `<span style=\"display:inline-block;background:${CATEGORY_COLORS[cat]||'#95a5a6'};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;margin:2px\">${CATEGORY_LABELS[cat]||cat}: ${count}</span> `;\n}\nhtml += `</div></div>`;\n\n// Stats\nhtml += `<div style=\"background:#fff;border:1px solid #e0e0e0;border-top:none;padding:12px 28px;font-size:12px;color:#666\">`;\nhtml += `Buscas: ${allResponses.length} \u2022 Bruto: ${totalBruto} \u2022 Dedup+UF: ${uniqueItems.length} \u2022 Relevantes: ${editais.length} \u2022 Ru\u00eddo: ${uniqueItems.length - editais.length}`;\nhtml += `</div>`;\n\n\n\n// Body - by UF\nhtml += `<div style=\"background:#fff;padding:20px 28px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 10px 10px\">`;\n\nfor (const uf of UF_ORDER) {\n  const items = byUF[uf];\n  if (!items || !items.length) continue;\n  const urg = items.filter(i => diasAte(i.data_encerramento) <= 7).length;\n\n  html += `<h2 style=\"color:#2c3e50;border-bottom:3px solid #3498db;padding-bottom:8px;margin-top:28px\">\ud83d\udccd ${uf} \u2014 ${items.length} editai${items.length!==1?'s':'l'}`;\n  if (urg) html += ` <span style=\"background:#e74c3c;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px\">\u26a0 ${urg} urgente(s)</span>`;\n  html += `</h2>`;\n\n  html += `<table border=\"0\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;font-size:12px;margin-bottom:10px\">`;\n  html += `<tr style=\"background:#34495e;color:#fff\"><th style=\"text-align:left;width:18%\">\u00d3rg\u00e3o</th><th style=\"text-align:left;width:28%\">Objeto</th><th style=\"text-align:center;width:10%\">Categoria</th><th style=\"text-align:center;width:12%\">Encerramento</th><th style=\"text-align:right;width:10%\">Valor</th><th style=\"text-align:center;width:22%\">A\u00e7\u00f5es</th></tr>`;\n\n  for (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    const dias = diasAte(item.data_encerramento);\n    const bg = i%2===0 ? '#fff' : '#f8f9fa';\n    const brd = dias<=3 ? 'border-left:4px solid #e74c3c' : dias<=7 ? 'border-left:4px solid #f39c12' : 'border-left:4px solid transparent';\n    const ds = dias<=3 ? 'color:#e74c3c;font-weight:bold' : dias<=7 ? 'color:#f39c12;font-weight:bold' : '';\n    const dl = dias<=0 ? '(ENCERRADO)' : dias===1 ? '(amanh\u00e3!)' : dias<=7 ? `(${dias} dias)` : '';\n\n    let catBadges = '';\n    for (const cat of item.categories) {\n      const parts = (CATEGORY_LABELS[cat]||cat).split(' ');\n      catBadges += `<span style=\"display:inline-block;background:${CATEGORY_COLORS[cat]||'#95a5a6'};color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;margin:1px\">${parts[0]} ${parts.slice(1).join(' ')}</span> `;\n    }\n\n    const descShort = item.objeto.substring(0,160) + (item.objeto.length>160 ? '...' : '');\n    // Links point to portal, not directly to PNCP\n    // Use pncp_id for lookup \u2014 portal resolves to DB id\n    const portalLink = `${PORTAL_BASE}/edital.php?pncp_id=${encodeURIComponent(item.pncp_id)}`;\n\n    html += `<tr style=\"background:${bg};${brd}\">`;\n    html += `<td style=\"padding:8px;vertical-align:top\"><strong>${item.orgao}</strong><br/><small style=\"color:#777\">${item.municipio}/${item.uf}</small></td>`;\n    html += `<td style=\"padding:8px;vertical-align:top\"><small style=\"color:#555\">${descShort}</small></td>`;\n    html += `<td style=\"padding:8px;text-align:center;vertical-align:top\">${catBadges}</td>`;\n    html += `<td style=\"padding:8px;text-align:center;vertical-align:top;${ds}\">${fmtDate(item.data_encerramento)}<br/><small>${dl}</small></td>`;\n    html += `<td style=\"padding:8px;text-align:right;vertical-align:top\">${fmtValor(item.valor_estimado)}</td>`;\n    html += `<td style=\"padding:8px;text-align:center;vertical-align:top\">`;\n    html += `<a href=\"${portalLink}\" style=\"display:inline-block;background:#2980b9;color:#fff;padding:5px 12px;border-radius:4px;text-decoration:none;font-size:10px;margin:2px\">\ud83d\udccb Detalhes</a>`;\n    html += `<br/><a href=\"${item.url_pncp}\" style=\"color:#999;font-size:9px;text-decoration:underline;margin-top:4px;display:inline-block\">Ver no PNCP \u2197</a>`;\n    html += `</td></tr>`;\n  }\n  html += `</table>`;\n}\n\n// Footer\nhtml += `<hr style=\"margin-top:30px;border:none;border-top:1px solid #dee2e6\"/>`;\nhtml += `<p style=\"font-size:10px;color:#999;margin-top:15px\">Gerado por <strong>Sunyata Consulting</strong> \u2014 IATR Monitoramento PNCP v3.0<br/>${new Date().toISOString()} \u2022 ${allResponses.length} buscas \u2022 ${erros} erros API</p>`;\nhtml += `</div></div></body></html>`;\n\n// --- 5. Return everything ---\nreturn [{ json: {\n  success: true,\n  editais_count: editais.length,\n  stats: {\n    total_buscas: allResponses.length,\n    total_bruto: totalBruto,\n    total_dedup_uf: uniqueItems.length,\n    total_relevante: editais.length,\n    ruido: uniqueItems.length - editais.length,\n    erros_api: erros,\n    por_uf: Object.fromEntries(Object.entries(byUF).map(([k,v]) => [k, v.length])),\n    por_categoria: catCounts,\n    urgentes: urgentes,\n  },\n  upsert_sql: upsertSql,\n  email: {\n    to: 'claudesunyata@gmail.com,filipe.litaiff@ifrj.edu.br,comercial06@iatr.com.br,comercial@iatr.com.br',\n    subject: `[PNCP Monitor] ${editais.length} editais relevantes \u2014 ${hoje}`,\n    html: html\n  },\n  timestamp: new Date().toISOString()\n}}];"
+                },
+                "id": "cde0825c-11fd-4a01-91d4-d3f15eabafc4",
+                "name": "Filter Format SQL",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    800,
+                    128
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "={{$json.upsert_sql}}",
+                    "options": {}
+                },
+                "id": "74f8acec-5aa6-403c-9c00-d039c58f8638",
+                "name": "Save to PostgreSQL",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.5,
+                "position": [
+                    1008,
+                    128
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "sunyata-pg-001",
+                        "name": "Sunyata PostgreSQL"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "jsCode": "// Pass through data, remove large SQL from downstream\nconst data = $('Filter Format SQL').first().json;\n\nreturn [{ json: {\n  success: data.success,\n  editais_count: data.editais_count,\n  stats: data.stats,\n  email: data.email,\n  db_status: 'upsert_complete',\n  timestamp: data.timestamp\n}}];"
+                },
+                "id": "c0693136-92bb-45ab-9716-6d383d4303c0",
+                "name": "Post-DB Cleanup",
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    1800,
+                    128
+                ]
+            },
+            {
+                "parameters": {
+                    "fromEmail": "flitaiff@gmail.com",
+                    "toEmail": "={{$json.email.to}}",
+                    "subject": "={{$json.email.subject}}",
+                    "html": "={{$json.email.html}}",
+                    "options": {}
+                },
+                "id": "7bb92d04-c8f1-4784-9f58-8cd9b4b2e4ae",
+                "name": "Send Email",
+                "type": "n8n-nodes-base.emailSend",
+                "typeVersion": 2.1,
+                "position": [
+                    2008,
+                    128
+                ],
+                "webhookId": "50e7bcbb-1e98-480b-b722-b6cc07e13bfa",
+                "credentials": {
+                    "smtp": {
+                        "id": "TAZ8C6Oo3qLTak9d",
+                        "name": "SMTP account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "options": {
+                        "responseCode": 200
+                    }
+                },
+                "id": "d6de384a-8c50-4f97-8e97-682145d08ced",
+                "name": "Respond OK",
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.5,
+                "position": [
+                    2200,
+                    128
+                ]
+            },
+            {
+                "parameters": {
+                    "operation": "executeQuery",
+                    "query": "SELECT id FROM pncp_editais WHERE enriquecido_em IS NULL ORDER BY id DESC LIMIT 50",
+                    "options": {}
+                },
+                "id": "enrich-get-ids-001",
+                "name": "Get Unenriched IDs",
+                "type": "n8n-nodes-base.postgres",
+                "typeVersion": 2.5,
+                "position": [
+                    1200,
+                    128
+                ],
+                "credentials": {
+                    "postgres": {
+                        "id": "sunyata-pg-001",
+                        "name": "Sunyata PostgreSQL"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "batchSize": 1,
+                    "options": {}
+                },
+                "id": "enrich-split-001",
+                "name": "Split Enrich Batches",
+                "type": "n8n-nodes-base.splitInBatches",
+                "typeVersion": 3,
+                "position": [
+                    1400,
+                    128
+                ]
+            },
+            {
+                "parameters": {
+                    "method": "POST",
+                    "url": "http://192.168.100.10:8000/api/ai/iatr/enrich-edital",
+                    "sendHeaders": true,
+                    "specifyHeaders": "keypair",
+                    "headerParameters": {
+                        "parameters": [
+                            {
+                                "name": "X-Internal-Key",
+                                "value": "3be587ec449cb5ddb42c071d61ca5892720179bd7545015aa208275cc200759f"
+                            },
+                            {
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    },
+                    "sendBody": true,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ edital_id: $json.id }) }}",
+                    "options": {
+                        "timeout": 60000
+                    }
+                },
+                "id": "enrich-edital-001",
+                "name": "Enrich Edital",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "position": [
+                    1600,
+                    128
+                ],
+                "onError": "continueRegularOutput"
+            }
+        ],
+        "connections": {
+            "Cron 07h Weekdays": {
+                "main": [
+                    [
+                        {
+                            "node": "Generate Search URLs",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Webhook Manual": {
+                "main": [
+                    [
+                        {
+                            "node": "Check Auth",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Check Auth": {
+                "main": [
+                    [
+                        {
+                            "node": "Generate Search URLs",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Respond 401",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Generate Search URLs": {
+                "main": [
+                    [
+                        {
+                            "node": "PNCP Search API",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "PNCP Search API": {
+                "main": [
+                    [
+                        {
+                            "node": "Filter Format SQL",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Filter Format SQL": {
+                "main": [
+                    [
+                        {
+                            "node": "Save to PostgreSQL",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Save to PostgreSQL": {
+                "main": [
+                    [
+                        {
+                            "node": "Get Unenriched IDs",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Post-DB Cleanup": {
+                "main": [
+                    [
+                        {
+                            "node": "Send Email",
+                            "type": "main",
+                            "index": 0
+                        },
+                        {
+                            "node": "Respond OK",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Get Unenriched IDs": {
+                "main": [
+                    [
+                        {
+                            "node": "Split Enrich Batches",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Split Enrich Batches": {
+                "main": [
+                    [
+                        {
+                            "node": "Enrich Edital",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ],
+                    [
+                        {
+                            "node": "Post-DB Cleanup",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Enrich Edital": {
+                "main": [
+                    [
+                        {
+                            "node": "Split Enrich Batches",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "authors": "FILIPE flitaiff@gmail.com",
+        "name": null,
+        "description": null,
+        "autosaved": false,
+        "workflowPublishHistory": [
+            {
+                "createdAt": "2026-02-27T00:41:12.245Z",
+                "id": 91,
+                "workflowId": "kWX9x3IteHYZehKC",
+                "versionId": "4467a68a-03b7-41c2-a9cd-3738315ccf4e",
+                "event": "activated",
+                "userId": "76b2cbce-e8f9-4d9f-8fc2-fd10d1c154e6"
+            }
+        ]
+    }
+}
