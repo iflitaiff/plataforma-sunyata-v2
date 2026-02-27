@@ -141,7 +141,7 @@ curl_setopt_array($ch, [
         'X-Auth-Token: ' . $webhookToken,
     ],
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 300, // 5 min — v3 waits for full LLM response
+    CURLOPT_TIMEOUT => 540, // 9 min — N8N LiteLLM timeout is 8 min (480s); add buffer
     CURLOPT_SSL_VERIFYPEER => false, // Internal HTTP, no SSL needed
 ]);
 
