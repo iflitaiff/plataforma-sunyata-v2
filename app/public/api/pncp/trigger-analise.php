@@ -11,6 +11,7 @@
 
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../src/Helpers/system_events.php';
 
 use Sunyata\Core\Database;
 
@@ -103,6 +104,26 @@ if (!$webhookToken) {
 
 $webhookUrl = rtrim($webhookBase, '/') . '/webhook/iatr/analisar';
 
+$traceId = generate_trace_id();
+
+log_event(
+    eventType:  'iatr.analysis.requested',
+    source:     'portal',
+    severity:   'info',
+    entityType: 'edital',
+    entityId:   (string) $editalId,
+    summary:    "Análise solicitada: {$tipoAnalise} ({$nivelProfundidade})",
+    payload:    [
+        'tipo_analise' => $tipoAnalise,
+        'nivel_profundidade' => $nivelProfundidade ?? 'completa',
+        'user_id' => $_SESSION['user']['id'] ?? null,
+        'tem_instrucoes' => !empty($instrucoesComplementares),
+    ],
+    traceId:    $traceId
+);
+
+$startTime = microtime(true);
+
 // Call N8N webhook server-side
 $ch = curl_init($webhookUrl);
 curl_setopt_array($ch, [
@@ -113,6 +134,7 @@ curl_setopt_array($ch, [
         'nivel_profundidade'        => $nivelProfundidade,
         'instrucoes_complementares' => $instrucoesComplementares,
         'contexto_empresa'          => $contextoEmpresa,
+        'trace_id'                  => $traceId,
     ], fn($v) => $v !== null)),
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
@@ -127,6 +149,20 @@ $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
 curl_close($ch);
+
+$duration = (int)((microtime(true) - $startTime) * 1000);
+
+log_event(
+    eventType:  $httpCode >= 200 && $httpCode < 300 ? 'iatr.analysis.dispatched' : 'iatr.analysis.dispatch_failed',
+    source:     'portal',
+    severity:   $httpCode >= 200 && $httpCode < 300 ? 'info' : 'error',
+    entityType: 'edital',
+    entityId:   (string) $editalId,
+    summary:    "Dispatch para N8N: HTTP {$httpCode}",
+    payload:    ['http_code' => $httpCode, 'trace_id' => $traceId],
+    traceId:    $traceId,
+    durationMs: $duration
+);
 
 if ($curlError) {
     http_response_code(502);
